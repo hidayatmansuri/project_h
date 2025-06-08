@@ -1,33 +1,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,500;0,700;1,400&display=swap');
 
+/* Light Mode Palette Background: #f5f5f5
+
+Primary - Soft Blue #3B82F6 - Calm and trustworthy, good for buttons
+Secondary - Warm Gray #6B7280 - Subdued contrast, useful for text/icons
+Accent - Emerald #10B981 - For success messages, active states
+Highlight - Amber #F59E0B - Attention-grabbing, good for warnings
+Text: #111827 - near-black for readability
+
+Dark Mode Palette Background: #1F2937
+
+Primary - Soft Blue #60A5FA - Slightly lighter than light mode version
+Secondary - Cool Gray #9CA3AF - Light gray for readability
+Accent - Mint Green #34D399 - Vibrant but not jarring on dark bg
+Highlight - Yellow #FBBF24 - High contrast and energetic
+Text: #F9FAFB off-white for clarity */
+
 /* Default Light Theme */
 :root {
-    --bg-color: #f5f5f5;
-    --text-color: #222222;
-    --link-color: #0066cc;
+    --bg-color: #f5f5f5; /* Background Color - Cultured */
+    --text-color: #111827; /* Text Color - Eerie Black */
+    --button-color: #3B82F6; /* Button Color - Blueberry */
+    --icon-color: #6B7280; /* Icon Color - AuroMetalSaurus */
+    --status-color: #10B981; /* Status Color - Green (Crayola) */
+    --warning-color: #F59E0B; /* Warning Color - Orange */
 }
 
 /* Auto Dark Theme based on OS */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-color: #1e1e1e;
-        --text-color: #dddddd;
-        --link-color: #4da3ff;
+        --bg-color: #1F2937; /* Background Color - Yankees Blue */
+        --text-color: #F9FAFB; /* Text Color - Ghost White */
+        --button-color: #60A5FA; /* Button Color - Blue Jeans */
+        --icon-color: #9CA3AF; /* Icon Color - Cadet Grey */
+        --status-color: #34D399; /* Status Color - Eucalyptus */
+        --warning-color: #FBBF24; /* Warning Color - Ripe Mango */
     }
 }
 
 /* Manual Light Override */
 html.light {
     --bg-color: #f5f5f5;
-    --text-color: #222222;
-    --link-color: #0066cc;
+    --text-color: #111827;
+    --button-color: #3B82F6;
+    --icon-color: #6B7280;
+    --status-color: #10B981;
+    --warning-color: #F59E0B;
 }
 
 /* Manual Dark Override */
 html.dark {
-    --bg-color: #1e1e1e;
-    --text-color: #dddddd;
-    --link-color: #4da3ff;
+    --bg-color: #1F2937;
+    --text-color: #F9FAFB;
+    --button-color: #60A5FA;
+    --icon-color: #9CA3AF;
+    --status-color: #34D399;
+    --warning-color: #FBBF24;
 }
 
 /* Apply variables globally */
@@ -54,7 +82,7 @@ header, footer {
     bottom: 1rem;
     right: 1rem;
     padding: 0.5rem 1rem;
-    background-color: var(--link-color);
+    background-color: var(--button-color);
     color: var(--bg-color);
     border: none;
     cursor: pointer;
