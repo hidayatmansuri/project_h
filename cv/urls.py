@@ -1,7 +1,6 @@
 from django.urls import path
-from cv.views import home,cv
+from .views import cv
 
 urlpatterns=[
-    path('',home,name='home'),
     path('cv/',cv,name='cv'),
 ]
