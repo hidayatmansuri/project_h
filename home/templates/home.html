@@ -18,7 +18,9 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
         <header>
-            <h1><a href="{% url 'home' %}">project-h</a></h1>
+            <button id="theme-toggle">Toggle Theme</button>
+
+            <div><a href="{% url 'home' %}">project-h</a></div>
             <nav>
                 <ul>
                     <li><a href="{% url 'cv' %}">CV</a></li>
@@ -31,6 +33,6 @@
         <footer>
             <p>&copy; 2025 project-h</p>
         </footer>
-        <script src="" async defer></script>
+        <script src="{% static 'js/theme-toggle.js' %}"></script>
     </body>
 </html>

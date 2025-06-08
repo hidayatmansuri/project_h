@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,500;0,700;1,400&display=swap');
+
+/* Default Light Theme */
+:root {
+    --bg-color: #f5f5f5;
+    --text-color: #222222;
+    --link-color: #0066cc;
+}
+
+/* Auto Dark Theme based on OS */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #1e1e1e;
+        --text-color: #dddddd;
+        --link-color: #4da3ff;
+    }
+}
+
+/* Manual Light Override */
+html.light {
+    --bg-color: #f5f5f5;
+    --text-color: #222222;
+    --link-color: #0066cc;
+}
+
+/* Manual Dark Override */
+html.dark {
+    --bg-color: #1e1e1e;
+    --text-color: #dddddd;
+    --link-color: #4da3ff;
+}
+
+/* Apply variables globally */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    color: var(--link-color);
+}
+
+header, footer {
+    padding: 1rem;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid #ccc;
+}
+
+#theme-toggle {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--link-color);
+    color: var(--bg-color);
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
