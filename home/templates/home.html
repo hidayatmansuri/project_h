@@ -8,6 +8,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
         <title>{% block title %}project-h{% endblock %}</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,21 +18,37 @@
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-        <header>
-            <button id="theme-toggle">Toggle Theme</button>
-
-            <div><a href="{% url 'home' %}">project-h</a></div>
-            <nav>
-                <ul>
-                    <li><a href="{% url 'cv' %}">CV</a></li>
-                </ul>
+        <header class="ph-header">
+            <div class="ph-logo">
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'images/p-h.svg' %}" alt="Project Logo" width="30" height="25">
+                </a>
+            </div>
+            <nav class="home-nav">
+                <div class="ph-label">
+                    <a href="{% url 'cv' %}">Project</a>
+                </div>|
+                <div class="ph-label">
+                    <a href="{% url 'cv' %}">CV</a>
+                </div>|
+                <label class="theme-toggle-label" for="theme-toggle">
+                    <input class="ph-checkbox" type="checkbox" id="theme-toggle" hidden/>
+                    <div class="theme-toggle-circle">Theme</div>
+                </label>
             </nav>
         </header>
 
-        <main>{% block content %}{% endblock %}</main>
 
-        <footer>
-            <p>&copy; 2025 project-h</p>
+        <main>
+            {% block content %}
+                <div class="home-body">
+                    <img src="{% static 'images/p-h.png' %}" alt='project-h'>
+                </div>
+            {% endblock %}
+        </main>
+
+        <footer class="ph-footer">
+            &copy; 2025 project-h
         </footer>
         <script src="{% static 'js/theme-toggle.js' %}"></script>
     </body>

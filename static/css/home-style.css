@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Ancizar+Sans:ital,wght@0,100..1000;1,100..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap');
 
 /* Light Mode Palette Background: #f5f5f5
 
@@ -15,6 +15,35 @@ Secondary - Cool Gray #9CA3AF - Light gray for readability
 Accent - Mint Green #34D399 - Vibrant but not jarring on dark bg
 Highlight - Yellow #FBBF24 - High contrast and energetic
 Text: #F9FAFB off-white for clarity */
+
+.ph-button {
+    display: inline-block;
+    padding: 0.5rem;
+    background-color: var(--button-color);
+    color: var(--bg-color);
+    border: none;
+    cursor: pointer;
+    width: 7rem;
+    height: 1.3rem;
+    text-align: center;
+}
+
+.ph-button:hover {
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+.ph-label {
+    display: inline-block;
+    padding: 0.5rem;
+    color: var(--text-color);
+    margin: auto 0.5rem;
+}
+
+.ph-label:hover {
+    text-shadow: 2px 2px 15px var(--text-color);
+    text-decoration: underline var(--warning-color);    
+}
 
 /* Default Light Theme */
 :root {
@@ -62,29 +91,98 @@ html.dark {
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: sans-serif;
+    font-family: Nunito;
     margin: 0;
     padding: 0;
+    transition: background-color 0.8s ease-out, color 0.8s ease-out;
 }
 
 a {
-    color: var(--link-color);
+    color: var(--text-color);
+    text-decoration: none;
 }
 
-header, footer {
-    padding: 1rem;
+.ph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 0.5rem;
     background-color: var(--bg-color);
-    border-bottom: 1px solid #ccc;
+    font-family: Nunito;
+    transition: background-color 0.8s ease-out, color 0.8s ease-out;
 }
 
-#theme-toggle {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: var(--button-color);
-    color: var(--bg-color);
-    border: none;
+.ph-logo {
+    display: flex;
+    align-items: center;
+}
+
+.ph-logo img {
+    display: block;
+    vertical-align: middle;
+}
+
+.home-nav {
+    display: flex;
+    align-items: center;
+    width: 260px;
+    gap: 0.5rem; /* Add spacing between nav items */
+    border: 1px solid var(--text-color);
+    border-radius: 10px;
+    margin-right: -20px;
+}
+
+.ph-label a {
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
+/* Toggle Theme Button */
+.theme-toggle-label {
+    display: flex;
+    align-items: center;
     cursor: pointer;
-    border-radius: 5px;
+    padding: 0 0.5rem;
+}
+
+.theme-toggle-circle {
+    width: 32px;
+    height: 32px;
+    background-color: var(--text-color);
+    color: var(--bg-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.6rem;
+    font-weight: bold;
+    transition: background-color 0.8s, color 0.8s, box-shadow 0.8s;
+}
+
+.theme-toggle-circle:hover {
+    /* box-shadow: 0 0 15px 8px rgba(0, 0, 0, 0.3); Bigger and softer shadow */
+    box-shadow: 0 0 55px 48px var(--text-color);
+    transition: background-color 0.8s ease-out, color 0.8s ease-out, box-shadow 0.8s ease-out;
+}
+
+.home-body {
+    display: flex;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.ph-footer {
+    display: flex;
+    box-sizing: border-box;
+    justify-content: flex-end;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding: 0.5rem;
 }
