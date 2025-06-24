@@ -5,5 +5,15 @@
 {% endblock %}
 
 {% block content %}
-    <div>CV</div>
+    <div class="cv-body">
+        {% for p in personal_info %}
+        <div>{{ p.name }}</div>
+        <div>
+            {{ p.email }}
+            {{ p.phone }}
+            {{ p.address }}
+            {{ p.profile }}
+        </div>
+        {% endfor %}
+    </div>
 {% endblock %}

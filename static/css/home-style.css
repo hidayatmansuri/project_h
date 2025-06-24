@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Ancizar+Sans:ital,wght@0,100..1000;1,100..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Ancizar+Sans:ital,wght@0,100..1000;1,100..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Pompiere&display=swap');
+@import url('fonts.css');
 
-/* Light Mode Palette Background: #f5f5f5
+/* Light Mode Palette Background: #f5f5f5 rgb(245, 245, 245)
 
 Primary - Soft Blue #3B82F6 - Calm and trustworthy, good for buttons
 Secondary - Warm Gray #6B7280 - Subdued contrast, useful for text/icons
@@ -8,42 +9,13 @@ Accent - Emerald #10B981 - For success messages, active states
 Highlight - Amber #F59E0B - Attention-grabbing, good for warnings
 Text: #111827 - near-black for readability
 
-Dark Mode Palette Background: #1F2937
+Dark Mode Palette Background: #1F2937 rgb(31, 41, 55)
 
 Primary - Soft Blue #60A5FA - Slightly lighter than light mode version
 Secondary - Cool Gray #9CA3AF - Light gray for readability
 Accent - Mint Green #34D399 - Vibrant but not jarring on dark bg
 Highlight - Yellow #FBBF24 - High contrast and energetic
 Text: #F9FAFB off-white for clarity */
-
-.ph-button {
-    display: inline-block;
-    padding: 0.5rem;
-    background-color: var(--button-color);
-    color: var(--bg-color);
-    border: none;
-    cursor: pointer;
-    width: 7rem;
-    height: 1.3rem;
-    text-align: center;
-}
-
-.ph-button:hover {
-    color: var(--text-color);
-    font-weight: bold;
-}
-
-.ph-label {
-    display: inline-block;
-    padding: 0.5rem;
-    color: var(--text-color);
-    margin: auto 0.5rem;
-}
-
-.ph-label:hover {
-    text-shadow: 2px 2px 15px var(--text-color);
-    text-decoration: underline var(--warning-color);    
-}
 
 /* Default Light Theme */
 :root {
@@ -75,6 +47,8 @@ html.light {
     --icon-color: #6B7280;
     --status-color: #10B981;
     --warning-color: #F59E0B;
+    --text-shadow: 2px 2px 4px rgba(31, 41, 55, 0.5);
+    --box-shadow: 0 0 42px 24px rgba(31, 41, 55, 0.5);
 }
 
 /* Manual Dark Override */
@@ -85,60 +59,166 @@ html.dark {
     --icon-color: #9CA3AF;
     --status-color: #34D399;
     --warning-color: #FBBF24;
+    --text-shadow: 2px 2px 4px rgba(245, 245, 245, 0.5);
+    --box-shadow: 0 0 42px 24px rgba(245, 245, 245, 0.65);
 }
 
 /* Apply variables globally */
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: Nunito;
+    font-family: Peignot;
     margin: 0;
     padding: 0;
-    transition: background-color 0.8s ease-out, color 0.8s ease-out;
 }
 
-a {
-    color: var(--text-color);
-    text-decoration: none;
-}
-
-.ph-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100vw;
-    box-sizing: border-box;
+.ph-button {
+    display: inline-block;
     padding: 0.5rem;
-    background-color: var(--bg-color);
-    font-family: Nunito;
-    transition: background-color 0.8s ease-out, color 0.8s ease-out;
+    background-color: var(--button-color);
+    color: var(--bg-color);
+    border: none;
+    cursor: pointer;
+    width: 7rem;
+    height: 1.3rem;
+    text-align: center;
+}
+
+.ph-button:hover {
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+.ph-label {
+    display: inline-block;
+    padding: 0.4rem;
+    color: var(--text-color);
+    margin: auto 0.5rem;
+}
+
+.ph-hover {
+    font-weight: bold;
+    transition: text-shadow 0.3s ease-in-out, filter 0.3s ease-in-out;
+}
+
+.ph-hover:hover {
+    color: var(--warning-color);
+    text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
+}
+
+.text-shadow {
+    text-shadow: var(--text-shadow);
+}
+
+.box-shadow {
+    box-shadow: var(--box-shadow);
 }
 
 .ph-logo {
     display: flex;
+    height: 2rem;
+    width: 2rem;
+    border-radius: 50%;
+    border: 2px solid var(--icon-color);
+    justify-content: center;
     align-items: center;
+    font-size: 1.8rem;
+    font-weight: bolder;
+    color: var(--icon-color);
+    font-family: Peignot;
 }
 
-.ph-logo img {
-    display: block;
-    vertical-align: middle;
+.ph-logo:hover {
+    color: var(--warning-color);
+    text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
+    /* transition: text-shadow 0.3s ease-in-out; */
+}
+
+a {
+    text-decoration: none;
+}
+
+/* Default: horizontal layout (desktop) */
+.ph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    background-color: var(--bg-color);
 }
 
 .home-nav {
     display: flex;
     align-items: center;
-    width: 260px;
-    gap: 0.5rem; /* Add spacing between nav items */
-    border: 1px solid var(--text-color);
-    border-radius: 10px;
-    margin-right: -20px;
+    gap: 0.5rem;
 }
 
-.ph-label a {
+.home-nav a {
     color: var(--text-color);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 1.2rem;
+}
+
+#mobile-nav {
+    display: none;
+}
+
+.home-body {
+    font-family: Gotu;
+    font-size: 1rem;
+    width: 80vw;
+    margin: auto;
+}
+
+/* Mobile View: vertical layout with nav on the left */
+@media screen and (max-width: 768px) {
+    .ph-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        flex-direction: column;
+        align-items: flex-start; /* align children to left */
+        width: 60px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .home-nav {
+        padding-top: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 60px;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    #desktop-nav {
+        display: none;
+    }
+
+    #mobile-nav {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .home-body {
+        margin-left: 60px !important;
+        padding: 1rem;
+        width: calc(90vw - 60px); /* Optional: ensures no horizontal scroll */
+        box-sizing: border-box;
+        word-break: break-word;
+        margin-right: 30px;
+    }
+
+    .cv-body {
+        margin-left: 60px !important;
+        padding: 1rem;
+        width: calc(80vw - 60px); /* Optional: ensures no horizontal scroll */
+        box-sizing: border-box;
+        word-break: break-word;
+    }
 }
 
 /* Toggle Theme Button */
@@ -154,27 +234,43 @@ a {
     height: 32px;
     background-color: var(--text-color);
     color: var(--bg-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.6rem;
-    font-weight: bold;
+    font-size: 1.6rem;
     transition: background-color 0.8s, color 0.8s, box-shadow 0.8s;
 }
 
 .theme-toggle-circle:hover {
-    /* box-shadow: 0 0 15px 8px rgba(0, 0, 0, 0.3); Bigger and softer shadow */
     box-shadow: 0 0 55px 48px var(--text-color);
     transition: background-color 0.8s ease-out, color 0.8s ease-out, box-shadow 0.8s ease-out;
 }
 
-.home-body {
-    display: flex;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+.para-1 {
+    font-family: Peignot;
+    /* font-size: 1.2rem; */
+}
+
+.para-2 {
+    font-family: Gotu;
+    /* font-size: 1.2rem; */
+}
+
+.para-3 {
+    font-family: Asap;
+    /* font-size: 1.2rem; */
+}
+
+.para-4 {
+    font-family: Playfair;
+    /* font-size: 1.2rem; */
+}
+
+.para-5 {
+    font-family: SourceSerif;
+    /* font-size: 1.2rem; */
 }
 
 .ph-footer {
@@ -182,7 +278,14 @@ a {
     box-sizing: border-box;
     justify-content: flex-end;
     position: absolute;
-    bottom: 0;
+    /* bottom: 0; */
     width: 100%;
     padding: 0.5rem;
+}
+
+.cv-body {
+    font-family: Gotu;
+    font-size: 1rem;
+    width: 80vw;
+    margin: auto;
 }

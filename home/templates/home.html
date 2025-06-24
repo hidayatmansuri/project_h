@@ -12,6 +12,7 @@
         <title>{% block title %}project-h{% endblock %}</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://kit.fontawesome.com/8461ef5dbf.js" crossorigin="anonymous"></script>
         <link rel="stylesheet" href="{% static 'css/home-style.css'%}">
     </head>
     <body>
@@ -19,21 +20,25 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
         <header class="ph-header">
-            <div class="ph-logo">
-                <a href="{% url 'home' %}">
-                    <img src="{% static 'images/p-h.svg' %}" alt="Project Logo" width="30" height="25">
-                </a>
-            </div>
-            <nav class="home-nav">
+            <a href="{% url 'home' %}">
+                <div class="ph-logo">
+                    ph
+                </div>
+            </a>
+            <nav class="home-nav text-shadow">
                 <div class="ph-label">
-                    <a href="{% url 'cv' %}">Project</a>
-                </div>|
+                    <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">Project</a>
+                    <a href="{% url 'cv' %}"><i id="mobile-nav" class="fa-regular fa-file-code ph-hover"></i></a>
+                </div>
+                <div id="desktop-nav">|</div>
                 <div class="ph-label">
-                    <a href="{% url 'cv' %}">CV</a>
-                </div>|
+                    <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">CV</a>
+                    <i id="mobile-nav" class="ph-hover fa-regular fa-file-lines"></i>
+                </div>
+                <div id="desktop-nav">|</div>
                 <label class="theme-toggle-label" for="theme-toggle">
                     <input class="ph-checkbox" type="checkbox" id="theme-toggle" hidden/>
-                    <div class="theme-toggle-circle">Theme</div>
+                    <div class="theme-toggle-circle"><i class="fa-solid fa-circle-half-stroke"></i></div>
                 </label>
             </nav>
         </header>
@@ -42,7 +47,26 @@
         <main>
             {% block content %}
                 <div class="home-body">
-                    <img src="{% static 'images/p-h.png' %}" alt='project-h'>
+                    <div class="para-1">
+                    <h3>Font: Peignot</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    </div>
+                    <div class="para-2">
+                    <h3>Font:  Gotu</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    </div>
+                    <div class="para-3">
+                    <h3>Font:  Asap</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    </div>
+                    <div class="para-4">
+                    <h3>Font:  Playfair</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    </div>
+                    <div class="para-5">
+                    <h3>Font:  SourceSerif</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    </div>
                 </div>
             {% endblock %}
         </main>
