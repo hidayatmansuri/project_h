@@ -6,14 +6,20 @@
 
 {% block content %}
     <div class="cv-body">
+        <div class="cv-detail">
         {% for p in personal_info %}
-        <div>{{ p.name }}</div>
-        <div>
-            {{ p.email }}
-            {{ p.phone }}
-            {{ p.address }}
-            {{ p.profile }}
-        </div>
+            <div class="cv-name">
+                {{ p.name }}
+            </div>
+            <div class="cv-personal">
+                <div>{{ p.email }}</div>
+                <div>0{{ p.phone }}</div>
+                <div>{{ p.address }}</div>
+            </div>
+            <div class="cv-profile">
+                {{ p.profile|linebreaksbr }}
+            </div>
         {% endfor %}
+        </div>
     </div>
 {% endblock %}
