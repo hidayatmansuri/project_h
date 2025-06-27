@@ -6,11 +6,11 @@
 
 {% block content %}
     <div class="cv-body">
-        <div class="cv-detail">
         {% for p in personal_info %}
-            <div class="cv-name">
-                {{ p.name }}
-            </div>
+        <div class="cv-name">
+            {{ p.name }}
+        </div>
+        <div class="cv-detail box-shadow">
             <div class="cv-personal">
                 <div>{{ p.email }}</div>
                 <div>0{{ p.phone }}</div>
@@ -19,7 +19,50 @@
             <div class="cv-profile">
                 {{ p.profile|linebreaksbr }}
             </div>
-        {% endfor %}
         </div>
+        {% endfor %}
+        
+        <div class="cv-name">
+            Experience
+        </div>
+        {% for e in experience %}
+        <div class="cv-detail box-shadow">
+            <div class="cv-personal">
+                <div class="cv-title">{{ e.title }}</div>
+                <div><i class="fa-solid fa-building"></i> {{ e.employer }}</div>
+                <div>{{ e.industry }}</div>
+                <div>{{ e.start_date|date:"F Y" }}</div>
+                {% if e.end_date %}
+                    <div>{{ e.end_date|date:"F Y" }}</div>
+                {% else %}
+                    <div>Present</div>
+                {% endif %}
+            </div>
+            <div class="cv-profile">
+                {{ e.description|linebreaksbr }}
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="cv-name">
+            Qualification
+        </div>
+        {% for qlf in qualification %}
+        <div class="cv-detail box-shadow">
+            <div class="cv-qlf-title">{{ qlf.degree }}</div>
+            <div class="cv-personal">
+                <div><i class="fa-solid fa-building"></i> {{ qlf.institute }}</div>
+                <div>{{ qlf.start_date|date:"F Y" }}</div>
+                {% if qlf.end_date %}
+                    <div>{{ qlf.end_date|date:"F Y" }}</div>
+                {% else %}
+                    <div>Present</div>
+                {% endif %}
+            </div>
+            <div class="cv-profile">
+                {{ qlf.subject|linebreaksbr }}
+            </div>
+        </div>
+        {% endfor %}
     </div>
 {% endblock %}
