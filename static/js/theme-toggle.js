@@ -1,6 +1,7 @@
 // theme-toggle.js
 document.addEventListener('DOMContentLoaded', function() {
     const toggleCheckbox = document.getElementById('theme-toggle');
+    const backToTop = document.getElementById("backToTop");
     const htmlElement = document.documentElement;
 
     // Load saved theme
@@ -18,4 +19,14 @@ document.addEventListener('DOMContentLoaded', function() {
         htmlElement.classList.add(newTheme);
         localStorage.setItem('theme', newTheme);
     });
+
+    window.addEventListener("scroll", () => {
+        if(window.scrollY > 10) {
+            backToTop.style.display = "flex";
+        } else {
+            backToTop.style.display = "none";
+        }
+    });
 });
+
+

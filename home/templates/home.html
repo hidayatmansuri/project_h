@@ -15,13 +15,13 @@
         <script src="https://kit.fontawesome.com/8461ef5dbf.js" crossorigin="anonymous"></script>
         <link rel="stylesheet" href="{% static 'css/home-style.css'%}">
     </head>
-    <body>
+    <body id="top">
         <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
         <header class="ph-header">
             <a href="{% url 'home' %}">
-                <div class="ph-logo">
+                <div class="ph-logo ph-hover">
                     ph
                 </div>
             </a>
@@ -69,6 +69,7 @@
                     </div>
                 </div>
             {% endblock %}
+            <div id="backToTop" class="ph-top"><a href="#top" class="ph-hover"><i class="fa-regular fa-circle-up"></i></a></div>
         </main>
 
         <footer class="ph-footer">

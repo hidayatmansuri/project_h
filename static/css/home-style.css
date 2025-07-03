@@ -1,66 +1,62 @@
 @import url('https://fonts.googleapis.com/css2?family=Ancizar+Sans:ital,wght@0,100..1000;1,100..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Pompiere&display=swap');
 @import url('fonts.css');
 
-/* Light Mode Palette Background: #f5f5f5 rgb(245, 245, 245)
+/*
+Primary: Buttons, links, highlights.
+Secondary: Hover states, less important CTAs.
+Neutral: Base background & text for legibility.
+Accent: Success states, active tags, or subtle emphasis.
+Borders/shadow: Subtle outlines and elevations.
+*/
 
-Primary - Soft Blue #3B82F6 - Calm and trustworthy, good for buttons
-Secondary - Warm Gray #6B7280 - Subdued contrast, useful for text/icons
-Accent - Emerald #10B981 - For success messages, active states
-Highlight - Amber #F59E0B - Attention-grabbing, good for warnings
-Text: #111827 - near-black for readability
+/* Default Light Mode Variables */
+:root {
+  --button-color: #0056D2;         /* Royal Blue - rgb(0, 86, 210) */
+  --hover-color: #4FB3FF;       /* Sky Blue - rgb(79, 179, 255) */
+  --bg-color: #F9FAFB;              /* White Smoke - rgb(249, 250, 251) */
+  --text-color: #2D2D2D;            /* Charcoal - rgb(45, 45, 45) */
+  --warning-color: #1ABC9C;          /* Emerald Green - rgb(26, 188, 156) */
+  --icon-color: #E0E0E0;          /* Light Gray - rgb(224, 224, 224) */
+}
 
-Dark Mode Palette Background: #1F2937 rgb(31, 41, 55)
-
-Primary - Soft Blue #60A5FA - Slightly lighter than light mode version
-Secondary - Cool Gray #9CA3AF - Light gray for readability
-Accent - Mint Green #34D399 - Vibrant but not jarring on dark bg
-Highlight - Yellow #FBBF24 - High contrast and energetic
-Text: #F9FAFB off-white for clarity */
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --button-color: #4F8DFF;       /* Royal Blue (lightened) - rgb(79, 141, 255) */
+    --hover-color: #1F6FEB;     /* Teal Blue - rgb(31, 111, 235) */
+    --bg-color: #121212;            /* Jet Black - rgb(18, 18, 18) */
+    --text-color: #E4E4E7;          /* Light Gray - rgb(228, 228, 231) */
+    --warning-color: #A3E635;        /* Lime Green - rgb(163, 230, 53) */
+    --icon-color: #2C2C2E;        /* Dark Gray - rgb(44, 44, 46) */
+  }
+}
 
 /* Default Light Theme */
-:root {
-    --bg-color: #f5f5f5; /* Background Color - Cultured */
-    --text-color: #111827; /* Text Color - Eerie Black */
-    --button-color: #3B82F6; /* Button Color - Blueberry */
-    --icon-color: #6B7280; /* Icon Color - AuroMetalSaurus */
-    --status-color: #10B981; /* Status Color - Green (Crayola) */
-    --warning-color: #F59E0B; /* Warning Color - Orange */
+html.light {
+    --button-color: #0056D2;
+    --hover-color: #4FB3FF;
+    --bg-color: #F9FAFB;
+    --text-color: #2D2D2D;
+    --warning-color: #1ABC9C;
+    --icon-color: #E0E0E0;
+    --text-shadow: 2px 2px 4px rgba(18, 18, 18, 0.5);
+    --box-shadow: 0 0 3px var(--icon-color);
 }
 
 /* Auto Dark Theme based on OS */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #1F2937; /* Background Color - Yankees Blue */
-        --text-color: #F9FAFB; /* Text Color - Ghost White */
-        --button-color: #60A5FA; /* Button Color - Blue Jeans */
-        --icon-color: #9CA3AF; /* Icon Color - Cadet Grey */
-        --status-color: #34D399; /* Status Color - Eucalyptus */
-        --warning-color: #FBBF24; /* Warning Color - Ripe Mango */
-    }
-}
-
-/* Manual Light Override */
-html.light {
-    --bg-color: #f5f5f5;
-    --text-color: #111827;
-    --button-color: #3B82F6;
-    --icon-color: #6B7280;
-    --status-color: #10B981;
-    --warning-color: #F59E0B;
-    --text-shadow: 2px 2px 4px rgba(31, 41, 55, 0.5);
-    --box-shadow: 0 1px 4px rgba(31, 41, 55, 0.5);
-}
-
-/* Manual Dark Override */
 html.dark {
-    --bg-color: #1F2937;
-    --text-color: #F9FAFB;
-    --button-color: #60A5FA;
-    --icon-color: #9CA3AF;
-    --status-color: #34D399;
-    --warning-color: #FBBF24;
-    --text-shadow: 2px 2px 4px rgba(245, 245, 245, 0.5);
-    --box-shadow: 0 0.5px 4px rgba(245, 245, 245, 0.65);
+    --button-color: #4F8DFF;
+    --hover-color: #1F6FEB;
+    --bg-color: #121212;
+    --text-color: #E4E4E7;
+    --warning-color: #A3E635;
+    --icon-color: #2C2C2E;
+    --text-shadow: 2px 2px 4px rgba(249, 250, 251, 0.5);
+    --box-shadow: 0 0 3px var(--icon-color);
+}
+
+html {
+    scroll-behavior: smooth;;
 }
 
 /* Apply variables globally */
@@ -73,20 +69,27 @@ body {
 }
 
 .ph-button {
-    display: inline-block;
-    padding: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.2rem;
     background-color: var(--button-color);
     color: var(--bg-color);
     border: none;
+    border-radius: 5px;
     cursor: pointer;
     width: 7rem;
-    height: 1.3rem;
-    text-align: center;
+    font-size: 1rem;
 }
 
-.ph-button:hover {
-    color: var(--text-color);
+/* .ph-button:hover {
+    color: var(--hover-color);
     font-weight: bold;
+    background-color: var(--bg-color);
+} */
+
+.ph-link {
+    color: var(--button-color);
 }
 
 .ph-label {
@@ -97,13 +100,42 @@ body {
 }
 
 .ph-hover {
-    font-weight: bold;
     transition: text-shadow 0.3s ease-in-out, filter 0.3s ease-in-out;
 }
 
 .ph-hover:hover {
-    color: var(--warning-color);
+    font-weight: bold;
+    color: var(--hover-color);
+    border-color: var(--hover-color);
     text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
+}
+
+.ph-circle {
+    display: flex;
+    height: 0.5rem;
+    width: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--text-color);
+    align-items: center;
+    justify-content: center;
+    margin: auto 0 auto 0;
+    aspect-ratio: 1 / 1;
+    /* border: 3px solid var(--text-color); */
+}
+
+
+.ph-line-10 {
+    height: 0.05rem;
+    width: 5%;
+    background-color: var(--text-color);
+    margin: auto 0 auto 0;
+}
+
+.ph-line {
+    height: 0.05rem;
+    width: 100%;
+    background-color: var(--text-color);
+    margin: auto 0 auto 0;
 }
 
 .text-shadow {
@@ -112,6 +144,7 @@ body {
 
 .box-shadow {
     box-shadow: var(--box-shadow);
+    border-radius: 5px;
 }
 
 .ph-logo {
@@ -124,18 +157,39 @@ body {
     align-items: center;
     font-size: 1.8rem;
     font-weight: bolder;
-    color: var(--icon-color);
+    color: var(--text-color);
     font-family: Peignot;
 }
 
-.ph-logo:hover {
-    color: var(--warning-color);
-    text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
-    /* transition: text-shadow 0.3s ease-in-out; */
+.ph-top {
+    display: none;
+    position: fixed;
+    height: 2rem;
+    width: 2rem;
+    border-radius: 50%;
+    /* border: 2px solid var(--icon-color); */
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem;
+    font-weight: bolder;
+    color: var(--text-color);
+    font-family: Peignot;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 999;
+    cursor: pointer;
 }
+
+/* .ph-logo:hover {
+    color: var(--hover-color);
+    text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
+    border-color: var(--text-color);
+    transition: text-shadow 0.3s ease-in-out, filter 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+} */
 
 a {
     text-decoration: none;
+    color: var(--button-color);
 }
 
 /* Default: horizontal layout (desktop) */
@@ -153,6 +207,7 @@ a {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-weight: bold;;
 }
 
 .home-nav a {
@@ -241,19 +296,26 @@ a {
 
 .cv-detail {
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin:auto;
     flex-wrap: wrap;
     box-sizing: border-box;
     gap: 0.5rem;
     width: 100%;
+    height: 100vh;
     padding: 0.5rem;
-    margin-bottom: 1.2rem;
+    /* margin-top: -2rem; */
 }
 
 .cv-name {
     display: flex;
+    justify-content: flex-end;
+    flex-direction: column;
     width:100%;
-    font-size: 2rem;
+    font-size: 1.6rem;
     font-weight: bold;
+    word-break: keep-all;
 }
 
 .cv-personal {
@@ -266,20 +328,21 @@ a {
     display: flex;
     flex-direction: column;
     text-align: justify;
-    border-left: 1px solid var(--icon-color);
-    width: 67%;
-    padding-left: 0.5rem;
+    /* border-top: 1px solid var(--icon-color); */
+    width: 100%;
+    /* padding-left: 0.5rem; */
+    margin-bottom: 0;
 }
 
 .cv-title {
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .cv-qlf-title {
     width: 100%;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 /* Mobile View: vertical layout with nav on the left */
@@ -318,7 +381,7 @@ a {
     .home-body {
         margin-left: 60px !important;
         padding: 1rem;
-        width: calc(90vw - 60px); /* Optional: ensures no horizontal scroll */
+        width: 90vw; /* Optional: ensures no horizontal scroll */
         box-sizing: border-box;
         word-break: break-word;
         margin-right: 30px;
@@ -330,5 +393,15 @@ a {
         width: 90vw; /* Optional: ensures no horizontal scroll */
         box-sizing: border-box;
         word-break: break-word;
+    }
+
+    .cv-personal {
+        width: 100%;
+    }
+
+    .cv-profile {
+        width: 100%;
+        border-top: 1px solid var(--icon-color);
+        border-left: none;
     }
 }
