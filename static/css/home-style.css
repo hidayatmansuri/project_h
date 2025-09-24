@@ -11,47 +11,45 @@ Borders/shadow: Subtle outlines and elevations.
 
 /* Default Light Mode Variables */
 :root {
-  --button-color: #0056D2;         /* Royal Blue - rgb(0, 86, 210) */
-  --hover-color: #4FB3FF;       /* Sky Blue - rgb(79, 179, 255) */
-  --bg-color: #F9FAFB;              /* White Smoke - rgb(249, 250, 251) */
-  --text-color: #2D2D2D;            /* Charcoal - rgb(45, 45, 45) */
-  --warning-color: #1ABC9C;          /* Emerald Green - rgb(26, 188, 156) */
-  --icon-color: #E0E0E0;          /* Light Gray - rgb(224, 224, 224) */
+  --button-color: #2C5465;
+  --hover-color: #5F7D8B;
+  --bg-color: #D3D9D4;
+  --text-color: #212A31;
+  --warning-color: #B65C2C;
+  --text-shadow-light: rgba(0,0,0,0.25)
 }
 
 /* Dark Mode Overrides */
 @media (prefers-color-scheme: dark) {
   :root {
-    --button-color: #4F8DFF;       /* Royal Blue (lightened) - rgb(79, 141, 255) */
-    --hover-color: #1F6FEB;     /* Teal Blue - rgb(31, 111, 235) */
-    --bg-color: #121212;            /* Jet Black - rgb(18, 18, 18) */
-    --text-color: #E4E4E7;          /* Light Gray - rgb(228, 228, 231) */
-    --warning-color: #A3E635;        /* Lime Green - rgb(163, 230, 53) */
-    --icon-color: #2C2C2E;        /* Dark Gray - rgb(44, 44, 46) */
+    --button-color: #4A90A4;
+    --hover-color: #A3B9C9;
+    --bg-color: #212A31;
+    --text-color: #D3D9D4;
+    --warning-color: #D98E48;
+    --text-shadow-dark: rgba(0,0,0,0.7)
   }
 }
 
 /* Default Light Theme */
 html.light {
-    --button-color: #0056D2;
-    --hover-color: #4FB3FF;
-    --bg-color: #F9FAFB;
-    --text-color: #2D2D2D;
-    --warning-color: #1ABC9C;
-    --icon-color: #E0E0E0;
-    --text-shadow: 2px 2px 4px rgba(18, 18, 18, 0.5);
+    --button-color: #2C5465;
+    --hover-color: #5F7D8B;
+    --bg-color: #D3D9D4;
+    --text-color: #212A31;
+    --warning-color: #B65C2C;
+    --text-shadow: 2px 2px 4px var(--text-shadow-light);
     --box-shadow: 0 0 3px var(--icon-color);
 }
 
 /* Auto Dark Theme based on OS */
 html.dark {
-    --button-color: #4F8DFF;
-    --hover-color: #1F6FEB;
-    --bg-color: #121212;
-    --text-color: #E4E4E7;
-    --warning-color: #A3E635;
-    --icon-color: #2C2C2E;
-    --text-shadow: 2px 2px 4px rgba(249, 250, 251, 0.5);
+    --button-color: #4A90A4;
+    --hover-color: #A3B9C9;
+    --bg-color: #212A31;
+    --text-color: #D3D9D4;
+    --warning-color: #D98E48;
+    --text-shadow: 2px 2px 4px var(--text-shadow-dark);
     --box-shadow: 0 0 3px var(--icon-color);
 }
 
@@ -107,7 +105,7 @@ body {
     font-weight: bold;
     color: var(--hover-color);
     border-color: var(--hover-color);
-    text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
+    text-shadow: 0 0 5px var(--text-shadow), 0 0 10px var(--text-shadow), 0 0 15px var(--text-shadow);
 }
 
 .ph-circle {
@@ -152,7 +150,7 @@ body {
     height: 2rem;
     width: 2rem;
     border-radius: 50%;
-    border: 2px solid var(--icon-color);
+    border: 2px solid var(--text-color);
     justify-content: center;
     align-items: center;
     font-size: 1.8rem;
@@ -195,6 +193,9 @@ a {
 /* Default: horizontal layout (desktop) */
 .ph-header {
     display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
     justify-content: space-between;
     align-items: center;
     width: 100%;
@@ -328,7 +329,7 @@ a {
     display: flex;
     flex-direction: column;
     text-align: justify;
-    /* border-top: 1px solid var(--icon-color); */
+    /* border-top: 1px solid var(--text-color); */
     width: 100%;
     /* padding-left: 0.5rem; */
     margin-bottom: 0;
@@ -401,7 +402,7 @@ a {
 
     .cv-profile {
         width: 100%;
-        border-top: 1px solid var(--icon-color);
+        border-top: 1px solid var(--text-color);
         border-left: none;
     }
 }
