@@ -62,7 +62,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: Peignot;
-    margin: 0;
+    margin: 5rem 0 0 0;
     padding: 0;
 }
 
@@ -157,6 +157,8 @@ body {
     font-weight: bolder;
     color: var(--text-color);
     font-family: Peignot;
+    text-shadow: var(--text-shadow);
+    cursor: pointer;
 }
 
 .ph-top {
@@ -348,6 +350,11 @@ a {
 
 /* Mobile View: vertical layout with nav on the left */
 @media screen and (max-width: 768px) {
+
+    body {
+        margin: 0;
+    }
+
     .ph-header {
         position: fixed;
         top: 0;
@@ -382,16 +389,17 @@ a {
     .home-body {
         margin-left: 60px !important;
         padding: 1rem;
-        width: 90vw; /* Optional: ensures no horizontal scroll */
+        /*width: 90vw; Optional: ensures no horizontal scroll */
         box-sizing: border-box;
         word-break: break-word;
         margin-right: 30px;
+        width: auto;
     }
 
     .cv-body {
         margin-left: 60px !important;
         padding: 1rem;
-        width: 90vw; /* Optional: ensures no horizontal scroll */
+        /*width: 90vw;  Optional: ensures no horizontal scroll */
         box-sizing: border-box;
         word-break: break-word;
     }
