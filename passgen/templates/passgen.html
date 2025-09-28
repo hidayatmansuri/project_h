@@ -1,0 +1,44 @@
+{% extends "home.html" %}
+
+{% block title %}
+    Pass-Gen
+{% endblock %}
+
+{% block content %}
+    <div class="cv-body">
+        <h3>Password Generator</h3>
+    </div>
+    <form method="post">
+    {% csrf_token %}
+    
+    <label>Length: </label>
+    <input type="number" name="length" min="6" max="32" value="12"><br><br>
+
+    <label>
+      <input type="checkbox" name="numbers"> Include Numbers
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="specials"> Include Special Characters
+    </label><br><br>
+
+    <label>Desired Password:</label><br>
+    <input type="text" name="desired" placeholder="Enter a word (optional)" style="width:300px;" value="{{ desired }}"><br><br>
+
+    <button type="submit">Generate Password</button>
+  </form>
+
+  {% if password %}
+  <div class="result">
+    <h3>Your Password:</h3>
+    <div class="password-box">
+      <input type="text" id="password" value="{{ password }}" readonly>
+      <button type="button" onclick="copyPassword()">Copy</button>
+    </div>
+  </div>
+  {% endif %}
+
+{% endblock %}
+
+{% load static %}
+    <script src="{% static 'js/copyPassword.js' %}"></script>
