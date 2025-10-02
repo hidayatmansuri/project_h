@@ -70,7 +70,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0.2rem;
+    padding: 0.5rem;
+    margin: 1rem;
     background-color: var(--button-color);
     color: var(--bg-color);
     border: none;
@@ -78,16 +79,29 @@ body {
     cursor: pointer;
     width: 7rem;
     font-size: 1rem;
+    float: right;
+    /* width: 100%; */
 }
 
-/* .ph-button:hover {
-    color: var(--hover-color);
+.ph-button:hover {
+    color: var(--button-color);
     font-weight: bold;
-    background-color: var(--bg-color);
-} */
+    background-color: var(--hover-color);
+}
 
 .ph-link {
     color: var(--button-color);
+}
+
+.ph-heading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.4rem;
+    color: var(--text-color);
+    margin: auto 0.5rem;
+    font: bold 1.2rem Gotu;
+    width: 100%;
 }
 
 .ph-label {
@@ -95,6 +109,28 @@ body {
     padding: 0.4rem;
     color: var(--text-color);
     margin: auto 0.5rem;
+}
+
+.ph-warning {
+    display: inline-block;
+    padding: 0.4rem;
+    margin: auto 0.5rem;
+    color: var(--warning-color);
+}
+
+.ph-field {
+    border: 0.1rem solid var(--text-color);
+    border-radius: 5px;
+    padding: 0.1rem 0.3rem 0 0.3rem;
+    background-color: var(--bg-color);
+    font: 1rem Gotu;
+    color: var(--text-color);
+}
+
+.ph-form {
+    /* display: flex; */
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .ph-hover {
@@ -120,7 +156,6 @@ body {
     aspect-ratio: 1 / 1;
     /* border: 3px solid var(--text-color); */
 }
-
 
 .ph-line-10 {
     height: 0.05rem;
@@ -167,7 +202,6 @@ body {
     height: 2rem;
     width: 2rem;
     border-radius: 50%;
-    /* border: 2px solid var(--icon-color); */
     justify-content: center;
     align-items: center;
     font-size: 1.8rem;
@@ -179,13 +213,6 @@ body {
     z-index: 999;
     cursor: pointer;
 }
-
-/* .ph-logo:hover {
-    color: var(--hover-color);
-    text-shadow: 0 0 5px var(--icon-color), 0 0 10px var(--icon-color), 0 0 15px var(--icon-color);
-    border-color: var(--text-color);
-    transition: text-shadow 0.3s ease-in-out, filter 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out;
-} */
 
 a {
     text-decoration: none;
@@ -292,7 +319,7 @@ a {
     box-sizing: border-box;
     justify-content: flex-end;
     position: absolute;
-    /* bottom: 0; */
+    bottom: 0;
     width: 100%;
     padding: 0.5rem;
 }
@@ -347,6 +374,60 @@ a {
     font-weight: bold;
     font-size: 1rem;
 }
+
+.ph-checkbox {
+    /* display: inline-block; */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+    margin: auto 0.5rem;
+    border: 1px solid var(--text-color);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+}
+
+.ph-checkbox:checked {
+    background-color: var(--bg-color);
+    border-color: var(--text-color);
+}
+
+.ph-checkbox:checked::after {
+    content: "✓";
+    color: var(--warning-color);
+    font-size: 1.5rem;
+    position: absolute;
+    /* left: 10px; */
+    top: -10px;
+}
+
+.copy-tooltip {
+    visibility: hidden;
+    color: var(--warning-color);
+    /* text-align: center; */
+    padding: 0.4rem;
+    font-size: bold 1.2rem Golu;
+    margin-left: 8px;
+    position: absolute;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.9s;
+}
+
+.copy-tooltip.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+.fa-copy {
+  margin-left: 8px;
+  cursor: pointer;
+  transition: color 0.9s;
+}
+
 
 /* Mobile View: vertical layout with nav on the left */
 @media screen and (max-width: 768px) {

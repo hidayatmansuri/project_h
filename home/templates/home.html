@@ -42,7 +42,7 @@
                 </div>
                 <div id="desktop-nav">|</div>
                 <label class="theme-toggle-label" for="theme-toggle">
-                    <input class="ph-checkbox" type="checkbox" id="theme-toggle" hidden/>
+                    <input type="checkbox" id="theme-toggle" hidden/>
                     <div class="theme-toggle-circle"><i class="fa-solid fa-circle-half-stroke"></i></div>
                 </label>
             </nav>
@@ -80,6 +80,8 @@
         <footer class="ph-footer">
             &copy; 2025 project-h
         </footer>
+        
         <script src="{% static 'js/theme-toggle.js' %}"></script>
+        {% block script %} {% endblock %}
     </body>
 </html>
