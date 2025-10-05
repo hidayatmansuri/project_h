@@ -16,7 +16,7 @@ Borders/shadow: Subtle outlines and elevations.
   --bg-color: #D3D9D4;
   --text-color: #212A31;
   --warning-color: #B65C2C;
-  --text-shadow-light: rgba(0,0,0,0.25)
+  --text-shadow-light: rgba(33, 42, 49, 0.5);
 }
 
 /* Dark Mode Overrides */
@@ -27,7 +27,7 @@ Borders/shadow: Subtle outlines and elevations.
     --bg-color: #212A31;
     --text-color: #D3D9D4;
     --warning-color: #D98E48;
-    --text-shadow-dark: rgba(0,0,0,0.7)
+    --text-shadow-dark: rgba(211, 217, 212, 0.5);
   }
 }
 
@@ -39,7 +39,9 @@ html.light {
     --text-color: #212A31;
     --warning-color: #B65C2C;
     --text-shadow: 2px 2px 4px var(--text-shadow-light);
-    --box-shadow: 0 0 3px var(--icon-color);
+    --box-shadow: 1px 4px 6px 2px var(--text-shadow-light);
+    --text-shadow-color: var(--text-shadow-light);
+    --text-shadow-invert: 2px 2px 4px var(--text-shadow-dark);
 }
 
 /* Auto Dark Theme based on OS */
@@ -49,8 +51,12 @@ html.dark {
     --bg-color: #212A31;
     --text-color: #D3D9D4;
     --warning-color: #D98E48;
-    --text-shadow: 2px 2px 4px var(--text-shadow-dark);
-    --box-shadow: 0 0 3px var(--icon-color);
+    /* --text-shadow: 2px 2px 4px var(--text-shadow-dark); */
+    --text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.25);
+    /* --box-shadow: 1px 4px 6px 2px var(--text-shadow-dark); */
+    --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 255, 255, 0.05);
+    --text-shadow-color: var(--text-shadow-dark);
+    --text-shadow-invert: 2px 2px 4px var(--text-shadow-light);
 }
 
 html {
@@ -67,19 +73,19 @@ body {
 }
 
 .ph-button {
-    display: flex;
+    /* display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: center; */
     padding: 0.5rem;
     margin: 1rem;
     background-color: var(--button-color);
     color: var(--bg-color);
     border: none;
-    border-radius: 5px;
+    border-radius: 0.2rem;
     cursor: pointer;
     width: 7rem;
     font-size: 1rem;
-    float: right;
+    /* float: right; */
     /* width: 100%; */
 }
 
@@ -87,6 +93,19 @@ body {
     color: var(--button-color);
     font-weight: bold;
     background-color: var(--hover-color);
+}
+
+.ph-border {
+    border: 1px solid var(--text-color);
+    border-radius: 0.2rem;
+}
+
+.ph-card {
+    /* background-color: var(--bg-color, #fff); */
+    border-radius: 10px;
+    /* padding: 1.5rem; */
+    box-shadow: var(--box-shadow);
+    /* transition: box-shadow 0.3s ease, transform 0.2s ease; */
 }
 
 .ph-link {
@@ -119,7 +138,7 @@ body {
 }
 
 .ph-field {
-    border: 0.1rem solid var(--text-color);
+    border: 0.05rem solid var(--text-color);
     border-radius: 5px;
     padding: 0.1rem 0.3rem 0 0.3rem;
     background-color: var(--bg-color);
@@ -131,6 +150,7 @@ body {
     /* display: flex; */
     flex-direction: column;
     gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 .ph-hover {
@@ -253,6 +273,7 @@ a {
     font-size: 1rem;
     width: 80vw;
     margin: auto;
+    flex: 1;
 }
 
 .cv-body {
@@ -260,6 +281,7 @@ a {
     font-size: 1rem;
     width: 80vw;
     margin: auto;
+    flex: 1;
 }
 
 /* Toggle Theme Button */
@@ -275,7 +297,7 @@ a {
     height: 32px;
     background-color: var(--text-color);
     color: var(--bg-color);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: var(--text-shadow-invert);
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -285,7 +307,7 @@ a {
 }
 
 .theme-toggle-circle:hover {
-    box-shadow: 0 0 55px 48px var(--text-color);
+    box-shadow: 0 0 45px 38px var(--text-color);
     transition: background-color 0.8s ease-out, color 0.8s ease-out, box-shadow 0.8s ease-out;
 }
 
@@ -318,9 +340,9 @@ a {
     display: flex;
     box-sizing: border-box;
     justify-content: flex-end;
-    position: absolute;
     bottom: 0;
     width: 100%;
+    height: 100%;
     padding: 0.5rem;
 }
 
@@ -497,5 +519,13 @@ a {
 
     .cv-detail {
         height: 100%;
+    }
+
+    .ph-field {
+        margin-left: 1rem;
+    }
+
+    .theme-toggle-circle:hover {
+        box-shadow: none;
     }
 }

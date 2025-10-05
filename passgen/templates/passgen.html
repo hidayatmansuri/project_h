@@ -5,48 +5,48 @@
 {% endblock %}
 
 {% block content %}
-    <div class="cv-body">
+    <div class="home-body">
         <div class="ph-heading">Password Generator</div>
-    
-        <form method="post" class="ph-form">
-            {% csrf_token %}
-        
-            <label class="ph-label">Length: </label>
-            <input class="ph-field" type="number" name="length" min="6" max="32" value="12"><br>
-
-            {% if error_message %}
-                <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ error_message }}</div><br>
-            {% endif %}
+        <div class="ph-label">Requirements</div>
+        <div class="ph-border ph-card">
+            <form method="post" class="ph-form">
+                {% csrf_token %}
             
-            <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="upper"> Include Uppercase
-            </label><br>
+                <label class="ph-label">Length: </label>
+                <input class="ph-field" type="number" name="length" min="6" max="32" value="12"><br>
 
-            <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="lower"> Include Lowercase
-            </label><br>
+                {% if error_message %}
+                    <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ error_message }}</div><br>
+                {% endif %}
+                
+                <label class="ph-label">
+                    <input class="ph-checkbox" type="checkbox" name="upper"> Include Uppercase
+                </label><br>
 
-            <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="numbs"> Include Numbers
-            </label><br>
+                <label class="ph-label">
+                    <input class="ph-checkbox" type="checkbox" name="lower"> Include Lowercase
+                </label><br>
 
-            <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="symbols"> Include Special Characters
-            </label><br>
+                <label class="ph-label">
+                    <input class="ph-checkbox" type="checkbox" name="numbs"> Include Numbers
+                </label><br>
 
-            <label class="ph-label">Desired Password:</label>
-            <input class="ph-field" type="text" name="desired" min="6" max="32" placeholder="Enter a word (optional)" style="width:300px;" value="{{ desired }}">
-            <br>
+                <label class="ph-label">
+                    <input class="ph-checkbox" type="checkbox" name="symbols"> Include Special Characters
+                </label><br>
 
-            <div>
+                <label class="ph-label">Desired Password:</label>
+                <input class="ph-field" type="text" name="desired" min="6" max="32" placeholder="Enter a word (optional)" value="{{ desired }}">
+                <br>
+
                 <button class="ph-button" type="submit">Generate</button>
-            </div>
-        </form>
+            </form>
+        </div>
         <br>
         {% if password %}
         <div>
             <div class="ph-label">Your Password:</div>
-            <input class="ph-field" type="text" id="password" min="6" max="32" value="{{ password }}" style="width:300px;" readonly>
+            <input class="ph-field" type="text" id="password" min="6" max="32" value="{{ password }}" readonly>
             <i class="fa-regular fa-copy ph-hover" onclick="copyPassword()"></i>
             <span id="copyMsg" class="copy-tooltip">Copied!</span>
         </div>
