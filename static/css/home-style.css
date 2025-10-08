@@ -68,7 +68,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: Peignot;
-    margin: 5rem 0 0 0;
+    margin: 4rem 0 0 0;
     padding: 0;
 }
 
@@ -90,8 +90,9 @@ body {
 }
 
 .ph-button:hover {
-    color: var(--button-color);
+    /* color: var(--hover-color); */
     font-weight: bold;
+    border: 1px solid var(--text-color);
     background-color: var(--hover-color);
 }
 
@@ -127,7 +128,7 @@ body {
     display: inline-block;
     padding: 0.4rem;
     color: var(--text-color);
-    margin: auto 0.5rem;
+    margin: auto auto auto 0.5rem;
 }
 
 .ph-warning {
@@ -239,6 +240,16 @@ a {
     color: var(--button-color);
 }
 
+.ph-space {
+    margin-left: 1rem
+}
+
+.ph-subs {
+    color: var(--text-shadow-color);
+    margin-left: 2.3rem;
+    font-size: 0.8rem;
+}
+
 /* Default: horizontal layout (desktop) */
 .ph-header {
     display: flex;
@@ -268,6 +279,13 @@ a {
     display: none;
 }
 
+.home-nav-label {
+    /* display: inline-block; */
+    padding: 0.4rem;
+    color: var(--text-color);
+    margin: auto 0.5rem;
+}
+
 .home-body {
     font-family: Gotu;
     font-size: 1rem;
@@ -279,7 +297,7 @@ a {
 .cv-body {
     font-family: Gotu;
     font-size: 1rem;
-    width: 80vw;
+    width: 60vw;
     margin: auto;
     flex: 1;
 }
@@ -418,21 +436,20 @@ a {
 }
 
 .ph-checkbox:checked::after {
-    content: "✓";
+    content: "×";
     color: var(--warning-color);
-    font-size: 1.5rem;
+    font-size: 2.5rem;
     position: absolute;
-    /* left: 10px; */
-    top: -10px;
+    left: -3px;
+    top: -14px;
 }
 
 .copy-tooltip {
     visibility: hidden;
     color: var(--warning-color);
-    /* text-align: center; */
     padding: 0.4rem;
-    font-size: bold 1.2rem Golu;
-    margin-left: 8px;
+    font-size: 0.5rem;
+    margin-top: 0.5rem;
     position: absolute;
     z-index: 10;
     opacity: 0;
@@ -452,7 +469,7 @@ a {
 
 
 /* Mobile View: vertical layout with nav on the left */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 765px) {
 
     body {
         margin: 0;
@@ -500,9 +517,10 @@ a {
     }
 
     .cv-body {
-        margin-left: 60px !important;
+        margin-left: 60px;
+        margin-right: auto;
         padding: 1rem;
-        /*width: 90vw;  Optional: ensures no horizontal scroll */
+        width: 80vw;
         box-sizing: border-box;
         word-break: break-word;
     }
@@ -521,9 +539,9 @@ a {
         height: 100%;
     }
 
-    .ph-field {
+    /* .ph-field {
         margin-left: 1rem;
-    }
+    } */
 
     .theme-toggle-circle:hover {
         box-shadow: none;

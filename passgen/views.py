@@ -21,6 +21,7 @@ def passgen(request):
         
         desire_password = request.POST.get("desired", "")
         
+        special_chars = "!£$%^&*+#~@"
         # Collect password characters based on check boxes
         characters = ""
         if includeUpper:
@@ -30,12 +31,16 @@ def passgen(request):
         if includeNumbers:
             characters += string.digits
         if includeSymbols:
-            characters += string.punctuation
+            characters += special_chars
 
+        uppercase_chars = string.ascii_uppercase if includeUpper else ""
+        
         # Makingsure that at-least once checkbox is checked
         if not characters:
             error_message = "Please select at least one of the following password type."
         else:
+            apply_uppercase_limit = includeUpper and includeLower
+            max_uppercase = 2 if length <= 10 else 5
             # If password provided transform
             if desire_password:
                 subs = {
@@ -64,9 +69,19 @@ def passgen(request):
                             password += char
                             
                 while len(password) < length:
-                    password += random.choice(characters)
+                    password += random.choice(characters + uppercase_chars)
             else:
                 password = ''.join(random.choice(characters) for _ in range(length))
+                
+            if apply_uppercase_limit:
+                uppercase_indices = [i for i, c in enumerate(password) if c.isupper()]
+                if len(uppercase_indices) > max_uppercase:
+                    random.shuffle(uppercase_indices)
+                    keep = set(uppercase_indices[:max_uppercase])
+                    password = ''.join(
+                        c.lower() if (i not in keep and c.isupper()) else c
+                        for i, c in enumerate(password)
+                    )
 
     return render(request, 'passgen.html',{
         'password':password,
