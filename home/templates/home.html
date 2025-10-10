@@ -26,11 +26,11 @@
                 </div>
             </a>
             <nav class="home-nav text-shadow">
-                <div class="home-nav-label">
+                {% comment %} <div class="home-nav-label">
                     <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">Project</a>
                     <a href="{% url 'cv' %}"><i id="mobile-nav" class="fa-regular fa-file-code ph-hover"></i></a>
                 </div>
-                <div id="desktop-nav">|</div>
+                <div id="desktop-nav">|</div> {% endcomment %}
                 <div class="home-nav-label">
                     <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">CV</a>
                     <a href="{% url 'cv' %}"><i id="mobile-nav" class="ph-hover fa-regular fa-file-lines"></i></a>
@@ -38,7 +38,7 @@
                 <div id="desktop-nav">|</div>
                 <div class="home-nav-label">
                     <a id="desktop-nav" class="ph-hover" href="{% url 'passgen' %}">Password</a>
-                    <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-regular fa-file-lines"></i></a>
+                    <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-star-of-life"></i></a>
                 </div>
                 <div id="desktop-nav">|</div>
                 <label class="theme-toggle-label" for="theme-toggle">
@@ -51,26 +51,11 @@
 
         <main>
             {% block content %}
-                <div class="home-body">
-                    <div class="para-1">
-                    <h3>Font: Peignot</h3>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-                    </div>
-                    <div class="para-2">
-                    <h3>Font:  Gotu</h3>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-                    </div>
-                    <div class="para-3">
-                    <h3>Font:  Asap</h3>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-                    </div>
-                    <div class="para-4">
-                    <h3>Font:  Playfair</h3>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-                    </div>
-                    <div class="para-5">
-                    <h3>Font:  SourceSerif</h3>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                <div class="welcome-body">
+                    <div class="ph-welcome">project-h</div>
+                    <div class="ph-subs welcome-desc">
+                        <a class="ph-hover" href="{% url 'cv' %}">CV</a><br>
+                        <a class="ph-hover" href="{% url 'passgen' %}">Password Generator</a><br>
                     </div>
                 </div>
             {% endblock %}

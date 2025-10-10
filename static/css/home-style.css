@@ -101,12 +101,16 @@ body {
     border-radius: 0.2rem;
 }
 
+.ph-border-left {
+    border-left: 1px solid var(--text-color);
+    height: 50vh;
+    width: 1vw;
+}
+
 .ph-card {
-    /* background-color: var(--bg-color, #fff); */
     border-radius: 10px;
-    /* padding: 1.5rem; */
+    padding: 1rem;
     box-shadow: var(--box-shadow);
-    /* transition: box-shadow 0.3s ease, transform 0.2s ease; */
 }
 
 .ph-link {
@@ -286,6 +290,96 @@ a {
     margin: auto 0.5rem;
 }
 
+.welcome-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80vw;
+    height: 80vh;
+    margin: auto;
+}
+
+.ph-welcome {
+    font-size: calc(3rem + 5vw);
+    word-break: break-all;
+    flex:1.5;
+    text-align: right;
+}
+
+.welcome-desc {
+    font-family: Gotu;
+    flex:1;
+    border-left: 1px solid var(--text-color);
+    padding: 1rem;
+    font-size: calc(0.8rem + 0.3vw);
+    overflow-y: auto; /* 👈 enables vertical scrolling */
+    max-height: 80vh; /* 👈 keeps it within the visible viewport */
+    scrollbar-width: none; /* optional: makes scrollbar thinner (Firefox) */
+    /* scrollbar-color: var(--text-color) transparent; optional custom colors */
+}
+
+/* For WebKit browsers (Chrome, Edge, Safari) */
+.welcome-desc::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+.welcome-desc::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 2px;
+}
+.welcome-desc::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.welcome-desc {
+    font-family: Gotu, sans-serif;
+    flex: 1;
+    border-left: 1px solid var(--text-color);
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: 80vh;
+    scrollbar-width: none; /* Hide scrollbar in Firefox */
+    scroll-behavior: smooth;
+}
+
+/* Chrome, Edge, Safari — hide scrollbar initially */
+.welcome-desc::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+/* Only show on hover — styled version */
+@media (hover: hover) and (pointer: fine) {
+    .welcome-desc:hover {
+        scrollbar-width: thin; /* Firefox */
+        scrollbar-color: var(--text-shadow-color) var(--bg-color);
+    }
+
+    .welcome-desc:hover::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .welcome-desc:hover::-webkit-scrollbar-track {
+        background: var(--bg-color); /* dark background */
+        border-radius: 10px;
+    }
+
+    .welcome-desc:hover::-webkit-scrollbar-thumb {
+        background: var(--text-color); /* match text color */
+        border-radius: 10px;
+        box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.4); /* subtle depth */
+        transition: background-color 0.3s ease;
+    }
+
+    .welcome-desc:hover::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-color, #00adb5); /* optional hover accent */
+    }
+}
+
+.welcome-desc > a {   
+    color: var(--text-shadow-color);
+}
+
 .home-body {
     font-family: Gotu;
     font-size: 1rem;
@@ -331,11 +425,6 @@ a {
 
 .para-1 {
     font-family: Peignot;
-    /* font-size: 1.2rem; */
-}
-
-.para-2 {
-    font-family: Gotu;
     /* font-size: 1.2rem; */
 }
 
@@ -438,10 +527,10 @@ a {
 .ph-checkbox:checked::after {
     content: "×";
     color: var(--warning-color);
-    font-size: 2.5rem;
+    font-size: 2.6rem;
     position: absolute;
-    left: -3px;
-    top: -14px;
+    left: -4px;
+    top: -15px;
 }
 
 .copy-tooltip {
@@ -504,6 +593,31 @@ a {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+    }
+
+
+    .ph-welcome {
+        display: flex;
+        justify-content: end;
+        align-items: center;
+        flex-direction: column;
+        border-bottom: 1px solid var(--text-color);
+        padding: 2rem;
+    }
+
+    .welcome-body {
+        flex-direction: column;
+        margin-left: 60px;
+    }
+
+    .welcome-desc {
+        font-family: Gotu;
+        flex:1;
+        border-left: none; 
+        padding: 1rem;
+        /* margin-left: 2rem;
+        width: 80%;
+        text-align: center; */
     }
 
     .home-body {
