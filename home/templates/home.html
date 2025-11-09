@@ -32,13 +32,29 @@
                 </div>
                 <div id="desktop-nav">|</div> {% endcomment %}
                 <div class="home-nav-label">
-                    <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">CV</a>
+                    <a id="desktop-nav"  class="ph-hover" href="{% url 'cv' %}">CV</a>
                     <a href="{% url 'cv' %}"><i id="mobile-nav" class="ph-hover fa-regular fa-file-lines"></i></a>
                 </div>
                 <div id="desktop-nav">|</div>
                 <div class="home-nav-label">
                     <a id="desktop-nav" class="ph-hover" href="{% url 'passgen' %}">Password</a>
                     <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-star-of-life"></i></a>
+                </div>
+                <div id="desktop-nav">|</div>
+                <div class="home-nav-label">
+                    <a id="desktop-nav" class="ph-hover" href="{% url 'passgen' %}">Utility</a>
+                    <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-fire-flame-curved"></i></a>
+                </div>    
+                <div id="desktop-nav">|</div>
+                <div class="home-nav-label dropdown">
+                    <a id="desktop-nav" class="ph-hover dropdown-toggle" href="#">Converter</a>
+                    <a href="#"><i id="mobile-nav" class="ph-hover fa-solid fa-repeat"></i></a>
+                    <div class="dropdown-menu">
+                        <a id="desktop-nav" class="ph-hover menu-item" href="{% url 'passgen' %}">Currency</a>
+                        <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-dollar-sign"></i></a>
+                        <a id="desktop-nav" class="ph-hover menu-item" href="{% url 'passgen' %}">Measurement</a>
+                        <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-weight-scale"></i></a>
+                    </div>
                 </div>
                 <div id="desktop-nav">|</div>
                 <label class="theme-toggle-label" for="theme-toggle">
@@ -48,7 +64,6 @@
             </nav>
         </header>
 
-
         <main>
             {% block content %}
                 <div class="welcome-body">
@@ -56,6 +71,9 @@
                     <div class="ph-subs welcome-desc">
                         <a class="ph-hover" href="{% url 'cv' %}">CV</a><br>
                         <a class="ph-hover" href="{% url 'passgen' %}">Password Generator</a><br>
+                        <a class="ph-hover" href="{% url 'passgen' %}">Utility Tracker</a><br>
+                        <a class="ph-hover" href="{% url 'passgen' %}">Currency Converter</a><br>
+                        <a class="ph-hover" href="{% url 'passgen' %}">Measurement Converter</a><br>
                     </div>
                 </div>
             {% endblock %}
@@ -66,7 +84,9 @@
             &copy; 2025 project-h
         </footer>
         
-        <script src="{% static 'js/theme-toggle.js' %}"></script>
-        {% block script %} {% endblock %}
+        {% block scripts %} 
+            <script src="{% static 'js/theme-toggle.js' %}"></script>
+            <script src="{% static 'js/dropdown.js' %}"></script>    
+        {% endblock %}
     </body>
 </html>

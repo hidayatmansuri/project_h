@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'cv',
     'home',
     'passgen',
+    'utilitytracker',
 ]
 
 MIDDLEWARE = [

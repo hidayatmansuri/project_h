@@ -158,15 +158,55 @@ body {
     margin-top: 0.5rem;
 }
 
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-toggle {
+    color: var(--text-color);
+    text-decoration: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    /* top: 100%; */
+    left: -1.1rem;
+    background: var(--bg-color);
+    border-left: 1.3px solid var(--text-color);
+    padding: 0.5rem 1.5rem;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.menu-item {
+    display: flex;
+    padding: 0.4rem 0;
+    cursor: pointer;
+}
+
+.dropdown.open .dropdown-menu {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
 .ph-hover {
     transition: text-shadow 0.3s ease-in-out, filter 0.3s ease-in-out;
 }
 
 .ph-hover:hover {
     font-weight: bold;
+    text-shadow: None;
     color: var(--hover-color);
     border-color: var(--hover-color);
-    text-shadow: 0 0 5px var(--text-shadow), 0 0 10px var(--text-shadow), 0 0 15px var(--text-shadow);
+    /* text-shadow: 0 0 5px var(--text-shadow), 0 0 10px var(--text-shadow), 0 0 15px var(--text-shadow); */
 }
 
 .ph-circle {
@@ -288,6 +328,7 @@ a {
     padding: 0.4rem;
     color: var(--text-color);
     margin: auto 0.5rem;
+    /* font-size: 1.1rem; */
 }
 
 .welcome-body {
