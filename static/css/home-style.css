@@ -389,6 +389,26 @@ a {
     background: transparent;
 }
 
+.utility-container {
+  display:flex; 
+  gap:2rem; 
+  width:90%; 
+  margin:auto;
+}
+
+.utility-left { 
+    flex:2; 
+    min-width:320px; 
+}
+
+.utility-right { 
+    flex:1; 
+    min-width:280px; 
+    display:flex; 
+    flex-direction:column; 
+    gap:1rem; 
+}
+
 /* Only show on hover — styled version */
 @media (hover: hover) and (pointer: fine) {
     .welcome-desc:hover {
@@ -700,5 +720,13 @@ a {
 
     .theme-toggle-circle:hover {
         box-shadow: none;
+    }
+
+    .utility-container { 
+        flex-direction: column; 
+    }
+    
+    .utility-right { 
+        order:-1; 
     }
 }
