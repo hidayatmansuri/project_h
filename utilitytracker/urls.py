@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import utilitytracker
+from .views import utility
 
 urlpatterns = [
-    path('utilitytracker/', utilitytracker, name='utilitytracker'),
+    path('utility', utility, name='utilitytracker'),
 ]

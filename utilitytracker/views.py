@@ -1,142 +1,150 @@
+# utilitytracker/views.py
 from django.shortcuts import render, redirect
 from django.utils import timezone
-from .models import UtilityReading, TopUp, MeterConfig
-from .forms import UtilityReadingForm, TopUpForm
 from datetime import timedelta, date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from .models import UtilityReading, TopUp
+from .forms import UtilityReadingForm, TopUpForm
 
-def utilitytracker(request):
-    # forms
+def utility(request):
     reading_form = UtilityReadingForm()
     topup_form = TopUpForm()
 
     if request.method == 'POST':
-        # either reading submit or top-up submit; distinguish by name attribute in submit button
+        # reading submit
         if 'submit_reading' in request.POST:
             reading_form = UtilityReadingForm(request.POST)
             if reading_form.is_valid():
                 r = reading_form.save(commit=False)
                 r.date = timezone.now().date()
-                # Optional: ensure not duplicate for same date
-                UtilityReading.objects.update_or_create(date=r.date, defaults={
-                    'electricity': r.electricity, 'gas': r.gas
-                })
+                # update or create -> one entry per date
+                UtilityReading.objects.update_or_create(
+                    date=r.date,
+                    defaults={'electricity': r.electricity, 'gas': r.gas}
+                )
                 return redirect('utilitytracker')
-        elif 'submit_topup' in request.POST:
+
+        # topup submit
+        if 'submit_topup' in request.POST:
             topup_form = TopUpForm(request.POST)
             if topup_form.is_valid():
                 topup_form.save()
-                return redirect('utilitytracker')
+                return redirect('utility')
 
-    # fetch readings ordered ascending for computations
-    readings_qs = UtilityReading.objects.all().order_by('date')
+    # --- gather data ---
+    readings_qs = UtilityReading.objects.all().order_by('date')  # ascending
     readings = list(readings_qs)
+    topups_qs = TopUp.objects.all().order_by('date')  # ascending
+    topups = list(topups_qs)
 
-    # fetch topups ordered ascending
-    topups = list(TopUp.objects.all().order_by('date'))
-
-    # load meter configs or defaults
-    configs = {c.meter: c for c in MeterConfig.objects.all()}
-    # ensure configs exist for both meters
-    for m in ['electricity', 'gas']:
-        if m not in configs:
-            # fallback default (not saved)
-            configs[m] = MeterConfig(meter=m, starting_balance=Decimal('0.00'), tariff=Decimal('0.20'))
-
-    # prepare daily usage list (per day) and running balances
-    # We'll compute arrays of dates, elec_usage, gas_usage, elec_balance, gas_balance
-    dates = []
-    elec_usage = []
-    gas_usage = []
-    elec_balance = []
-    gas_balance = []
-    # Start balances
-    elec_bal = Decimal(configs['electricity'].starting_balance)
-    gas_bal = Decimal(configs['gas'].starting_balance)
-    # pointer for previous readings to compute usage
-    prev = None
-
-    # create maps for topups by date (datetime) for quick aggregation
-    # but topups can occur with time; we'll include topups up to and including that date when computing balance for that date
+    # helper: group topups by date (date portion) and also get topups between two dates inclusive
     topups_by_date = {}
     for t in topups:
         d = t.date.date()
         topups_by_date.setdefault(d, []).append(t)
 
-    # iterate through readings
+    # Prepare arrays for charting: dates, elec_usage, gas_usage, and arrays of readings to display
+    chart_dates = []
+    elec_usage = []
+    gas_usage = []
+    elec_readings = []  # the raw meter reading at each date (for display)
+    gas_readings = []
+
+    # We compute usage for each consecutive pair: prev -> current
+    prev = None
     for r in readings:
-        d = r.date
-        # compute usage vs previous
         if prev is None:
-            # no previous: cannot compute usage; treat usage as None or 0
-            eu = None
-            gu = None
-        else:
-            eu = None
-            gu = None
-            if prev.electricity is not None and r.electricity is not None:
-                eu = r.electricity - prev.electricity
-                # guard against negative or unrealistic values:
-                if eu < 0:
-                    eu = None
-            if prev.gas is not None and r.gas is not None:
-                gu = r.gas - prev.gas
-                if gu < 0:
-                    gu = None
+            # can't compute usage for first reading (no previous) — we still store the reading
+            prev = r
+            chart_dates.append(r.date.isoformat())
+            elec_readings.append(float(r.electricity) if r.electricity is not None else None)
+            gas_readings.append(float(r.gas) if r.gas is not None else None)
+            # usage is 0 for first point (so chart line shows 0 or no bar) — we append 0 to keep arrays equal
+            elec_usage.append(0.0)
+            gas_usage.append(0.0)
+            continue
 
-        # add to lists
-        dates.append(d.isoformat())
-        elec_usage.append(eu if eu is not None else 0)
-        gas_usage.append(gu if gu is not None else 0)
+        # compute top-ups that happened strictly between prev.date (exclusive) and r.date (inclusive)
+        # We include topups on the current date (they increase reading before measuring usage)
+        start_dt = prev.date
+        end_dt = r.date
+        # sum topups amounts between dates
+        elec_topups_sum = Decimal('0.00')
+        gas_topups_sum = Decimal('0.00')
+        for t in topups:
+            t_date = t.date.date()
+            if start_dt < t_date <= end_dt:
+                if t.meter == 'electricity':
+                    elec_topups_sum += Decimal(t.amount)
+                elif t.meter == 'gas':
+                    gas_topups_sum += Decimal(t.amount)
 
-        # apply topups for this date (if any) BEFORE subtracting day's consumption
-        todays_topups = topups_by_date.get(d, [])
-        for t in todays_topups:
-            if t.meter == 'electricity':
-                elec_bal += Decimal(t.credit)
-                # if units were supplied, optionally convert currency -> units or track both
-                # we use currency-based balance
-            elif t.meter == 'gas':
-                gas_bal += Decimal(t.credit)
+        # default to 0 if readings missing
+        eu = 0.0
+        gu = 0.0
 
-        # subtract consumption cost (use tariff), only if we have eu/gu
-        if eu is not None:
-            # tariff as Decimal
-            tariff = Decimal(configs['electricity'].tariff)
-            elec_bal -= Decimal(eu) * tariff
-        if gu is not None:
-            tariff = Decimal(configs['gas'].tariff)
-            gas_bal -= Decimal(gu) * tariff
+        # electricity usage = prev.electricity - (current.electricity - elec_topups_sum)
+        if prev.electricity is not None and r.electricity is not None:
+            try:
+                eu_calc = (Decimal(prev.electricity) - (Decimal(r.electricity) - elec_topups_sum))
+                # if negative (shouldn't happen if data sane), set 0
+                eu = float(eu_calc) if eu_calc > 0 else 0.0
+            except (InvalidOperation, TypeError):
+                eu = 0.0
 
-        elec_balance.append(float(elec_bal))
-        gas_balance.append(float(gas_bal))
+        # gas usage similar
+        if prev.gas is not None and r.gas is not None:
+            try:
+                gu_calc = (Decimal(prev.gas) - (Decimal(r.gas) - gas_topups_sum))
+                gu = float(gu_calc) if gu_calc > 0 else 0.0
+            except (InvalidOperation, TypeError):
+                gu = 0.0
+
+        # Append current date and usage
+        chart_dates.append(r.date.isoformat())
+        elec_usage.append(round(eu, 2))
+        gas_usage.append(round(gu, 2))
+        elec_readings.append(float(r.electricity) if r.electricity is not None else None)
+        gas_readings.append(float(r.gas) if r.gas is not None else None)
 
         prev = r
 
-    # prepare chart datasets for Chart.js
+    # Last 30 days readings (aligned dates row) — create list of last 30 dates and map readings if present
+    today = timezone.now().date()
+    last_30_dates = [today - timedelta(days=i) for i in reversed(range(30))]  # oldest -> newest
+    readings_map = {r.date: r for r in readings}
+
+    last_30_rows = []
+    for d in reversed(last_30_dates):
+        r = readings_map.get(d)
+        if r and (r.electricity is not None or r.gas is not None):
+            last_30_rows.append({
+                'date': d.isoformat(),
+                'electricity': float(r.electricity) if (r and r.electricity is not None) else None,
+                'gas': float(r.gas) if (r and r.gas is not None) else None,
+            })
+
+    # Top-ups table (most recent first)
+    recent_topups = TopUp.objects.all().order_by('-date')[:50]
+
+    # Chart payload (daily arrays)
     chart_payload = {
-        'dates': dates,
+        'dates': chart_dates,
         'elec_usage': elec_usage,
         'gas_usage': gas_usage,
-        'elec_balance': elec_balance,
-        'gas_balance': gas_balance,
-        # topup points to mark on balance graph
+        'elec_readings': elec_readings,
+        'gas_readings': gas_readings,
         'topups': [
-            {'date': t.date.date().isoformat(), 'meter': t.meter, 'credit': float(t.credit)}
-            for t in topups
+            {'date': t.date.isoformat(), 'meter': t.meter, 'amount': float(t.amount), 'note': t.note}
+            for t in recent_topups
         ]
     }
-
-    # last 30 days reading table (align dates row)
-    today = timezone.now().date()
-    start_30 = today - timedelta(days=30)
-    last_30 = UtilityReading.objects.filter(date__gte=start_30).order_by('date')
 
     context = {
         'reading_form': reading_form,
         'topup_form': topup_form,
         'chart_payload': chart_payload,
-        'last_30': last_30,
-        'configs': configs,
+        'last_30_rows': last_30_rows,
+        'recent_topups': recent_topups,
     }
     return render(request, 'utility_home.html', context)

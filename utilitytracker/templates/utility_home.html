@@ -7,7 +7,7 @@
 <div class="utility-container ph-card cv-body">
   <!-- layout: content area (left) and forms (right on desktop / top on mobile) -->
   <div class="utility-left">
-    <h2>Usage Graphs</h2>
+    <div class="ph-heading">Usage Graphs</div>
 
     <div class="graph-controls">
       <label><input type="radio" name="viewMode" value="daily" checked> Daily</label>
@@ -19,22 +19,27 @@
     <canvas id="consumptionChart" height="180"></canvas>
     <canvas id="balanceChart" height="120" style="display:none; margin-top:1rem;"></canvas>
 
-    <h3>Last 30 days</h3>
+    <div class="ph-heading">Last 30 days</div>
     <table class="ph-table">
       <thead><tr><th>Date</th><th>Electricity</th><th>Gas</th></tr></thead>
       <tbody>
-      {% for r in last_30 %}
-        <tr><td>{{ r.date }}</td><td>{{ r.electricity }}</td><td>{{ r.gas }}</td></tr>
+      {% for r in last_30_rows %}
+        <tr><td>{{ r.date }}</td><td>£{{ r.electricity|floatformat:2 }}</td><td>£{{ r.gas|floatformat:2 }}</td></tr>
       {% empty %}
         <tr><td colspan="3">No readings yet</td></tr>
       {% endfor %}
       </tbody>
+      <tr>
+      {% for d in last_30_dates %}
+        <th>{{ d }}</th>
+      {% endfor %}
+      </tr>
     </table>
   </div>
 
   <div class="utility-right">
     <div class="ph-card">
-      <h3>Submit Today's Reading</h3>
+      <div class="ph-heading">Submit Today's Reading</div>
       <form method="POST">
         {% csrf_token %}
         {{ reading_form.electricity.label_tag }}<br>
@@ -46,28 +51,17 @@
     </div>
 
     <div class="ph-card" style="margin-top:1rem;">
-      <h3>Top-up (Pre-pay)</h3>
+      <div class="ph-heading">Top-up (Pre-pay)</div>
       <form method="POST">
         {% csrf_token %}
         {{ topup_form.meter.label_tag }}<br>
         {{ topup_form.meter }}<br>
-        {{ topup_form.credit.label_tag }}<br>
-        {{ topup_form.credit }}<br>
-        {{ topup_form.units.label_tag }}<br>
-        {{ topup_form.units }}<br>
+        {{ topup_form.amount.label_tag }}<br>
+        {{ topup_form.amount }}<br>
         {{ topup_form.note.label_tag }}<br>
         {{ topup_form.note }}<br><br>
         <button class="ph-button" name="submit_topup" type="submit">Submit Top-up</button>
       </form>
-    </div>
-
-    <div class="ph-card" style="margin-top:1rem;">
-      <h4>Meter Settings</h4>
-      <p>Electricity tariff: {{ configs.electricity.tariff }} per unit</p>
-      <p>Electricity start balance: {{ configs.electricity.starting_balance }}</p>
-      <p>Gas tariff: {{ configs.gas.tariff }} per unit</p>
-      <p>Gas start balance: {{ configs.gas.starting_balance }}</p>
-      <small>To change these, edit MeterConfig in admin or extend UI to allow edits.</small>
     </div>
   </div>
 </div>
@@ -91,7 +85,7 @@
     data: {
       labels: dates,
       datasets: [
-        { label: 'Electricity (units)', data: elecUsage, borderColor: '#FFD056', fill:false, tension:0.3 },
+        { label: 'Electricity (units)', data: elecUsage, borderColor: '#FFD056', fill:false, tension:0.1 },
         { label: 'Gas (units)', data: gasUsage, borderColor: '#4BC0C0', fill:false, tension:0.3 }
       ]
     },

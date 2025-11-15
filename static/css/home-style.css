@@ -396,6 +396,28 @@ a {
   margin:auto;
 }
 
+.utility-form {
+    flex: 1;
+    min-width: 280px;
+}
+
+.utility-data {
+    flex: 2;
+    min-width: 320px;
+}
+
+.ph-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.ph-table th, .ph-table td {
+    border: 1px solid var(--text-color);
+    padding: 0.5rem;
+    text-align: center;
+}
+
 .utility-left { 
     flex:2; 
     min-width:320px; 
