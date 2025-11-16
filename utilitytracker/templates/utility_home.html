@@ -4,10 +4,10 @@
 {% block title %}Utility Tracker{% endblock %}
 
 {% block content %}
-<div class="utility-container ph-card cv-body">
+<div class="utility-container ph-card ph-border home-body">
   <!-- layout: content area (left) and forms (right on desktop / top on mobile) -->
   <div class="utility-left">
-    <div class="ph-heading">Usage Graphs</div>
+    <div class="ph-heading">Daily Usage Graphs</div>
 
     <div class="graph-controls">
       <label><input type="radio" name="viewMode" value="daily" checked> Daily</label>
@@ -18,7 +18,8 @@
 
     <canvas id="consumptionChart" height="180"></canvas>
     <canvas id="balanceChart" height="120" style="display:none; margin-top:1rem;"></canvas>
-
+    <br>
+    <div class="ph-line"></div>
     <div class="ph-heading">Last 30 days</div>
     <table class="ph-table">
       <thead><tr><th>Date</th><th>Electricity</th><th>Gas</th></tr></thead>
@@ -38,99 +39,41 @@
   </div>
 
   <div class="utility-right">
-    <div class="ph-card">
-      <div class="ph-heading">Submit Today's Reading</div>
+    <div class="ph-form">
+      <div class="ph-heading">Today's Reading</div>
       <form method="POST">
         {% csrf_token %}
-        {{ reading_form.electricity.label_tag }}<br>
-        {{ reading_form.electricity }}<br>
-        {{ reading_form.gas.label_tag }}<br>
-        {{ reading_form.gas }}<br><br>
-        <button class="ph-button" name="submit_reading" type="submit">Submit Reading</button>
+        <div class="ph-label">{{ reading_form.electricity.label_tag }}</div><br>
+        <div class="ph-space">{{ reading_form.electricity }}</div><br>
+        <div class="ph-label">{{ reading_form.gas.label_tag }}</div><br>
+        <div class="ph-space">{{ reading_form.gas }}</div><br>
+        <button class="ph-button" name="submit_reading" type="submit">Submit</button>
       </form>
     </div>
-
-    <div class="ph-card" style="margin-top:1rem;">
+    <div class="ph-line"></div>
+    <div class="ph-form">
       <div class="ph-heading">Top-up (Pre-pay)</div>
       <form method="POST">
         {% csrf_token %}
-        {{ topup_form.meter.label_tag }}<br>
-        {{ topup_form.meter }}<br>
-        {{ topup_form.amount.label_tag }}<br>
-        {{ topup_form.amount }}<br>
-        {{ topup_form.note.label_tag }}<br>
-        {{ topup_form.note }}<br><br>
-        <button class="ph-button" name="submit_topup" type="submit">Submit Top-up</button>
+        <div class="ph-label">{{ topup_form.meter.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.meter }}</div><br>
+        <div class="ph-label">{{ topup_form.amount.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.amount }}</div><br>
+        <div class="ph-label">{{ topup_form.note.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.note }}</div><br>
+        <button class="ph-button" name="submit_topup" type="submit">Top-up</button>
       </form>
     </div>
   </div>
 </div>
 
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const payload = {{ chart_payload|safe }};
-  // Raw arrays
-  const dates = payload.dates || [];
-  const elecUsage = payload.elec_usage || [];
-  const gasUsage = payload.gas_usage || [];
-  const elecBal = payload.elec_balance || [];
-  const gasBal = payload.gas_balance || [];
-  const topups = payload.topups || [];
-
-  // consumption chart
-  const ctxC = document.getElementById('consumptionChart').getContext('2d');
-  const consumptionChart = new Chart(ctxC, {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [
-        { label: 'Electricity (units)', data: elecUsage, borderColor: '#FFD056', fill:false, tension:0.1 },
-        { label: 'Gas (units)', data: gasUsage, borderColor: '#4BC0C0', fill:false, tension:0.3 }
-      ]
-    },
-    options: {
-      responsive: true, scales:{ y:{ beginAtZero:true } },
-      plugins:{ legend:{ position:'top' } }
-    }
-  });
-
-  // balance chart
-  const ctxB = document.getElementById('balanceChart').getContext('2d');
-  const balanceChart = new Chart(ctxB, {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [
-        { label:'Electricity Balance', data: elecBal, borderColor:'#FF8A65', fill:false, tension:0.3 },
-        { label:'Gas Balance', data: gasBal, borderColor:'#90A4AE', fill:false, tension:0.3 },
-        // top-ups will be plotted as scatter points through separate dataset(s)
-        { label:'Top-ups (Electricity)', data: topups.filter(t => t.meter==='electricity').map(t => ({ x:t.date, y: 0 })), type:'scatter', pointBackgroundColor:'#FF8A65', pointRadius:6 },
-        { label:'Top-ups (Gas)', data: topups.filter(t => t.meter==='gas').map(t => ({ x:t.date, y: 0 })), type:'scatter', pointBackgroundColor:'#90A4AE', pointRadius:6 }
-      ]
-    },
-    options: {
-      responsive:true,
-      scales: { x: { type:'time', time: { parser:'yyyy-MM-dd', unit:'day' } }, y: { beginAtZero:false } },
-      plugins: { legend:{ position:'top' } }
-    }
-  });
-
-  // toggles
-  document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      // TODO: implement aggregation for monthly/yearly when chosen
-      // For now, we keep daily; you can implement grouping easily client-side or request aggregated data from server
-      consumptionChart.update();
-      balanceChart.update();
-    });
-  });
-
-  document.getElementById('showBalance').addEventListener('change', (e) => {
-    const show = e.target.checked;
-    document.getElementById('balanceChart').style.display = show ? 'block' : 'none';
-  });
-</script>
 {% endblock %}
 
+{% block script %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    window.chartPayload = {{ chart_payload|safe }};
+  </script>
+  <script src="{% static 'js/utility-chart.js' %}"></script>
 {% endblock %}

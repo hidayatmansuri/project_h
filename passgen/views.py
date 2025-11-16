@@ -89,5 +89,3 @@ def passgen(request):
         'error_message':error_message,
         }
     )
-
-

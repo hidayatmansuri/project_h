@@ -84,9 +84,9 @@
             &copy; 2025 project-h
         </footer>
         
-        {% block scripts %} 
-            <script src="{% static 'js/theme-toggle.js' %}"></script>
-            <script src="{% static 'js/dropdown.js' %}"></script>    
+        {% block script %}
+            <script src="{% static 'js/dropdown.js' %}"></script> 
+            <script src="{% static 'js/theme-toggle.js' %}"></script>   
         {% endblock %}
     </body>
 </html>

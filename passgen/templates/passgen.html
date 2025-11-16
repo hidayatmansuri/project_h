@@ -11,11 +11,10 @@
         <div class="ph-border ph-card">
             <form method="post" class="ph-form">
                 {% csrf_token %}
-            
                 <label class="ph-label">Length: </label>
                 <input class="ph-field" type="number" name="length" min="6" max="32" value="12"><br>
                 <div class="ph-space">
-                    <div class="ph-subs">Password length should be between 8 and 32 characters for security.</div>
+                    <div class="ph-subs">Password length should be between 8 and 32 characters for security reasons.</div>
                 </div>
                 {% if error_message %}
                     <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ error_message }}</div><br>
@@ -42,7 +41,7 @@
                 <div class="ph-space">
                     <input class="ph-field" type="text" name="desired" min="6" max="32" placeholder="Enter a word (optional)" value="{{ desired }}">    
                 </div>
-                {% comment %} <br> {% endcomment %}
+                <br>
                 <button class="ph-button" type="submit">Generate</button>
             </form>
         </div>
@@ -60,5 +59,6 @@
 
 {% block script %}
     {% load static %}
-        <script src="{% static 'js/copyPassword.js' %}"></script>
+    {{ block.super }}
+    <script src="{% static 'js/copyPassword.js' %}"></script>
 {% endblock %}
