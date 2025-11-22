@@ -291,7 +291,7 @@ a {
 }
 
 .ph-subs {
-    display: flex;
+    /* display: flex; */
     color: var(--text-shadow-color);
     margin-left: 2.3rem;
     font-size: 0.8rem;
@@ -617,6 +617,10 @@ a {
     position: absolute;
     left: -4px;
     top: -15px;
+}
+
+.ph-radio {
+
 }
 
 .copy-tooltip {

@@ -30,7 +30,7 @@ def utility(request):
             topup_form = TopUpForm(request.POST)
             if topup_form.is_valid():
                 topup_form.save()
-                return redirect('utility')
+                return redirect('utilitytracker')
 
     # --- gather data ---
     readings_qs = UtilityReading.objects.all().order_by('date')  # ascending
