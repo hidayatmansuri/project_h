@@ -23,14 +23,14 @@ def utility(request):
                     date=r.date,
                     defaults={'electricity': r.electricity, 'gas': r.gas}
                 )
-                return redirect('utilitytracker')
+                return redirect('utility')
 
         # topup submit
         if 'submit_topup' in request.POST:
             topup_form = TopUpForm(request.POST)
             if topup_form.is_valid():
                 topup_form.save()
-                return redirect('utilitytracker')
+                return redirect('utility')
 
     # --- gather data ---
     readings_qs = UtilityReading.objects.all().order_by('date')  # ascending

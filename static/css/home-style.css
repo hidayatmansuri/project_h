@@ -113,6 +113,10 @@ body {
     box-shadow: var(--box-shadow);
 }
 
+.ph-center {
+    margin: 0 auto;
+}
+
 .ph-link {
     color: var(--button-color);
 }
@@ -152,7 +156,6 @@ body {
 }
 
 .ph-form {
-    /* display: flex; */
     flex-direction: column;
     gap: 0.5rem;
     margin-top: 0.5rem;
@@ -620,7 +623,7 @@ a {
 }
 
 .ph-radio {
-
+    
 }
 
 .copy-tooltip {
@@ -756,6 +759,6 @@ a {
     }
     
     .utility-right { 
-        order:-1; 
+        order:1; 
     }
 }

@@ -114,8 +114,3 @@ document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
     balanceChart.update();
   });
 });
-
-document.getElementById('showBalance').addEventListener('change', (e) => {
-  const show = e.target.checked;
-  document.getElementById('balanceChart').style.display = show ? 'block' : 'none';
-});

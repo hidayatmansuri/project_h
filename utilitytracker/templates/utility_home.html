@@ -13,11 +13,10 @@
       <label><input type="radio" name="viewMode" value="daily" checked> Daily</label>
       <label><input type="radio" name="viewMode" value="monthly"> Monthly</label>
       <label><input type="radio" name="viewMode" value="yearly"> Yearly</label>
-      <label><input type="checkbox" id="showBalance"> Show Balance</label>
     </div>
 
     <canvas id="consumptionChart" height="180"></canvas>
-    <canvas id="balanceChart" height="120" style="display:none; margin-top:1rem;"></canvas>
+    
     <br>
     <div class="ph-line"></div>
     <div class="ph-heading">Last 30 days</div>
@@ -41,7 +40,7 @@
   <div class="utility-right">
     <div class="ph-form">
       <div class="ph-heading">Today's Reading</div>
-      <form method="POST">
+      <form method="POST" class="ph-center">
         {% csrf_token %}
         <div class="ph-label">{{ reading_form.electricity.label_tag }}</div><br>
         <div class="ph-space">{{ reading_form.electricity }}</div><br>
