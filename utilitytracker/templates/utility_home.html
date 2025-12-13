@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="utility-container home-body">
-  <!-- layout: content area (left) and forms (right on desktop / top on mobile) -->
+  <!-- layout: content area (left) and forms (right on desktop) -->
   <div class="utility-left">
     <div class="ph-heading">Daily Usage Graphs</div>
 
@@ -13,9 +13,11 @@
       <label><input type="radio" name="viewMode" value="daily" checked> Daily</label>
       <label><input type="radio" name="viewMode" value="monthly"> Monthly</label>
       <label><input type="radio" name="viewMode" value="yearly"> Yearly</label>
+      <label><input type="checkbox" id="showBalance"> Show Balance</label>
     </div>
 
     <canvas id="consumptionChart" height="180"></canvas>
+    <canvas id="balanceChart" height="120" style="display:none; margin-top:1rem;"></canvas>
     
     <br>
     <div class="ph-line"></div>
@@ -38,9 +40,9 @@
   </div>
 
   <div class="utility-right">
-    <div class="ph-form">
+    <div class="ph-form ph-center">
       <div class="ph-heading">Today's Reading</div>
-      <form method="POST" class="ph-center">
+      <form method="POST">
         {% csrf_token %}
         <div class="ph-label">{{ reading_form.electricity.label_tag }}</div><br>
         <div class="ph-space">{{ reading_form.electricity }}</div><br>
@@ -50,7 +52,7 @@
       </form>
     </div>
     <div class="ph-line"></div>
-    <div class="ph-form">
+    <div class="ph-form ph-center">
       <div class="ph-heading">Top-up (Pre-pay)</div>
       <form method="POST">
         {% csrf_token %}

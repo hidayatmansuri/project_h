@@ -58,8 +58,6 @@ const consumptionChart = new Chart(ctxC, {
 });
 
 // ------------------ BALANCE CHART ------------------
-const ctxB = document.getElementById('balanceChart').getContext('2d');
-
 const balanceChart = new Chart(ctxB, {
   type: 'line',
   data: {
@@ -100,17 +98,27 @@ const balanceChart = new Chart(ctxB, {
   options: {
     responsive:true,
     scales: {
-      x: { type:'time', time: { parser:'dd-MM-yyyy', unit:'day' } },
+      x: {
+        type:'time',
+        time: { parser:'yyyy-MM-dd', unit:'day' }
+      },
       y: { beginAtZero:false }
     },
     plugins: { legend:{ position:'top' } }
   }
 });
 
+
 // ------------------ TOGGLES ------------------
-document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    consumptionChart.update();
+
+document.getElementById('showBalance').addEventListener('change', (e) => {
+  const show = e.target.checked;
+  const balanceCanvas = document.getElementById('balanceChart');
+  balanceCanvas.style.display = show ? 'block' : 'none';
+
+  if (show) {
     balanceChart.update();
-  });
+  }
 });
+
+
