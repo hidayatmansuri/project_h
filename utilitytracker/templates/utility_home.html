@@ -1,0 +1,101 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block title %}Utility Tracker{% endblock %}
+
+{% block content %}
+<div class="utility-container home-body">
+  <!-- layout: content area (left) and forms (right on desktop) -->
+  <div class="utility-left">
+    <div class="ph-heading">Usage Graphs</div>
+
+    <div class="graph-controls">
+      <label><input type="radio" name="viewMode" value="daily" checked> Daily</label>
+      <label><input type="radio" name="viewMode" value="monthly"> Monthly</label>
+      <label><input type="radio" name="viewMode" value="yearly"> Yearly</label>
+      <label><input type="checkbox" id="showBalance"> Show Balance</label>
+    </div>
+
+    <canvas id="consumptionChart" height="180"></canvas>
+    <canvas id="balanceChart" height="120" style="display:none; margin-top:1rem;"></canvas>
+
+    <br>
+    <div class="ph-line"></div>
+    <div class="ph-heading">Last 30 days</div>
+    <table class="ph-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Electricity</th>
+          <th>Gas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in last_30_rows %}
+        <tr>
+          <td>{{ r.date }}</td>
+          <td>£{{ r.electricity|floatformat:2 }}</td>
+          <td>£{{ r.gas|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3">No readings yet</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="utility-right">
+    <div class="ph-form ph-center">
+      <div class="ph-heading">Submit Reading</div>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="ph-label">{{ reading_form.date.label_tag }}</div><br>
+        <div class="ph-space">{{ reading_form.date }}</div><br>
+        <div class="ph-label">{{ reading_form.electricity.label_tag }}</div><br>
+        <div class="ph-space">{{ reading_form.electricity }}</div><br>
+        <div class="ph-label">{{ reading_form.gas.label_tag }}</div><br>
+        <div class="ph-space">{{ reading_form.gas }}</div><br>
+        <button class="ph-button" name="submit_reading" type="submit">Submit</button>
+      </form>
+    </div>
+    <div class="ph-line"></div>
+    <div class="ph-form ph-center">
+      <div class="ph-heading">Top-up (Pre-pay)</div>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="ph-label">{{ topup_form.date.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.date }}</div><br>
+        <div class="ph-label">{{ topup_form.meter.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.meter }}</div><br>
+        <div class="ph-label">{{ topup_form.amount.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.amount }}</div><br>
+        <div class="ph-label">{{ topup_form.note.label_tag }}</div><br>
+        <div class="ph-space">{{ topup_form.note }}</div><br>
+        <button class="ph-button" name="submit_topup" type="submit">Top-up</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{{ chart_payload|json_script:"chart-data" }}
+<script>
+  window.chartPayload = JSON.parse(document.getElementById('chart-data').textContent);
+  
+  // Initialize Flatpickr on date inputs
+  flatpickr('input[type="date"]', {
+    dateFormat: "Y-m-d",
+    disableMobile: true // Prevents mobile browsers from using native popups
+  });
+</script>
+<script src="{% static 'js/utility-chart.js' %}"></script>
+{% endblock %}

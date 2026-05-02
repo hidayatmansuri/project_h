@@ -1,0 +1,75 @@
+{% extends "home.html" %}
+
+{% block title %}
+    CV
+{% endblock %}
+
+{% block content %}
+    <div class="home-body">
+        {% for p in personal_info %}
+        {% comment %} <div class="cv-name">
+            <div>{{ p.name }}</div>
+        </div> {% endcomment %}
+        <div class="cv-detail">
+            {% comment %} <div class="cv-personal"> {% endcomment %}
+            <div class="cv-name">{{ p.name }}</div>
+                {% comment %} <div>0{{ p.phone }}</div> {% endcomment %}
+                {% comment %} <div>{{ p.address }}</div> {% endcomment %}
+            {% comment %} </div> {% endcomment %}
+            <div class="cv-profile">
+                {{ p.profile|linebreaksbr }}
+            </div>
+            <div class="ph-link"><a href="#experience" class="ph-hover">experience</a> | <a href="#skill" class="ph-hover">skill</a></div>
+        </div>
+        {% endfor %}
+        
+        <div id="experience" class="cv-name">
+            {% comment %} <div class="ph-circle"></div>
+            <div class="ph-line-10"></div> {% endcomment %}
+            Experience
+            {% comment %} <div class="ph-line"></div>
+            <div class="ph-circle"></div> {% endcomment %}
+        </div>
+        {% for e in experience %}
+        <div class="cv-detail">
+            <div class="cv-personal">
+                <div class="cv-title">{{ e.title }}</div>
+                <div><i class="fa-solid fa-building"></i> {{ e.employer }}</div>
+                <div><i class="fa-solid fa-industry"></i> {{ e.industry }}</div>
+                <div><i class="fa-solid fa-timeline"></i> {{ e.start_date|date:"M y" }} - 
+                {% if e.end_date %}
+                    {{ e.end_date|date:"M y" }}
+                {% else %}
+                    Present
+                {% endif %}
+                </div>
+            </div>
+            <div class="cv-profile">
+                {{ e.description|linebreaksbr }}
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div id="skill" class="cv-name">
+            Qualification
+        </div>
+        {% for qlf in qualification %}
+        <div class="cv-detail box-shadow">
+            <div class="cv-qlf-title">{{ qlf.degree }}</div>
+            <div class="cv-personal">
+                <div><i class="fa-solid fa-building"></i> {{ qlf.institute }}</div>
+                <div><i class="fa-solid fa-timeline"></i> {{ qlf.start_date|date:"M y" }} - 
+                {% if qlf.end_date %}
+                    {{ qlf.end_date|date:"M y" }}
+                {% else %}
+                    Present
+                {% endif %}
+                </div>
+            </div>
+            <div class="cv-profile">
+                {{ qlf.subject|linebreaksbr }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}
