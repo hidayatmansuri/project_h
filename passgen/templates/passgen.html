@@ -1,62 +1,75 @@
 {% extends "home.html" %}
 
 {% block title %}
-    Password Generator
+Password Generator
 {% endblock %}
 
 {% block content %}
-    <div class="home-body">
+<div class="passgen-body">
+    <div class="passgen-left">
+        <div class="ph-heading">Requirements:</div>
+        <span class="passgen-left-req">Password length should be between 8 and 32 characters for security
+            reasons.</span>
+        <span class="passgen-left-req">Considered Special Charatcers: "! £ $ % ^ & * + # ~ @"</span>
+    </div>
+    <div class="passgen-right">
         <div class="ph-heading">Password Generator</div>
-        <div class="ph-label">Requirements:</div>
-        <div class="ph-border ph-card">
-            <form method="post" class="ph-form">
-                {% csrf_token %}
-                <label class="ph-label">Length: </label>
-                <input class="ph-field" type="number" name="length" min="6" max="32" value="12"><span class="ph-subs">Password length should be between 8 and 32 characters for security reasons.</span>
-                <div class="ph-space"></div>
-                {% if error_message %}
-                    <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ error_message }}</div><br>
-                {% endif %}
-                
-                <label class="ph-label">
-                    <input class="ph-checkbox" type="checkbox" name="upper"> Include Uppercase
-                </label>
 
-                <label class="ph-label">
-                    <input class="ph-checkbox" type="checkbox" name="lower"> Include Lowercase
-                </label>
-
-                <label class="ph-label">
-                    <input class="ph-checkbox" type="checkbox" name="numbs"> Include Numbers
-                </label>
-
-                <label class="ph-label">
-                    <input class="ph-checkbox" type="checkbox" name="symbols"> Include Special Characters
-                    <span class="ph-subs">Considered Special Charatcers: "! £ $ % ^ & * + # ~ @"</span>
-                </label><br>
-
-                <label class="ph-label">Desired Password:</label>
+        <form method="post" class="ph-form">
+            {% csrf_token %}
+            <div class="ph-label">
+                <label>Length: </label>
                 <div class="ph-space">
-                    <input class="ph-field" type="text" name="desired" min="6" max="32" placeholder="Enter a word (optional)" value="{{ desired }}">    
+                    <input class="ph-field" type="number" name="length" min="6" max="32" value="12">
                 </div>
-                <br>
-                <button class="ph-button" type="submit">Generate</button>
-            </form>
-        </div>
-        <br>
+            </div>
+            {% if error_message %}
+            <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ error_message }}</div><br>
+            {% endif %}
+
+            <label class="ph-label">Include the Following: </label>
+            <label class="ph-label">
+                <input class="ph-checkbox" type="checkbox" name="upper"> Uppercase
+            </label>
+
+            <label class="ph-label">
+                <input class="ph-checkbox" type="checkbox" name="lower"> Lowercase
+            </label>
+
+            <label class="ph-label">
+                <input class="ph-checkbox" type="checkbox" name="numbs"> Numbers
+            </label>
+
+            <label class="ph-label">
+                <input class="ph-checkbox" type="checkbox" name="symbols"> Special Characters
+            </label>
+            <!-- <br> -->
+            <label class="ph-label">Desired Password:</label>
+            <div class="ph-space">
+                <input class="ph-field" type="text" name="desired" min="6" max="32"
+                    placeholder="Enter a word (optional)" value="{{ desired }}">
+            </div>
+            <br>
+            <button class="ph-button" type="submit">Generate</button>
+        </form>
         {% if password %}
-        <div>
-            <div class="ph-label">Your Password:</div>
+        <!-- <div class="ph-space"> -->
+        <div class="ph-label">Your Password:</div>
+        <!-- </div> -->
+        <div class="ph-space">
             <input class="ph-field" type="text" id="password" min="6" max="32" value="{{ password }}" readonly>
             <i class="fa-regular fa-copy ph-hover" onclick="copyPassword()"></i>
             <span id="copyMsg" class="copy-tooltip">Copied!</span>
         </div>
+        <!-- </div> -->
         {% endif %}
     </div>
+    <br>
+</div>
 {% endblock %}
 
 {% block script %}
-    {% load static %}
-    {{ block.super }}
-    <script src="{% static 'js/copyPassword.js' %}"></script>
+{% load static %}
+{{ block.super }}
+<script src="{% static 'js/copyPassword.js' %}"></script>
 {% endblock %}

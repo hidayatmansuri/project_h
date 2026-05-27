@@ -87,4 +87,4 @@ python manage.py test
 *(Note: Replace the placeholder image paths with actual screenshots of your app!)*
 
 ## 📄 License
-This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
+This project is proprietary and confidential. All rights are reserved by the copyright owner. See the [LICENSE](LICENSE) file for details.
