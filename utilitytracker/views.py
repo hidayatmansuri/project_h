@@ -2,6 +2,7 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from .forms import UtilityReadingForm, TopUpForm
+from .models import UtilityReading
 from . import selectors, services
 
 def utility(request):
@@ -12,7 +13,14 @@ def utility(request):
     if request.method == 'POST':
         # reading submit
         if 'submit_reading' in request.POST:
-            reading_form = UtilityReadingForm(request.POST)
+            date_str = request.POST.get('date')
+            instance = None
+            if date_str:
+                try:
+                    instance = UtilityReading.objects.filter(date=date_str).first()
+                except Exception:
+                    pass
+            reading_form = UtilityReadingForm(request.POST, instance=instance)
             if reading_form.is_valid():
                 r = reading_form.save(commit=False)
                 services.create_or_update_reading(

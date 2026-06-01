@@ -92,7 +92,7 @@ main {
     border: none;
     border-radius: 0.2rem;
     cursor: pointer;
-    width: 7rem;
+    width: auto;
     font-size: 1rem;
     /* float: right; */
     /* width: 100%; */
@@ -863,11 +863,20 @@ a {
         border-top: 1px solid var(--text-color);
         align-items: center;
         justify-content: center;
-        margin-top: 1rem;
+        padding-top: 1rem;
+        padding-left: 0;
     }
 
     .passgen-left {
         margin-bottom: 1rem;
+        align-items: center;
+        padding-right: 0;
+    }
+
+    .passgen-left-req {
+        /* display: block; */
+        text-align: center;
+        /* margin-top: 1rem; */
     }
 }
 

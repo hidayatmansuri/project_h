@@ -43,4 +43,26 @@ class UtilityReadingTest(TestCase):
         reading = UtilityReading.objects.get(date=test_date)
         self.assertEqual(reading.electricity, 20.00)
 
+    def test_utility_view_update_reading(self):
+        """Test that the view handles updates of existing readings via POST without uniqueness errors"""
+        test_date = timezone.now().date()
         
+        # 1. Create an initial reading
+        UtilityReading.objects.create(date=test_date, electricity=10.00, gas=20.00)
+        
+        # 2. POST to the view to update that reading
+        response = self.client.post('/utility', {
+            'submit_reading': 'Submit',
+            'date': test_date.isoformat(),
+            'electricity': '15.50',
+            'gas': '25.50'
+        })
+        
+        # 3. Assert it redirects to 'utility' view
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/utility')
+        
+        # 4. Verify database values are updated
+        reading = UtilityReading.objects.get(date=test_date)
+        self.assertEqual(reading.electricity, 15.50)
+        self.assertEqual(reading.gas, 25.50)

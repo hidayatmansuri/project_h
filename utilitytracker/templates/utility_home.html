@@ -28,6 +28,7 @@
           <th>Date</th>
           <th>Electricity</th>
           <th>Gas</th>
+          <th>Update</th>
         </tr>
       </thead>
       <tbody>
@@ -36,10 +37,16 @@
           <td>{{ r.date }}</td>
           <td>£{{ r.electricity|floatformat:2 }}</td>
           <td>£{{ r.gas|floatformat:2 }}</td>
+          <td>
+            <button type="button" class="ph-button edit-reading-button" data-date="{{ r.date }}"
+              data-electricity="{{ r.electricity }}" data-gas="{{ r.gas }}">
+              <i class="fa-solid fa-arrow-rotate-right"></i>
+            </button>
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="3">No readings yet</td>
+          <td colspan="4">No readings yet</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -48,16 +55,30 @@
 
   <div class="utility-right">
     <div class="ph-form ph-center">
-      <div class="ph-heading">Submit Reading</div>
-      <form method="POST">
+      <div class="ph-heading" id="reading-form-title">Submit Reading</div>
+      <form method="POST" id="reading-form">
         {% csrf_token %}
-        <div class="ph-label">{{ reading_form.date.label_tag }}</div><br>
+        {% if reading_form.errors %}
+        <div class="ph-warning">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          {% for field in reading_form %}
+            {% for error in field.errors %}
+              <span>{{ error }}</span>
+            {% endfor %}
+          {% endfor %}
+          {% for error in reading_form.non_field_errors %}
+            <span>{{ error }}</span>
+          {% endfor %}
+        </div>
+        <br>
+        {% endif %}
+        <div class="ph-label">{{ reading_form.date.label_tag }}</div>
         <div class="ph-space">{{ reading_form.date }}</div><br>
-        <div class="ph-label">{{ reading_form.electricity.label_tag }}</div><br>
+        <div class="ph-label">{{ reading_form.electricity.label_tag }}</div>
         <div class="ph-space">{{ reading_form.electricity }}</div><br>
-        <div class="ph-label">{{ reading_form.gas.label_tag }}</div><br>
+        <div class="ph-label">{{ reading_form.gas.label_tag }}</div>
         <div class="ph-space">{{ reading_form.gas }}</div><br>
-        <button class="ph-button" name="submit_reading" type="submit">Submit</button>
+        <button class="ph-button" name="submit_reading" id="submit-reading-button" type="submit">Submit</button>
       </form>
     </div>
     <div class="ph-line"></div>
@@ -65,13 +86,27 @@
       <div class="ph-heading">Top-up (Pre-pay)</div>
       <form method="POST">
         {% csrf_token %}
-        <div class="ph-label">{{ topup_form.date.label_tag }}</div><br>
+        {% if topup_form.errors %}
+        <div class="ph-warning">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          {% for field in topup_form %}
+            {% for error in field.errors %}
+              <span>{{ error }}</span>
+            {% endfor %}
+          {% endfor %}
+          {% for error in topup_form.non_field_errors %}
+            <span>{{ error }}</span>
+          {% endfor %}
+        </div>
+        <br>
+        {% endif %}
+        <div class="ph-label">{{ topup_form.date.label_tag }}</div>
         <div class="ph-space">{{ topup_form.date }}</div><br>
-        <div class="ph-label">{{ topup_form.meter.label_tag }}</div><br>
+        <div class="ph-label">{{ topup_form.meter.label_tag }}</div>
         <div class="ph-space">{{ topup_form.meter }}</div><br>
-        <div class="ph-label">{{ topup_form.amount.label_tag }}</div><br>
+        <div class="ph-label">{{ topup_form.amount.label_tag }}</div>
         <div class="ph-space">{{ topup_form.amount }}</div><br>
-        <div class="ph-label">{{ topup_form.note.label_tag }}</div><br>
+        <div class="ph-label">{{ topup_form.note.label_tag }}</div>
         <div class="ph-space">{{ topup_form.note }}</div><br>
         <button class="ph-button" name="submit_topup" type="submit">Top-up</button>
       </form>
@@ -90,11 +125,41 @@
 {{ chart_payload|json_script:"chart-data" }}
 <script>
   window.chartPayload = JSON.parse(document.getElementById('chart-data').textContent);
-  
+
   // Initialize Flatpickr on date inputs
   flatpickr('input[type="date"]', {
     dateFormat: "Y-m-d",
     disableMobile: true // Prevents mobile browsers from using native popups
+  });
+
+  // Handle "Edit" button click
+  document.querySelectorAll('.edit-reading-button').forEach(button => {
+    button.addEventListener('click', function () {
+      const dateVal = this.getAttribute('data-date');
+      const elecVal = this.getAttribute('data-electricity');
+      const gasVal = this.getAttribute('data-gas');
+      const form = document.getElementById('reading-form');
+      const dateInput = form.querySelector('input[name="date"]');
+      const elecInput = form.querySelector('input[name="electricity"]');
+      const gasInput = form.querySelector('input[name="gas"]');
+
+      // Update Flatpickr instance programmatically
+      if (dateInput && dateInput._flatpickr) {
+        dateInput._flatpickr.setDate(dateVal);
+      } else if (dateInput) {
+        dateInput.value = dateVal;
+      }
+
+      if (elecInput) elecInput.value = elecVal;
+      if (gasInput) gasInput.value = gasVal;
+
+      // Update form header and submit button text for better UX
+      document.getElementById('reading-form-title').innerText = `Update Reading (${dateVal})`;
+      document.getElementById('submit-reading-button').innerText = 'Update';
+
+      // Smoothly scroll the form into view
+      form.scrollIntoView({ behavior: 'smooth' });
+    });
   });
 </script>
 <script src="{% static 'js/utility-chart.js' %}"></script>

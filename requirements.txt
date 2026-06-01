@@ -4,3 +4,21 @@ psycopg2-binary==2.9.12
 python-dotenv==1.0.1
 sqlparse==0.5.3
 tzdata==2025.2
+
+
+
+
+from utilitytracker.models import UtilityReading
+import datetime
+
+# 1. Fetch the reading by date
+reading = UtilityReading.objects.filter(date=datetime.date(2026, 5, 30)).first()
+
+if reading:
+    # 2. Update values
+    reading.electricity = 29.53
+    reading.gas = 16.26
+    reading.save()
+    print("Reading updated successfully!")
+else:
+    print("Reading not found.")

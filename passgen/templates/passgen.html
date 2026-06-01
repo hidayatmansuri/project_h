@@ -24,7 +24,10 @@ Password Generator
                 </div>
             </div>
             {% if error_message %}
-            <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i> {{ error_message }}</div><br>
+            <div class="ph-warning"><i class="fa-solid fa-circle-exclamation"></i>
+                {{ error_message }}
+            </div>
+            <br>
             {% endif %}
 
             <label class="ph-label">Include the Following: </label>
@@ -43,7 +46,7 @@ Password Generator
             <label class="ph-label">
                 <input class="ph-checkbox" type="checkbox" name="symbols"> Special Characters
             </label>
-            <!-- <br> -->
+
             <label class="ph-label">Desired Password:</label>
             <div class="ph-space">
                 <input class="ph-field" type="text" name="desired" min="6" max="32"
@@ -53,15 +56,12 @@ Password Generator
             <button class="ph-button" type="submit">Generate</button>
         </form>
         {% if password %}
-        <!-- <div class="ph-space"> -->
         <div class="ph-label">Your Password:</div>
-        <!-- </div> -->
         <div class="ph-space">
             <input class="ph-field" type="text" id="password" min="6" max="32" value="{{ password }}" readonly>
             <i class="fa-regular fa-copy ph-hover" onclick="copyPassword()"></i>
             <span id="copyMsg" class="copy-tooltip">Copied!</span>
         </div>
-        <!-- </div> -->
         {% endif %}
     </div>
     <br>
