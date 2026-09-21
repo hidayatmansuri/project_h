@@ -5,12 +5,12 @@ Password Generator
 {% endblock %}
 
 {% block content %}
-<div class="passgen-body">
+<div class="passgen-body ph-card">
     <div class="passgen-left">
         <div class="ph-heading">Requirements:</div>
         <span class="passgen-left-req">Password length should be between 8 and 32 characters for security
             reasons.</span>
-        <span class="passgen-left-req">Considered Special Charatcers: "! £ $ % ^ & * + # ~ @"</span>
+        <span class="passgen-left-req">Considered Special Charatcers: "! £ $ % ^ & * + # ~ @ ?"</span>
     </div>
     <div class="passgen-right">
         <div class="ph-heading">Password Generator</div>
@@ -20,7 +20,8 @@ Password Generator
             <div class="ph-label">
                 <label>Length: </label>
                 <div class="ph-space">
-                    <input class="ph-field" type="number" name="length" min="6" max="32" value="12">
+                    <input class="ph-field" type="number" name="length" min="8" max="32"
+                        value="{{ length|default:12 }}">
                 </div>
             </div>
             {% if error_message %}
@@ -32,19 +33,20 @@ Password Generator
 
             <label class="ph-label">Include the Following: </label>
             <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="upper"> Uppercase
+                <input class="ph-checkbox" type="checkbox" name="upper" {% if upper %}checked{% endif %}> Uppercase
             </label>
 
             <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="lower"> Lowercase
+                <input class="ph-checkbox" type="checkbox" name="lower" {% if lower %}checked{% endif %}> Lowercase
             </label>
 
             <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="numbs"> Numbers
+                <input class="ph-checkbox" type="checkbox" name="numbs" {% if numbs %}checked{% endif %}> Numbers
             </label>
 
             <label class="ph-label">
-                <input class="ph-checkbox" type="checkbox" name="symbols"> Special Characters
+                <input class="ph-checkbox" type="checkbox" name="symbols" {% if symbols %}checked{% endif %}> Special
+                Characters
             </label>
 
             <label class="ph-label">Desired Password:</label>

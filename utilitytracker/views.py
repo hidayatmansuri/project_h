@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from .forms import UtilityReadingForm, TopUpForm
-from .models import UtilityReading
+from .models import UtilityReading, TopUp
 from . import selectors, services
 
 def utility(request):
@@ -30,12 +30,27 @@ def utility(request):
                 )
                 return redirect('utility')
 
-        # topup submit
+        # topup submit (create or update)
         if 'submit_topup' in request.POST:
-            topup_form = TopUpForm(request.POST)
+            topup_id = request.POST.get('topup_id')
+            instance = None
+            if topup_id:
+                try:
+                    instance = TopUp.objects.filter(id=topup_id).first()
+                except Exception:
+                    pass
+            topup_form = TopUpForm(request.POST, instance=instance)
             if topup_form.is_valid():
                 topup_form.save()
                 return redirect('utility')
+
+        # topup delete
+        if 'delete_topup' in request.POST:
+            topup_id = request.POST.get('topup_id')
+            if topup_id:
+                services.delete_topup(topup_id)
+                return redirect('utility')
+
 
     # --- gather data using selectors ---
     chart_payload = selectors.get_utility_data_for_charts()

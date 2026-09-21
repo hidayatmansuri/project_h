@@ -13,6 +13,8 @@ class UtilityReadingForm(forms.ModelForm):
         }
 
 class TopUpForm(forms.ModelForm):
+    topup_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+
     class Meta:
         model = TopUp
         fields = ['date', 'meter', 'amount', 'note']
@@ -22,3 +24,4 @@ class TopUpForm(forms.ModelForm):
             'amount': forms.NumberInput(attrs={'class': 'ph-field', 'step': '0.01'}),
             'note': forms.TextInput(attrs={'class': 'ph-field'}),
         }
+

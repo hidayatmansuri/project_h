@@ -156,4 +156,29 @@ document.getElementById('showBalance').addEventListener('change', (e) => {
   }
 });
 
+// ------------------ THEME UPDATE OBSERVER ------------------
+// Watch for dark/light mode class changes on the HTML element
+const observer = new MutationObserver(() => {
+  // Re-fetch the updated CSS variables
+  const newWarningColor = styles.getPropertyValue('--warning-color').trim();
+  const newButtonColor = styles.getPropertyValue('--button-color').trim();
+
+  // Update Consumption Chart
+  if (typeof consumptionChart !== 'undefined') {
+    consumptionChart.data.datasets[0].borderColor = newWarningColor;
+    consumptionChart.data.datasets[1].borderColor = newButtonColor;
+    consumptionChart.update();
+  }
+
+  // Update Balance Chart
+  if (typeof balanceChart !== 'undefined') {
+    balanceChart.data.datasets[0].borderColor = newWarningColor;
+    balanceChart.data.datasets[1].borderColor = newButtonColor;
+    balanceChart.data.datasets[2].pointBackgroundColor = newWarningColor;
+    balanceChart.data.datasets[3].pointBackgroundColor = newButtonColor;
+    balanceChart.update();
+  }
+});
+
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 

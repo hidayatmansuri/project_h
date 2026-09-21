@@ -27,69 +27,102 @@
                 ph
             </div>
         </a>
-        <nav class="home-nav text-shadow">
+        <button class="menu-toggle" id="menuToggle" aria-label="Open Menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <nav class="home-nav text-shadow" id="mainNav">
+            <button class="close-menu" id="closeMenu" aria-label="Close Menu">&times;</button>
             {% comment %} <div class="home-nav-label">
-                <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">Project</a>
-                <a href="{% url 'cv' %}"><i id="mobile-nav" class="fa-regular fa-file-code ph-hover"></i></a>
+                <a class="nav-link ph-hover" href="{% url 'cv' %}"><i class="fa-regular fa-file-code"></i>
+                    <span>Project</span></a>
             </div>
-            <div id="desktop-nav">|</div> {% endcomment %}
+            <div class="nav-separator">|</div> {% endcomment %}
             <div class="home-nav-label">
-                <a id="desktop-nav" class="ph-hover" href="{% url 'cv' %}">CV</a>
-                <a href="{% url 'cv' %}"><i id="mobile-nav" class="ph-hover fa-regular fa-file-lines"></i></a>
+                <a class="nav-link ph-hover" href="{% url 'cv' %}"><i class="fa-regular fa-file-lines"></i>
+                    <span>About Me</span></a>
             </div>
-            <div id="desktop-nav">|</div>
+            <div class="nav-separator">|</div>
             <div class="home-nav-label">
-                <a id="desktop-nav" class="ph-hover" href="{% url 'passgen' %}">Password</a>
-                <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-star-of-life"></i></a>
+                <a class="nav-link ph-hover" href="{% url 'passgen' %}"><i class="fa-solid fa-star-of-life"></i>
+                    <span>Password</span></a>
             </div>
-            <div id="desktop-nav">|</div>
+            <div class="nav-separator">|</div>
             <div class="home-nav-label">
-                <a id="desktop-nav" class="ph-hover" href="{% url 'utility' %}">Utility</a>
-                <a href="{% url 'utility' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-fire-flame-curved"></i></a>
+                <a class="nav-link ph-hover" href="{% url 'utility' %}"><i class="fa-solid fa-fire-flame-curved"></i>
+                    <span>Utility</span></a>
             </div>
-            <div id="desktop-nav">|</div>
+            <div class="nav-separator">|</div>
             <div class="home-nav-label dropdown">
-                <a id="desktop-nav" class="ph-hover dropdown-toggle" href="#">Converter</a>
-                <a href="#"><i id="mobile-nav" class="ph-hover fa-solid fa-repeat"></i></a>
+                <a class="nav-link ph-hover dropdown-toggle" href="#"><i class="fa-solid fa-repeat"></i>
+                    <span>Converter</span></a>
                 <div class="dropdown-menu">
-                    <a id="desktop-nav" class="ph-hover menu-item" href="{% url 'passgen' %}">Currency</a>
-                    <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-dollar-sign"></i></a>
-                    <a id="desktop-nav" class="ph-hover menu-item" href="{% url 'passgen' %}">Measurement</a>
-                    <a href="{% url 'passgen' %}"><i id="mobile-nav" class="ph-hover fa-solid fa-weight-scale"></i></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'passgen' %}"><i
+                            class="fa-solid fa-dollar-sign"></i> <span>Currency</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'passgen' %}"><i
+                            class="fa-solid fa-weight-scale"></i> <span>Measurement</span></a>
                 </div>
             </div>
-            <div id="desktop-nav">|</div>
+            <div class="nav-separator">|</div>
             <label class="theme-toggle-label" for="theme-toggle">
                 <input type="checkbox" id="theme-toggle" hidden />
                 <div class="theme-toggle-circle"><i class="fa-solid fa-circle-half-stroke"></i></div>
             </label>
         </nav>
+        <div class="nav-overlay" id="navOverlay"></div>
     </header>
 
     <main>
         {% block content %}
         <div class="welcome-body">
             <div class="ph-welcome">project-h</div>
-            <div class="ph-welcome-subs welcome-desc">
+            <div class="welcome-cards">
+                <a href="{% url 'cv' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        Me &<br>Skills
+                    </div>
+                    <span>About<span class="floating-lable"> Me</span></span>
+                </a>
+                <a href="{% url 'passgen' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        P@sswORd<br> G3n@ph
+                    </div>
+                    <span>Pass<span class="floating-lable">word</span></span>
+                </a>
+                <a href="{% url 'utility' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        {% if electricity %}
+                        Elec: £{{electricity.electricity | floatformat:2}}
+                        {% endif %}<br>
+                        {% if gas %}
+                        Gas: £{{gas.gas | floatformat:2}}
+                        {% endif %}
+                    </div>
+                    <span class="floating-bottom">Uti<span class="floating-lable">lity</span></span>
+                </a>
+            </div>
+            <!-- <div class="ph-welcome-subs welcome-desc">
                 <a class="ph-hover" href="{% url 'cv' %}">CV</a><br>
                 <a class="ph-hover" href="{% url 'passgen' %}">Password Generator</a><br>
                 <a class="ph-hover" href="{% url 'utility' %}">Utility Tracker</a><br>
                 <a class="ph-hover" href="{% url 'passgen' %}">Currency Converter</a><br>
                 <a class="ph-hover" href="{% url 'passgen' %}">Measurement Converter</a><br>
-            </div>
+            </div> -->
         </div>
+
         {% endblock %}
         <div id="backToTop" class="ph-top"><a href="#top" class="ph-hover"><i class="fa-regular fa-circle-up"></i></a>
         </div>
     </main>
 
     <footer class="ph-footer">
-        &copy; 2025 project-h
+        &copy; <span id="copyright-year">""""</span> project-h
     </footer>
 
     {% block script %}
     <script src="{% static 'js/dropdown.js' %}"></script>
     <script src="{% static 'js/theme-toggle.js' %}"></script>
+    <script src="{% static 'js/sidebar.js' %}"></script>
+    <script src="{% static 'js/copyright.js' %}"></script>
     {% endblock %}
 </body>
 

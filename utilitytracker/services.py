@@ -22,3 +22,22 @@ def create_topup(date, meter, amount, note=""):
         note=note
     )
     return topup
+
+def update_topup(topup_id, date, meter, amount, note=""):
+    """
+    Handles the logic for updating an existing top-up.
+    """
+    topup = TopUp.objects.get(id=topup_id)
+    topup.date = date
+    topup.meter = meter
+    topup.amount = amount
+    topup.note = note
+    topup.save()
+    return topup
+
+def delete_topup(topup_id):
+    """
+    Handles the logic for deleting a top-up.
+    """
+    TopUp.objects.filter(id=topup_id).delete()
+

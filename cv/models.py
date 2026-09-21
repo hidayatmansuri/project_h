@@ -5,7 +5,7 @@ from django.db import models
 class PersonalInfo(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField()
-    phone = models.IntegerField()
+    phone = models.CharField(max_length=15)
     address = models.CharField(max_length=200)
     profile = models.TextField()
     
@@ -21,6 +21,7 @@ class Qualification(models.Model):
     
     def __str__(self):
         return self.institute
+
 class Experience(models.Model):
     title = models.CharField(max_length=100)
     employer = models.CharField(max_length=100)
@@ -31,4 +32,12 @@ class Experience(models.Model):
 
     def __str__(self):
         return self.title
+
+class Skill(models.Model):
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=50, blank=True, null=True)
+    proficiency = models.CharField(max_length=50, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
 
