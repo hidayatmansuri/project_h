@@ -7,4 +7,5 @@ urlpatterns = [
     path('',include('cv.urls')),
     path('',include('passgen.urls')),
     path('',include('utilitytracker.urls')),
+    path('',include('shades.urls')),
 ]

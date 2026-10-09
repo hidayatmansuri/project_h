@@ -15,6 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://kit.fontawesome.com/8461ef5dbf.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'css/home-style.css'%}">
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body id="top">
@@ -50,6 +51,11 @@
             <div class="home-nav-label">
                 <a class="nav-link ph-hover" href="{% url 'utility' %}"><i class="fa-solid fa-fire-flame-curved"></i>
                     <span>Utility</span></a>
+            </div>
+            <div class="nav-separator">|</div>
+            <div class="home-nav-label">
+                <a class="nav-link ph-hover" href="{% url 'shades' %}"><i class="fa-solid fa-palette"></i>
+                    <span>Shades</span></a>
             </div>
             <div class="nav-separator">|</div>
             <div class="home-nav-label dropdown">
@@ -99,6 +105,12 @@
                     </div>
                     <span class="floating-bottom">Uti<span class="floating-lable">lity</span></span>
                 </a>
+                <a href="{% url 'shades' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        #000000<br>#FFFFFF
+                    </div>
+                    <span>Sha<span class="floating-lable">des</span></span>
+                </a>
             </div>
             <!-- <div class="ph-welcome-subs welcome-desc">
                 <a class="ph-hover" href="{% url 'cv' %}">CV</a><br>
@@ -115,7 +127,7 @@
     </main>
 
     <footer class="ph-footer">
-        &copy; <span id="copyright-year">""""</span> project-h
+        <span>&copy; <span id="copyright-year"></span> project-h</span>
     </footer>
 
     {% block script %}

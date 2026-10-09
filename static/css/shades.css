@@ -1,0 +1,440 @@
+/* ==========================================================================
+   Shades App Styling - project-h
+   Mobile-first, adhering to existing project color variables and design tokens.
+   ========================================================================== */
+
+.shades-wrapper {
+    width: 92%;
+    max-width: 1400px;
+    margin: 70px auto 2rem auto;
+    font-family: Gotu, 'Ubuntu', sans-serif;
+    color: var(--text-color);
+}
+
+@media screen and (min-width: 766px) {
+    .shades-wrapper {
+        margin-top: 2rem;
+    }
+}
+
+/* Hero / Header Card */
+.shades-header-card {
+    background: rgba(128, 128, 128, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--text-color);
+    border-radius: 6px;
+    box-shadow: var(--box-shadow);
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.shades-title {
+    font-family: Peignot, Gotu, sans-serif;
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+    text-shadow: var(--text-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.shades-title i {
+    color: var(--hover-color);
+    font-size: 1.8rem;
+}
+
+.shades-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    opacity: 0.85;
+    margin: 0;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.4;
+}
+
+/* Controls Panel */
+.shades-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Category Filter Tabs (Horizontal Scroll on Mobile) */
+.shades-tabs-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.shades-tabs-wrapper::-webkit-scrollbar {
+    height: 4px;
+}
+
+.shades-tabs-wrapper::-webkit-scrollbar-thumb {
+    background: var(--text-color);
+    border-radius: 4px;
+}
+
+.shades-tab-btn {
+    white-space: nowrap;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--text-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-color);
+    font-family: Gotu, sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.shades-tab-btn:hover {
+    border-color: var(--hover-color);
+    color: var(--hover-color);
+}
+
+.shades-tab-btn.active {
+    background: var(--text-color);
+    color: var(--bg-color);
+    font-weight: bold;
+    border-color: var(--text-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Search and Sort Toolbar */
+.shades-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.shades-search-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 240px;
+    position: relative;
+}
+
+.shades-search-box i {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--text-color);
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.shades-search-input {
+    width: 100%;
+    padding: 0.45rem 0.75rem 0.45rem 2.2rem;
+    border: 1px solid var(--text-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: Gotu, monospace;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.shades-search-input:focus {
+    outline: none;
+    border-color: var(--hover-color);
+    box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.2);
+}
+
+.shades-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.shades-select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--text-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: Gotu, sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.shades-count-badge {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--text-color);
+    border-radius: 4px;
+    background: rgba(128, 128, 128, 0.08);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Color Swatches Grid
+   Two-square layout per card:
+   1. Square 1: Color swatch with border matching existing design.
+   2. Square 2: Underneath, little off down and 8px (5-10px) to the right,
+      with border matching existing design, containing hex and RGB
+      top of each other with copy icons.
+   ========================================================================== */
+
+.shades-grid {
+    display: grid;
+    /* Mobile-first: 2 columns on small screens, expands naturally */
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1.5rem 1.25rem;
+    margin-top: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+@media screen and (max-width: 520px) {
+    .shades-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.3rem 1rem;
+    }
+}
+
+@media screen and (min-width: 900px) {
+    .shades-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.8rem 1.5rem;
+    }
+}
+
+/* The card wrapper */
+.shade-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    /* Add padding-right to allow the 8px offset of the bottom square without overlapping */
+    padding-right: 10px;
+    padding-bottom: 8px;
+    animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Square 1: Top Square (The Colour) */
+.shade-color-square {
+    width: calc(100% - 10px);
+    aspect-ratio: 2 / 1;
+    /* border: 1px solid var(--text-color); */
+    /* border-radius: 4px; */
+    box-shadow: var(--box-shadow);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
+    margin-left: 0;
+}
+
+.shade-color-square:hover {
+    transform: translateY(-3px);
+    border-color: var(--hover-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Subtle ripple on click */
+.shade-color-square:active {
+    transform: scale(0.97);
+}
+
+/* Square 2: Bottom Square (Hashcode & RGB values underneath)
+   - "there should be another square under neath which little off down to accommodate hashcode and rgb values top of each other"
+   - "the square with value should be off little right as well as much as 5 or 10 pixel"
+   - "both above square i mentioned on above paragraph should have a border according to existing project design"
+*/
+.shade-info-square {
+    width: calc(100% - 10px);
+    aspect-ratio: 2 / 1;
+    margin-top: -15px;
+    /* little off down */
+    margin-left: 10px;
+    /* off little right as much as 5 or 10 pixel */
+    /* border: 1px solid var(--text-color); */
+    /* border according to existing project design */
+    /* border-radius: 4px; */
+    background: var(--bg-color);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-items: stretch;
+    padding: 0.5rem 0.4rem;
+    box-sizing: border-box;
+    /* gap: 0.45rem; */
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* .shade-info-square:hover {
+    transform: translateY(-2px);
+    border-color: var(--hover-color);
+} */
+
+/* Value row inside the bottom square (hashcode & rgb top of each other) */
+.shade-value-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.35rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    gap: 0.3rem;
+    /* min-height: 28px; */
+    box-sizing: border-box;
+}
+
+.shade-value-row:hover {
+    background-color: rgba(128, 128, 128, 0.15);
+    border-color: rgba(128, 128, 128, 0.25);
+}
+
+.shade-value-row:active {
+    background-color: rgba(128, 128, 128, 0.3);
+}
+
+.shade-val-text {
+    font-family: Gotu, monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: all;
+}
+
+@media screen and (max-width: 360px) {
+    .shade-val-text {
+        font-size: 0.68rem;
+    }
+}
+
+/* Copy Icon Button */
+.shade-copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    opacity: 0.75;
+    padding: 2px 4px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.shade-value-row:hover .shade-copy-btn,
+.shade-copy-btn:hover {
+    opacity: 1;
+    color: var(--hover-color);
+    transform: scale(1.15);
+}
+
+/* Copied feedback state */
+.shade-copy-btn.copied {
+    color: #27ae60 !important;
+    opacity: 1 !important;
+    transform: scale(1.25);
+}
+
+/* Empty State / Not Found */
+.shades-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 1rem;
+    border: 1px dashed var(--text-color);
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.05);
+}
+
+.shades-empty i {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+    color: var(--hover-color);
+}
+
+.shades-empty p {
+    margin: 0.4rem 0;
+    font-size: 1rem;
+}
+
+/* Pagination / Load More Footer */
+.shades-load-more-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 2rem auto;
+    text-align: center;
+}
+
+.shades-load-more-btn {
+    margin: 0 auto;
+}
+
+/* Floating Toast Notification */
+.shade-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    background: var(--text-color);
+    color: var(--bg-color);
+    padding: 0.65rem 1.4rem;
+    border-radius: 30px;
+    font-family: Gotu, sans-serif;
+    font-size: 0.9rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.shade-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.shade-toast i {
+    color: #2ecc71;
+    font-size: 1rem;
+}

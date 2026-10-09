@@ -1,0 +1,117 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block title %}Colour Shades | project-h{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/shades.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="shades-wrapper">
+    <!-- Header Section -->
+    <div class="shades-header-card">
+        <h1 class="shades-title">
+            <i class="fa-solid fa-palette"></i> Colour Shades
+        </h1>
+        <p class="shades-subtitle">
+            Colour shades erected in ascending order from <strong>#000000</strong> to <strong>#FFFFFF</strong>.
+            Click any copy icon or row to quickly copy the hashcode or RGB value.
+        </p>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="shades-controls">
+        <!-- Mode Tabs -->
+        <div class="shades-tabs-wrapper" role="tablist">
+            <button type="button" class="shades-tab-btn active" data-mode="grayscale">
+                <i class="fa-solid fa-circle-half-stroke"></i> Grayscale (256)
+            </button>
+            <button type="button" class="shades-tab-btn" data-mode="spectrum">
+                <i class="fa-solid fa-rainbow"></i> Full Spectrum
+            </button>
+            <button type="button" class="shades-tab-btn" data-mode="reds">
+                <i class="fa-solid fa-fire"></i> Red Shades
+            </button>
+            <button type="button" class="shades-tab-btn" data-mode="greens">
+                <i class="fa-solid fa-leaf"></i> Green Shades
+            </button>
+            <button type="button" class="shades-tab-btn" data-mode="blues">
+                <i class="fa-solid fa-water"></i> Blue Shades
+            </button>
+            <button type="button" class="shades-tab-btn" data-mode="websafe">
+                <i class="fa-solid fa-globe"></i> Web-Safe (216)
+            </button>
+        </div>
+
+        <!-- Search and Sort Toolbar -->
+        <div class="shades-toolbar">
+            <div class="shades-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="shadesSearch" class="shades-search-input"
+                    placeholder="Search HEX (e.g. #000000) or RGB..." autocomplete="off">
+            </div>
+
+            <div class="shades-toolbar-actions">
+                <select id="shadesSort" class="shades-select" aria-label="Sort order">
+                    <option value="hex_asc" selected>Hex: Ascending (#000000 → #FFFFFF)</option>
+                    <option value="hex_desc">Hex: Descending (#FFFFFF → #000000)</option>
+                    <option value="lum_asc">Luminance: Dark → Light</option>
+                    <option value="lum_desc">Luminance: Light → Dark</option>
+                </select>
+
+                <div id="shadesCountBadge" class="shades-count-badge">
+                    256 shades
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Color Swatches Grid -->
+    <div id="shadesGrid" class="shades-grid">
+        {% for shade in initial_shades %}
+        <div class="shade-card">
+            <!-- Top Square: Colour swatch -->
+            <div class="shade-color-square" style="background-color: {{ shade.hex }};"
+                title="Click to copy {{ shade.hex }}"></div>
+
+            <!-- Bottom Square: Underneath, slightly down and 8px to the right -->
+            <div class="shade-info-square">
+                <!-- Row 1: Hashcode -->
+                <div class="shade-value-row" data-copy="{{ shade.hex }}" title="Click to copy {{ shade.hex }}">
+                    <span class="shade-val-text">{{ shade.hex }}</span>
+                    <button type="button" class="shade-copy-btn" aria-label="Copy {{ shade.hex }}">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <!-- Row 2: RGB Value -->
+                <div class="shade-value-row" data-copy="{{ shade.rgb }}" title="Click to copy {{ shade.rgb }}">
+                    <span class="shade-val-text">{{ shade.rgb }}</span>
+                    <button type="button" class="shade-copy-btn" aria-label="Copy {{ shade.rgb }}">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Load More Container -->
+    <div id="loadMoreContainer" class="shades-load-more-container" style="display: none;">
+        <button type="button" id="loadMoreBtn" class="ph-button shades-load-more-btn">
+            Load More Shades
+        </button>
+    </div>
+</div>
+
+<!-- Floating Toast Notification -->
+<div id="shadeToast" class="shade-toast" role="status" aria-live="polite">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="shadeToastMsg">Copied to clipboard!</span>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script src="{% static 'js/shades.js' %}"></script>
+{% endblock %}

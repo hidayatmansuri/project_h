@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'home',
     'passgen',
     'utilitytracker',
+    'shades',
 ]
 
 MIDDLEWARE = [
