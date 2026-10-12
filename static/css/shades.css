@@ -19,12 +19,12 @@
 
 /* Hero / Header Card */
 .shades-header-card {
-    background: rgba(128, 128, 128, 0.08);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--text-color);
-    border-radius: 6px;
-    box-shadow: var(--box-shadow);
+    /* background: rgba(128, 128, 128, 0.08); */
+    /* backdrop-filter: blur(12px); */
+    /* -webkit-backdrop-filter: blur(12px); */
+    /* border: 1px solid var(--text-color); */
+    /* border-radius: 6px; */
+    /* box-shadow: var(--box-shadow); */
     padding: 1.5rem 1rem;
     margin-bottom: 1.5rem;
     text-align: center;
@@ -69,8 +69,10 @@
 /* Category Filter Tabs (Horizontal Scroll on Mobile) */
 .shades-tabs-wrapper {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 0.5rem;
-    overflow-x: auto;
+    /* overflow-x: auto; */
     padding-bottom: 0.4rem;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
@@ -324,7 +326,7 @@
 
 .shade-val-text {
     font-family: Gotu, monospace;
-    font-size: 0.75rem;
+    font-size: calc(0.5rem + 0.25rem);
     font-weight: 600;
     color: var(--text-color);
     letter-spacing: 0.2px;

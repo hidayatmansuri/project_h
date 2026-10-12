@@ -421,6 +421,10 @@ a {
     gap: 0.5rem;
 }
 
+.nav-link.active i {
+    color: var(--hover-color);
+}
+
 .nav-separator {
     color: var(--text-color);
 }
