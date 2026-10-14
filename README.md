@@ -12,6 +12,8 @@ The project is divided into several dedicated applications:
 *   **📄 CV/Portfolio (`cv`):** A professional digital resume showcasing skills, experience, and projects.
 *   **🔐 Password Generator (`passgen`):** A secure tool to generate strong, random passwords based on user-defined criteria.
 *   **⚡ Utility Tracker (`utilitytracker`):** A comprehensive dashboard to track electricity and gas meter readings, log top-ups, and visualize usage data over time with interactive charts.
+*   **🎨 Colour Shades (`shades`):** An interactive colour palette explorer from #000000 to #FFFFFF with instant copy micro-interactions.
+*   **📝 Document Editor (`docedit`):** A document editor for old scanned books and diverse documents. Features OCR with fuzzy character detection, automated font matching (system fonts, free Google Font downloads, and nearest match alternatives), Windows system font installation, live split-pane editing, and same-extension file exports.
 
 ## 🚀 Technologies Used
 

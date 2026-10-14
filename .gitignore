@@ -9,3 +9,8 @@ __pycache__/
 # Django
 db.sqlite3
 media/
+db_test.sqlite3
+docedit/media/docedit_tmp/
+docedit/scratch/
+scratch/
+

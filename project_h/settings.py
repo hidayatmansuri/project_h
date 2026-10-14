@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'passgen',
     'utilitytracker',
     'shades',
+    'docedit',
 ]
 
 MIDDLEWARE = [

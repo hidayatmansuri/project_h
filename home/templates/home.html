@@ -58,6 +58,11 @@
                     <span>Shades</span></a>
             </div>
             <div class="nav-separator">|</div>
+            <div class="home-nav-label">
+                <a class="nav-link ph-hover" href="{% url 'docedit' %}"><i class="fa-solid fa-file-pen"></i>
+                    <span>DocEdit</span></a>
+            </div>
+            <div class="nav-separator">|</div>
             <div class="home-nav-label dropdown">
                 <a class="nav-link ph-hover dropdown-toggle" href="#"><i class="fa-solid fa-repeat"></i>
                     <span>Converter</span></a>
@@ -110,6 +115,12 @@
                         #000000<br>#FFFFFF
                     </div>
                     <span>Sha<span class="floating-lable">des</span></span>
+                </a>
+                <a href="{% url 'docedit' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        Match &<br>Fonts
+                    </div>
+                    <span>Doc<span class="floating-lable">Edit</span></span>
                 </a>
             </div>
             <!-- <div class="ph-welcome-subs welcome-desc">
