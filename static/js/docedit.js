@@ -36,8 +36,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toolbar Elements
     const tbFontSelect = document.getElementById('tbFontSelect');
+    const tbFontRefresh = document.getElementById('tbFontRefresh');
+    const tbInstallFontBtn = document.getElementById('tbInstallFontBtn');
     const tbFontSizeSelect = document.getElementById('tbFontSizeSelect');
     const tbFuzzyToggle = document.getElementById('tbFuzzyToggle');
+
+    // Font Installation Modal Elements
+    const installFontModal = document.getElementById('doceditInstallFontModal');
+    const modalBtnCloseFontInstall = document.getElementById('modalBtnCloseFontInstall');
+    const modalBtnSubmitFontInstall = document.getElementById('modalBtnSubmitFontInstall');
+    const tabBtnFontFile = document.getElementById('tabBtnFontFile');
+    const tabBtnFontOnline = document.getElementById('tabBtnFontOnline');
+    const tabContentFontFile = document.getElementById('tabContentFontFile');
+    const tabContentFontOnline = document.getElementById('tabContentFontOnline');
+    const fontFileDropzone = document.getElementById('fontFileDropzone');
+    const fontFileInput = document.getElementById('fontFileInput');
+    const selectedFontFileName = document.getElementById('selectedFontFileName');
+    const fontSearchInput = document.getElementById('fontSearchInput');
+    const fontInstallStatus = document.getElementById('fontInstallStatus');
+    let selectedFontFile = null;
+    let activeInstallTab = 'file';
 
     // Confirmation Modal Elements
     const confirmModal = document.getElementById('doceditConfirmModal');
@@ -65,6 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbZoomIn = document.getElementById('tbZoomIn');
     const tbZoomLevel = document.getElementById('tbZoomLevel');
 
+    // Layout Alignment & Nudge Elements
+    const tbLayoutAlignSep = document.getElementById('tbLayoutAlignSep');
+    const tbLayoutAlignGroup = document.getElementById('tbLayoutAlignGroup');
+    const tbAlignBlockLeft = document.getElementById('tbAlignBlockLeft');
+    const tbNudgeLeft = document.getElementById('tbNudgeLeft');
+    const tbNudgeRight = document.getElementById('tbNudgeRight');
+    const tbNudgeUp = document.getElementById('tbNudgeUp');
+    const tbNudgeDown = document.getElementById('tbNudgeDown');
+    const tbBtnBold = document.querySelector('.tb-btn[data-cmd="bold"]');
+    const tbBtnItalic = document.querySelector('.tb-btn[data-cmd="italic"]');
+    const tbBtnUnderline = document.querySelector('.tb-btn[data-cmd="underline"]');
+
     // State
     let currentSessionId = null;
     let pollInterval = null;
@@ -74,6 +104,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPagesData = [];
     let currentPageIndex = 1;
     let currentZoom = 100;
+
+    // Active block tracking for layout-preserved mode
+    let activeBlockEl = null;
+    let activeBlockData = null;
+    let activeBlockPage = null;
+    let floatingBlockToolbar = null;
 
 
     // Helper: Format bytes
@@ -247,11 +283,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const font = data.font_info || {};
         if (font.name) {
             panFontName.textContent = font.name;
-            if (tbFontSelect) tbFontSelect.value = font.name;
+            if (tbFontSelect) {
+                ensureFontInSelect(font.name);
+                tbFontSelect.value = font.name;
+            }
         }
         if (font.size_pt) {
             panFontSize.textContent = `${font.size_pt} pt`;
-            if (tbFontSizeSelect) tbFontSizeSelect.value = String(font.size_pt);
+            if (tbFontSizeSelect) {
+                ensureFontSizeInSelect(font.size_pt);
+                tbFontSizeSelect.value = String(font.size_pt);
+            }
         }
 
         // Font Status Badge
@@ -304,6 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Apply font to editor canvas
         const fontName = data.font_info && data.font_info.name ? data.font_info.name : 'EB Garamond';
         const fontSize = data.font_info && data.font_info.size_pt ? data.font_info.size_pt : 12;
+        if (tbFontSelect) {
+            ensureFontInSelect(fontName);
+            tbFontSelect.value = fontName;
+        }
+        if (tbFontSizeSelect) {
+            ensureFontSizeInSelect(fontSize);
+            tbFontSizeSelect.value = String(fontSize);
+        }
         editorPaper.style.fontFamily = `"${fontName}", serif`;
         editorPaper.style.fontSize = `${fontSize}pt`;
 
@@ -313,6 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
             editorPaper.contentEditable = "false";
             if (tbPageNavGroup) tbPageNavGroup.style.display = 'inline-flex';
             if (tbPageSep) tbPageSep.style.display = 'inline-block';
+            if (tbLayoutAlignSep) tbLayoutAlignSep.style.display = 'inline-block';
+            if (tbLayoutAlignGroup) tbLayoutAlignGroup.style.display = 'inline-flex';
             currentPageIndex = 1;
             updatePageIndicator();
             renderLayoutPreservedPages(data.pages, fontName, fontSize);
@@ -322,6 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
             editorPaper.contentEditable = "true";
             if (tbPageNavGroup) tbPageNavGroup.style.display = 'none';
             if (tbPageSep) tbPageSep.style.display = 'none';
+            if (tbLayoutAlignSep) tbLayoutAlignSep.style.display = 'none';
+            if (tbLayoutAlignGroup) tbLayoutAlignGroup.style.display = 'none';
             if (data.document_html) {
                 editorPaper.innerHTML = data.document_html;
             }
@@ -362,6 +416,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.createElement('div');
             overlay.className = 'page-text-overlay';
 
+            // Alignment guides for magnetic snapping
+            const guideV = document.createElement('div');
+            guideV.className = 'docedit-align-guide-v';
+            const guideH = document.createElement('div');
+            guideH.className = 'docedit-align-guide-h';
+
             p.blocks.forEach(b => {
                 const blockDiv = document.createElement('div');
                 blockDiv.className = `docedit-text-block${b.has_fuzzy ? ' has-fuzzy' : ''}`;
@@ -374,18 +434,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 blockDiv.style.minWidth = `${b.width_pct}%`;
                 blockDiv.style.fontSize = `${b.font_size_pt || fontSize}pt`;
                 blockDiv.style.fontFamily = `"${b.font_name || fontName}", serif`;
+                if (b.is_bold) blockDiv.style.fontWeight = 'bold';
+                if (b.is_italic) blockDiv.style.fontStyle = 'italic';
+                if (b.is_underline) blockDiv.style.textDecoration = 'underline';
                 blockDiv.textContent = b.text;
 
                 blockDiv.addEventListener('focus', () => {
-                    blockDiv.classList.add('is-focused');
-                    currentPageIndex = p.page_num;
-                    updatePageIndicator();
+                    setActiveBlock(blockDiv, b, p);
+                });
+
+                blockDiv.addEventListener('click', (e) => {
+                    setActiveBlock(blockDiv, b, p);
                 });
 
                 blockDiv.addEventListener('input', () => {
                     b.text = blockDiv.innerText.trim();
                     b.is_modified = true;
                     blockDiv.classList.add('is-edited');
+                    updateFloatingToolbarPosition();
                 });
 
                 blockDiv.addEventListener('blur', () => {
@@ -395,11 +461,66 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
+                blockDiv.addEventListener('keydown', (e) => {
+                    // Formatting shortcuts
+                    if (e.ctrlKey || e.metaKey) {
+                        const k = e.key.toLowerCase();
+                        if (k === 'b') {
+                            e.preventDefault();
+                            toggleActiveBlockBold();
+                            return;
+                        } else if (k === 'i') {
+                            e.preventDefault();
+                            toggleActiveBlockItalic();
+                            return;
+                        } else if (k === 'u') {
+                            e.preventDefault();
+                            toggleActiveBlockUnderline();
+                            return;
+                        }
+                    }
+                    // Alt + Arrow nudging & Alt + L snap
+                    if (e.altKey) {
+                        const step = e.shiftKey ? 0.5 : 0.1;
+                        if (e.key === 'ArrowLeft') {
+                            e.preventDefault();
+                            nudgeActiveBlock(-step, 0);
+                            return;
+                        } else if (e.key === 'ArrowRight') {
+                            e.preventDefault();
+                            nudgeActiveBlock(step, 0);
+                            return;
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            nudgeActiveBlock(0, -step);
+                            return;
+                        } else if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            nudgeActiveBlock(0, step);
+                            return;
+                        } else if (e.key.toLowerCase() === 'l') {
+                            e.preventDefault();
+                            alignLeftWithNearestBlock();
+                            return;
+                        }
+                    }
+                });
+
+                blockDiv.addEventListener('mousedown', (e) => {
+                    if (e.altKey) {
+                        e.preventDefault();
+                        setActiveBlock(blockDiv, b, p);
+                        startBlockDrag(e);
+                    }
+                });
+
                 overlay.appendChild(blockDiv);
             });
 
             canvas.appendChild(bgImg);
             canvas.appendChild(overlay);
+            canvas.appendChild(guideV);
+            canvas.appendChild(guideH);
             sheet.appendChild(header);
             sheet.appendChild(canvas);
             pagesContainer.appendChild(sheet);
@@ -433,6 +554,329 @@ document.addEventListener('DOMContentLoaded', () => {
         const total = currentPagesData.length || 1;
         tbPageIndicator.textContent = `Page ${currentPageIndex} / ${total}`;
     }
+
+    // --------------------------------------------------------------------------
+    // Active Block Management, Alignment & Formatting for Layout Preserved Mode
+    // --------------------------------------------------------------------------
+    function getOrCreateFloatingToolbar() {
+        if (!floatingBlockToolbar) {
+            floatingBlockToolbar = document.createElement('div');
+            floatingBlockToolbar.className = 'docedit-block-toolbar';
+            floatingBlockToolbar.contentEditable = 'false';
+            floatingBlockToolbar.innerHTML = `
+                <div class="block-drag-handle" title="Drag to move text box (Snaps magnetically to other text)"><i class="fa-solid fa-arrows-up-down-left-right"></i> Move</div>
+                <button type="button" class="block-action-btn" data-act="align-left" title="Snap Left with Nearest Document Text (Alt+L)"><i class="fa-solid fa-align-left"></i> Align</button>
+                <div class="block-action-sep"></div>
+                <button type="button" class="block-action-btn" data-act="bold" title="Toggle Bold (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="block-action-btn" data-act="italic" title="Toggle Italic (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="block-action-btn" data-act="underline" title="Toggle Underline (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
+                <div class="block-action-sep"></div>
+                <button type="button" class="block-action-btn" data-act="nudge-left" title="Nudge Left (Alt+Left)"><i class="fa-solid fa-caret-left"></i></button>
+                <button type="button" class="block-action-btn" data-act="nudge-right" title="Nudge Right (Alt+Right)"><i class="fa-solid fa-caret-right"></i></button>
+                <button type="button" class="block-action-btn" data-act="nudge-up" title="Nudge Up (Alt+Up)"><i class="fa-solid fa-caret-up"></i></button>
+                <button type="button" class="block-action-btn" data-act="nudge-down" title="Nudge Down (Alt+Down)"><i class="fa-solid fa-caret-down"></i></button>
+            `;
+
+            floatingBlockToolbar.addEventListener('mousedown', (e) => {
+                const btn = e.target.closest('.block-action-btn');
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const act = btn.getAttribute('data-act');
+                    if (act === 'align-left') alignLeftWithNearestBlock();
+                    else if (act === 'bold') toggleActiveBlockBold();
+                    else if (act === 'italic') toggleActiveBlockItalic();
+                    else if (act === 'underline') toggleActiveBlockUnderline();
+                    else if (act === 'nudge-left') nudgeActiveBlock(-0.2, 0);
+                    else if (act === 'nudge-right') nudgeActiveBlock(0.2, 0);
+                    else if (act === 'nudge-up') nudgeActiveBlock(0, -0.2);
+                    else if (act === 'nudge-down') nudgeActiveBlock(0, 0.2);
+                }
+            });
+
+            const dragHandle = floatingBlockToolbar.querySelector('.block-drag-handle');
+            if (dragHandle) {
+                dragHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startBlockDrag(e);
+                });
+            }
+        }
+        return floatingBlockToolbar;
+    }
+
+    function updateFloatingToolbarPosition() {
+        if (!activeBlockEl || !activeBlockEl.isConnected) {
+            if (floatingBlockToolbar && floatingBlockToolbar.parentElement) {
+                floatingBlockToolbar.style.display = 'none';
+            }
+            return;
+        }
+        const overlay = activeBlockEl.parentElement;
+        if (!overlay) return;
+
+        const tb = getOrCreateFloatingToolbar();
+        if (tb.parentElement !== overlay) {
+            overlay.appendChild(tb);
+        }
+
+        const curL = parseFloat(activeBlockEl.style.left) || (activeBlockData ? activeBlockData.left_pct : 0);
+        const curT = parseFloat(activeBlockEl.style.top) || (activeBlockData ? activeBlockData.top_pct : 0);
+
+        tb.style.left = `${curL}%`;
+        tb.style.top = `calc(${curT}% - 26px)`;
+        tb.style.display = 'flex';
+    }
+
+    function setActiveBlock(blockDiv, b, p) {
+        if (activeBlockEl && activeBlockEl !== blockDiv) {
+            activeBlockEl.classList.remove('is-focused', 'is-selected');
+        }
+        activeBlockEl = blockDiv;
+        activeBlockData = b;
+        activeBlockPage = p;
+        blockDiv.classList.add('is-focused', 'is-selected');
+        currentPageIndex = p.page_num;
+        updatePageIndicator();
+
+        if (tbFontSelect && b.font_name) {
+            ensureFontInSelect(b.font_name);
+            tbFontSelect.value = b.font_name;
+        }
+        if (tbFontSizeSelect && b.font_size_pt) {
+            ensureFontSizeInSelect(b.font_size_pt);
+            tbFontSizeSelect.value = String(b.font_size_pt);
+        }
+
+        updateToolbarEffectStates();
+        updateFloatingToolbarPosition();
+    }
+
+    function toggleActiveBlockBold() {
+        if (!activeBlockEl || !activeBlockData) return;
+        activeBlockData.is_bold = !activeBlockData.is_bold;
+        activeBlockEl.style.fontWeight = activeBlockData.is_bold ? 'bold' : 'normal';
+        activeBlockData.is_modified = true;
+        activeBlockEl.classList.add('is-edited');
+        updateToolbarEffectStates();
+    }
+
+    function toggleActiveBlockItalic() {
+        if (!activeBlockEl || !activeBlockData) return;
+        activeBlockData.is_italic = !activeBlockData.is_italic;
+        activeBlockEl.style.fontStyle = activeBlockData.is_italic ? 'italic' : 'normal';
+        activeBlockData.is_modified = true;
+        activeBlockEl.classList.add('is-edited');
+        updateToolbarEffectStates();
+    }
+
+    function toggleActiveBlockUnderline() {
+        if (!activeBlockEl || !activeBlockData) return;
+        activeBlockData.is_underline = !activeBlockData.is_underline;
+        activeBlockEl.style.textDecoration = activeBlockData.is_underline ? 'underline' : 'none';
+        activeBlockData.is_modified = true;
+        activeBlockEl.classList.add('is-edited');
+        updateToolbarEffectStates();
+    }
+
+    function updateToolbarEffectStates() {
+        if (!activeBlockData) return;
+        if (tbBtnBold) tbBtnBold.classList.toggle('active', !!activeBlockData.is_bold);
+        if (tbBtnItalic) tbBtnItalic.classList.toggle('active', !!activeBlockData.is_italic);
+        if (tbBtnUnderline) tbBtnUnderline.classList.toggle('active', !!activeBlockData.is_underline);
+
+        if (floatingBlockToolbar) {
+            const fBold = floatingBlockToolbar.querySelector('[data-act="bold"]');
+            const fItalic = floatingBlockToolbar.querySelector('[data-act="italic"]');
+            const fUnderline = floatingBlockToolbar.querySelector('[data-act="underline"]');
+            if (fBold) fBold.classList.toggle('active', !!activeBlockData.is_bold);
+            if (fItalic) fItalic.classList.toggle('active', !!activeBlockData.is_italic);
+            if (fUnderline) fUnderline.classList.toggle('active', !!activeBlockData.is_underline);
+        }
+    }
+
+    function startBlockDrag(e) {
+        if (!activeBlockEl || !activeBlockData || !activeBlockPage) return;
+        const b = activeBlockData;
+        const p = activeBlockPage;
+        const sheetCanvas = activeBlockEl.closest('.page-sheet-canvas');
+        if (!sheetCanvas) return;
+
+        const guideV = sheetCanvas.querySelector('.docedit-align-guide-v');
+        const guideH = sheetCanvas.querySelector('.docedit-align-guide-h');
+
+        const startMouseX = e.clientX;
+        const startMouseY = e.clientY;
+        const startLeftPct = b.left_pct;
+        const startTopPct = b.top_pct;
+        const canvasRect = sheetCanvas.getBoundingClientRect();
+
+        activeBlockEl.classList.add('is-moving');
+
+        function onMouseMove(moveEvent) {
+            const deltaX = moveEvent.clientX - startMouseX;
+            const deltaY = moveEvent.clientY - startMouseY;
+
+            let newLeft = startLeftPct + (deltaX / canvasRect.width) * 100;
+            let newTop = startTopPct + (deltaY / canvasRect.height) * 100;
+
+            newLeft = Math.max(0, Math.min(100 - (b.width_pct || 1), newLeft));
+            newTop = Math.max(0, Math.min(100 - (b.height_pct || 1), newTop));
+
+            // Magnetic Snapping to other blocks on the same page
+            const SNAP_THRESHOLD = 0.8;
+            let snapX = null;
+            let snapY = null;
+
+            for (const other of p.blocks) {
+                if (other.id === b.id) continue;
+                if (Math.abs(newLeft - other.left_pct) < SNAP_THRESHOLD) {
+                    newLeft = other.left_pct;
+                    snapX = newLeft;
+                    break;
+                }
+                const curMid = newLeft + (b.width_pct || 0) / 2;
+                const otherMid = other.left_pct + (other.width_pct || 0) / 2;
+                if (Math.abs(curMid - otherMid) < SNAP_THRESHOLD) {
+                    newLeft = otherMid - (b.width_pct || 0) / 2;
+                    snapX = otherMid;
+                    break;
+                }
+            }
+
+            for (const other of p.blocks) {
+                if (other.id === b.id) continue;
+                if (Math.abs(newTop - other.top_pct) < SNAP_THRESHOLD) {
+                    newTop = other.top_pct;
+                    snapY = newTop;
+                    break;
+                }
+            }
+
+            if (guideV) {
+                if (snapX !== null) {
+                    guideV.style.left = `${snapX}%`;
+                    guideV.style.display = 'block';
+                } else {
+                    guideV.style.display = 'none';
+                }
+            }
+
+            if (guideH) {
+                if (snapY !== null) {
+                    guideH.style.top = `${snapY}%`;
+                    guideH.style.display = 'block';
+                } else {
+                    guideH.style.display = 'none';
+                }
+            }
+
+            b.left_pct = Math.round(newLeft * 1000) / 1000;
+            b.top_pct = Math.round(newTop * 1000) / 1000;
+            activeBlockEl.style.left = `${b.left_pct}%`;
+            activeBlockEl.style.top = `${b.top_pct}%`;
+            b.is_modified = true;
+            activeBlockEl.classList.add('is-edited');
+
+            updateFloatingToolbarPosition();
+        }
+
+        function onMouseUp() {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+
+            activeBlockEl.classList.remove('is-moving');
+            if (guideV) guideV.style.display = 'none';
+            if (guideH) guideH.style.display = 'none';
+
+            // Recalculate bbox
+            const lx0 = (b.left_pct / 100.0) * p.width;
+            const ly0 = (b.top_pct / 100.0) * p.height;
+            const w_pt = ((b.width_pct || 10) / 100.0) * p.width;
+            const h_pt = ((b.height_pct || 2) / 100.0) * p.height;
+            b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
+        }
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    }
+
+    function alignLeftWithNearestBlock() {
+        if (!activeBlockEl || !activeBlockData || !activeBlockPage) return;
+        const b = activeBlockData;
+        const p = activeBlockPage;
+
+        const otherBlocks = p.blocks.filter(o => o.id !== b.id && Math.abs(o.left_pct - b.left_pct) > 0.05);
+        if (otherBlocks.length === 0) return;
+
+        otherBlocks.sort((a, bBlock) => Math.abs(a.left_pct - b.left_pct) - Math.abs(bBlock.left_pct - b.left_pct));
+        const target = otherBlocks[0];
+
+        b.left_pct = target.left_pct;
+        activeBlockEl.style.left = `${b.left_pct}%`;
+        b.is_modified = true;
+        activeBlockEl.classList.add('is-edited');
+
+        const lx0 = (b.left_pct / 100.0) * p.width;
+        const ly0 = (b.top_pct / 100.0) * p.height;
+        const w_pt = ((b.width_pct || 10) / 100.0) * p.width;
+        const h_pt = ((b.height_pct || 2) / 100.0) * p.height;
+        b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
+
+        updateFloatingToolbarPosition();
+
+        const sheetCanvas = activeBlockEl.closest('.page-sheet-canvas');
+        if (sheetCanvas) {
+            const guideV = sheetCanvas.querySelector('.docedit-align-guide-v');
+            if (guideV) {
+                guideV.style.left = `${b.left_pct}%`;
+                guideV.style.display = 'block';
+                setTimeout(() => { guideV.style.display = 'none'; }, 1000);
+            }
+        }
+    }
+
+    function nudgeActiveBlock(dxPct, dyPct) {
+        if (!activeBlockEl || !activeBlockData || !activeBlockPage) return;
+        const b = activeBlockData;
+        const p = activeBlockPage;
+
+        b.left_pct = Math.max(0, Math.min(100 - (b.width_pct || 1), Math.round((b.left_pct + dxPct) * 1000) / 1000));
+        b.top_pct = Math.max(0, Math.min(100 - (b.height_pct || 1), Math.round((b.top_pct + dyPct) * 1000) / 1000));
+
+        activeBlockEl.style.left = `${b.left_pct}%`;
+        activeBlockEl.style.top = `${b.top_pct}%`;
+        b.is_modified = true;
+        activeBlockEl.classList.add('is-edited');
+
+        const lx0 = (b.left_pct / 100.0) * p.width;
+        const ly0 = (b.top_pct / 100.0) * p.height;
+        const w_pt = ((b.width_pct || 10) / 100.0) * p.width;
+        const h_pt = ((b.height_pct || 2) / 100.0) * p.height;
+        b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
+
+        updateFloatingToolbarPosition();
+    }
+
+    // Dismiss active block and floating toolbar on outside click
+    document.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.docedit-text-block') || e.target.closest('.docedit-block-toolbar') || e.target.closest('.tb-btn') || e.target.closest('.tb-select')) {
+            return;
+        }
+        if (activeBlockEl) {
+            activeBlockEl.classList.remove('is-focused', 'is-selected');
+            activeBlockEl = null;
+            activeBlockData = null;
+            activeBlockPage = null;
+            if (floatingBlockToolbar) {
+                floatingBlockToolbar.style.display = 'none';
+            }
+            if (tbBtnBold) tbBtnBold.classList.remove('active');
+            if (tbBtnItalic) tbBtnItalic.classList.remove('active');
+            if (tbBtnUnderline) tbBtnUnderline.classList.remove('active');
+        }
+    });
 
     function applyZoom() {
         const sheets = document.querySelectorAll('.docedit-page-sheet');
@@ -524,10 +968,55 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const cmd = btn.getAttribute('data-cmd');
             const val = btn.getAttribute('data-val') || null;
+
+            if (currentMode === 'layout_preserved' && activeBlockEl && activeBlockData) {
+                if (cmd === 'bold') {
+                    toggleActiveBlockBold();
+                    return;
+                } else if (cmd === 'italic') {
+                    toggleActiveBlockItalic();
+                    return;
+                } else if (cmd === 'underline') {
+                    toggleActiveBlockUnderline();
+                    return;
+                }
+            }
+
             document.execCommand(cmd, false, val);
             editorPaper.focus();
         });
     });
+
+    if (tbAlignBlockLeft) {
+        tbAlignBlockLeft.addEventListener('click', (e) => {
+            e.preventDefault();
+            alignLeftWithNearestBlock();
+        });
+    }
+    if (tbNudgeLeft) {
+        tbNudgeLeft.addEventListener('click', (e) => {
+            e.preventDefault();
+            nudgeActiveBlock(-0.2, 0);
+        });
+    }
+    if (tbNudgeRight) {
+        tbNudgeRight.addEventListener('click', (e) => {
+            e.preventDefault();
+            nudgeActiveBlock(0.2, 0);
+        });
+    }
+    if (tbNudgeUp) {
+        tbNudgeUp.addEventListener('click', (e) => {
+            e.preventDefault();
+            nudgeActiveBlock(0, -0.2);
+        });
+    }
+    if (tbNudgeDown) {
+        tbNudgeDown.addEventListener('click', (e) => {
+            e.preventDefault();
+            nudgeActiveBlock(0, 0.2);
+        });
+    }
 
     const tbHeadingSelect = document.getElementById('tbHeadingSelect');
     if (tbHeadingSelect) {
@@ -542,6 +1031,353 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Font Management Functions
+    function ensureFontInSelect(fontName) {
+        if (!tbFontSelect || !fontName) return;
+        const exists = Array.from(tbFontSelect.options).some(opt => opt.value.toLowerCase() === fontName.toLowerCase());
+        if (!exists) {
+            let sysGroup = tbFontSelect.querySelector('optgroup[label^="💻 System"]');
+            if (!sysGroup) sysGroup = tbFontSelect;
+            const opt = document.createElement('option');
+            opt.value = fontName;
+            opt.textContent = fontName;
+            sysGroup.appendChild(opt);
+        }
+    }
+
+    function ensureFontSizeInSelect(fontSize) {
+        if (!tbFontSizeSelect || !fontSize) return;
+        const valStr = String(fontSize);
+        const exists = Array.from(tbFontSizeSelect.options).some(opt => opt.value === valStr || parseFloat(opt.value) === parseFloat(valStr));
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = valStr;
+            opt.textContent = `${fontSize} pt`;
+            const options = Array.from(tbFontSizeSelect.options);
+            const insertBeforeOpt = options.find(o => parseFloat(o.value) > parseFloat(valStr));
+            if (insertBeforeOpt) {
+                tbFontSizeSelect.insertBefore(opt, insertBeforeOpt);
+            } else {
+                tbFontSizeSelect.appendChild(opt);
+            }
+        }
+    }
+
+    function populateFontDropdown(fontData) {
+        if (!tbFontSelect || !fontData || !fontData.groups) return;
+        const currentVal = tbFontSelect.value;
+        tbFontSelect.innerHTML = '';
+
+        const groups = fontData.groups;
+
+        if (groups.recommended && groups.recommended.length > 0) {
+            const grp = document.createElement('optgroup');
+            grp.label = '✨ Recommended & Classic Book Fonts';
+            groups.recommended.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.name;
+                opt.textContent = f.label || f.name;
+                grp.appendChild(opt);
+            });
+            tbFontSelect.appendChild(grp);
+        }
+
+        if (groups.project && groups.project.length > 0) {
+            const grp = document.createElement('optgroup');
+            grp.label = '📁 Project Fonts';
+            groups.project.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.name;
+                opt.textContent = `${f.name} (Project Font)`;
+                grp.appendChild(opt);
+            });
+            tbFontSelect.appendChild(grp);
+        }
+
+        if (groups.system && groups.system.length > 0) {
+            const grp = document.createElement('optgroup');
+            grp.label = `💻 System & OS Fonts (${groups.system.length})`;
+            groups.system.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.name;
+                opt.textContent = f.name;
+                grp.appendChild(opt);
+            });
+            tbFontSelect.appendChild(grp);
+        }
+
+        const preferredVal = currentVal || (currentMeta && currentMeta.font_info ? currentMeta.font_info.name : null);
+        if (preferredVal) {
+            ensureFontInSelect(preferredVal);
+            tbFontSelect.value = preferredVal;
+        }
+    }
+
+    async function refreshFontList(force = false) {
+        if (!tbFontSelect) return;
+        if (tbFontRefresh) tbFontRefresh.classList.add('spinning');
+        try {
+            const url = force ? '/docedit/api/fonts/?refresh=1' : '/docedit/api/fonts/';
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.success) {
+                populateFontDropdown(data);
+                if (force) {
+                    showNotice('System Fonts Refreshed', `Scanned system & OS: ${data.total_count} fonts available.`);
+                }
+            }
+        } catch (err) {
+            console.error('Failed fetching font list:', err);
+        } finally {
+            if (tbFontRefresh) {
+                setTimeout(() => tbFontRefresh.classList.remove('spinning'), 400);
+            }
+        }
+    }
+
+    // Refresh OS Fonts Button
+    if (tbFontRefresh) {
+        tbFontRefresh.addEventListener('click', () => {
+            refreshFontList(true);
+        });
+    }
+
+    // Install Font Modal Handlers
+    function showInstallFontModal() {
+        if (!installFontModal) return;
+        selectedFontFile = null;
+        if (selectedFontFileName) {
+            selectedFontFileName.style.display = 'none';
+            selectedFontFileName.textContent = '';
+        }
+        if (fontFileInput) fontFileInput.value = '';
+        if (fontSearchInput) fontSearchInput.value = '';
+        if (fontInstallStatus) {
+            fontInstallStatus.style.display = 'none';
+            fontInstallStatus.className = 'font-install-status';
+            fontInstallStatus.textContent = '';
+        }
+        installFontModal.classList.add('show');
+    }
+
+    function hideInstallFontModal() {
+        if (installFontModal) installFontModal.classList.remove('show');
+    }
+
+    if (tbInstallFontBtn) {
+        tbInstallFontBtn.addEventListener('click', showInstallFontModal);
+    }
+
+    if (modalBtnCloseFontInstall) {
+        modalBtnCloseFontInstall.addEventListener('click', hideInstallFontModal);
+    }
+
+    if (installFontModal) {
+        installFontModal.addEventListener('click', (e) => {
+            if (e.target === installFontModal) hideInstallFontModal();
+        });
+    }
+
+    // Install Modal Tabs
+    if (tabBtnFontFile && tabBtnFontOnline) {
+        tabBtnFontFile.addEventListener('click', () => {
+            activeInstallTab = 'file';
+            tabBtnFontFile.classList.add('active');
+            tabBtnFontOnline.classList.remove('active');
+            if (tabContentFontFile) tabContentFontFile.classList.add('active');
+            if (tabContentFontOnline) tabContentFontOnline.classList.remove('active');
+        });
+
+        tabBtnFontOnline.addEventListener('click', () => {
+            activeInstallTab = 'online';
+            tabBtnFontOnline.classList.add('active');
+            tabBtnFontFile.classList.remove('active');
+            if (tabContentFontOnline) tabContentFontOnline.classList.add('active');
+            if (tabContentFontFile) tabContentFontFile.classList.remove('active');
+        });
+    }
+
+    // Dropzone for Font Files
+    if (fontFileDropzone && fontFileInput) {
+        fontFileDropzone.addEventListener('click', () => {
+            fontFileInput.click();
+        });
+
+        fontFileDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fontFileDropzone.classList.add('drag-over');
+        });
+
+        fontFileDropzone.addEventListener('dragleave', () => {
+            fontFileDropzone.classList.remove('drag-over');
+        });
+
+        fontFileDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fontFileDropzone.classList.remove('drag-over');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleSelectedFontFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fontFileInput.addEventListener('change', () => {
+            if (fontFileInput.files && fontFileInput.files.length > 0) {
+                handleSelectedFontFile(fontFileInput.files[0]);
+            }
+        });
+    }
+
+    function handleSelectedFontFile(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext !== 'ttf' && ext !== 'otf') {
+            if (fontInstallStatus) {
+                fontInstallStatus.className = 'font-install-status error';
+                fontInstallStatus.style.display = 'block';
+                fontInstallStatus.textContent = 'Please choose a TrueType (.ttf) or OpenType (.otf) font file.';
+            }
+            return;
+        }
+        selectedFontFile = file;
+        if (selectedFontFileName) {
+            selectedFontFileName.style.display = 'inline-block';
+            selectedFontFileName.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+        }
+        if (fontInstallStatus) fontInstallStatus.style.display = 'none';
+    }
+
+    // Submit Font Installation
+    if (modalBtnSubmitFontInstall) {
+        modalBtnSubmitFontInstall.addEventListener('click', async () => {
+            if (activeInstallTab === 'file') {
+                if (!selectedFontFile) {
+                    if (fontInstallStatus) {
+                        fontInstallStatus.className = 'font-install-status error';
+                        fontInstallStatus.style.display = 'block';
+                        fontInstallStatus.textContent = 'Please select a .ttf or .otf font file to install.';
+                    }
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('font_file', selectedFontFile);
+
+                modalBtnSubmitFontInstall.disabled = true;
+                modalBtnSubmitFontInstall.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Installing...';
+                if (fontInstallStatus) {
+                    fontInstallStatus.className = 'font-install-status info';
+                    fontInstallStatus.style.display = 'block';
+                    fontInstallStatus.textContent = 'Installing font into Windows system registry...';
+                }
+
+                try {
+                    const resp = await fetch('/docedit/api/fonts/install/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: formData,
+                    });
+                    const resData = await resp.json();
+                    if (resData.success) {
+                        if (resData.fonts) populateFontDropdown(resData.fonts);
+                        ensureFontInSelect(resData.name);
+                        tbFontSelect.value = resData.name;
+                        editorPaper.style.fontFamily = `"${resData.name}", serif`;
+                        panFontName.textContent = resData.name;
+                        showNotice('Font Installed', resData.message || `Font '${resData.name}' installed to system successfully.`);
+                        hideInstallFontModal();
+
+                        if (currentSessionId) {
+                            fetch(`/docedit/api/font/${currentSessionId}/`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                                body: JSON.stringify({ font_name: resData.name }),
+                            }).catch(() => {});
+                        }
+                    } else {
+                        if (fontInstallStatus) {
+                            fontInstallStatus.className = 'font-install-status error';
+                            fontInstallStatus.style.display = 'block';
+                            fontInstallStatus.textContent = resData.error || 'Failed installing font.';
+                        }
+                    }
+                } catch (err) {
+                    if (fontInstallStatus) {
+                        fontInstallStatus.className = 'font-install-status error';
+                        fontInstallStatus.style.display = 'block';
+                        fontInstallStatus.textContent = 'Network or server error installing font.';
+                    }
+                } finally {
+                    modalBtnSubmitFontInstall.disabled = false;
+                    modalBtnSubmitFontInstall.innerHTML = '<i class="fa-solid fa-download"></i> Install to System';
+                }
+            } else {
+                // Online search tab
+                const name = fontSearchInput ? fontSearchInput.value.trim() : '';
+                if (!name) {
+                    if (fontInstallStatus) {
+                        fontInstallStatus.className = 'font-install-status error';
+                        fontInstallStatus.style.display = 'block';
+                        fontInstallStatus.textContent = 'Please enter a font family name.';
+                    }
+                    return;
+                }
+
+                modalBtnSubmitFontInstall.disabled = true;
+                modalBtnSubmitFontInstall.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading & Installing...';
+                if (fontInstallStatus) {
+                    fontInstallStatus.className = 'font-install-status info';
+                    fontInstallStatus.style.display = 'block';
+                    fontInstallStatus.textContent = `Downloading '${name}' and registering into Windows system...`;
+                }
+
+                try {
+                    const resp = await fetch('/docedit/api/fonts/install/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: JSON.stringify({ font_name: name }),
+                    });
+                    const resData = await resp.json();
+                    if (resData.success) {
+                        if (resData.fonts) populateFontDropdown(resData.fonts);
+                        ensureFontInSelect(resData.name);
+                        tbFontSelect.value = resData.name;
+                        editorPaper.style.fontFamily = `"${resData.name}", serif`;
+                        panFontName.textContent = resData.name;
+                        showNotice('Font Installed', resData.message || `Font '${resData.name}' installed to system successfully.`);
+                        hideInstallFontModal();
+
+                        if (currentSessionId) {
+                            fetch(`/docedit/api/font/${currentSessionId}/`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                                body: JSON.stringify({ font_name: resData.name }),
+                            }).catch(() => {});
+                        }
+                    } else {
+                        if (fontInstallStatus) {
+                            fontInstallStatus.className = 'font-install-status error';
+                            fontInstallStatus.style.display = 'block';
+                            fontInstallStatus.textContent = resData.error || 'Failed downloading/installing font.';
+                        }
+                    }
+                } catch (err) {
+                    if (fontInstallStatus) {
+                        fontInstallStatus.className = 'font-install-status error';
+                        fontInstallStatus.style.display = 'block';
+                        fontInstallStatus.textContent = 'Network or server error.';
+                    }
+                } finally {
+                    modalBtnSubmitFontInstall.disabled = false;
+                    modalBtnSubmitFontInstall.innerHTML = '<i class="fa-solid fa-download"></i> Install to System';
+                }
+            }
+        });
+    }
+
     // Font Switching via Toolbar
     if (tbFontSelect) {
         tbFontSelect.addEventListener('change', async () => {
@@ -549,15 +1385,40 @@ document.addEventListener('DOMContentLoaded', () => {
             editorPaper.style.fontFamily = `"${newFont}", serif`;
             panFontName.textContent = newFont;
 
+            // In layout_preserved mode: if a specific block is active, update that block; otherwise update all
+            if (currentMode === 'layout_preserved') {
+                if (activeBlockEl && activeBlockData) {
+                    activeBlockEl.style.fontFamily = `"${newFont}", serif`;
+                    activeBlockData.font_name = newFont;
+                    activeBlockData.is_modified = true;
+                    activeBlockEl.classList.add('is-edited');
+                } else {
+                    const blocks = editorPaper.querySelectorAll('.docedit-text-block');
+                    blocks.forEach(b => {
+                        b.style.fontFamily = `"${newFont}", serif`;
+                    });
+                    if (currentPagesData && currentPagesData.length > 0) {
+                        currentPagesData.forEach(p => {
+                            if (p.blocks) {
+                                p.blocks.forEach(b => {
+                                    b.font_name = newFont;
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
             if (currentSessionId) {
                 try {
+                    const curSize = tbFontSizeSelect ? parseFloat(tbFontSizeSelect.value) : null;
                     const resp = await fetch(`/docedit/api/font/${currentSessionId}/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCsrfToken(),
                         },
-                        body: JSON.stringify({ font_name: newFont }),
+                        body: JSON.stringify({ font_name: newFont, size_pt: curSize }),
                     });
                     const resData = await resp.json();
                     if (resData.success) {
@@ -570,12 +1431,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Background sync of system fonts on page load
+    setTimeout(() => { refreshFontList(false); }, 1000);
+
     // Font Size Adjuster via Toolbar
     if (tbFontSizeSelect) {
         tbFontSizeSelect.addEventListener('change', () => {
             const newSize = tbFontSizeSelect.value;
+            const newSizeNum = parseFloat(newSize);
             editorPaper.style.fontSize = `${newSize}pt`;
             panFontSize.textContent = `${newSize} pt`;
+
+            // In layout_preserved mode: if a specific block is active, update that block; otherwise update all
+            if (currentMode === 'layout_preserved') {
+                if (activeBlockEl && activeBlockData) {
+                    activeBlockEl.style.fontSize = `${newSize}pt`;
+                    activeBlockData.font_size_pt = newSizeNum;
+                    activeBlockData.is_modified = true;
+                    activeBlockEl.classList.add('is-edited');
+                } else {
+                    const blocks = editorPaper.querySelectorAll('.docedit-text-block');
+                    blocks.forEach(b => {
+                        b.style.fontSize = `${newSize}pt`;
+                    });
+                    if (currentPagesData && currentPagesData.length > 0) {
+                        currentPagesData.forEach(p => {
+                            if (p.blocks) {
+                                p.blocks.forEach(b => {
+                                    b.font_size_pt = newSizeNum;
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (currentSessionId) {
+                const curFont = tbFontSelect ? tbFontSelect.value : (currentMeta?.font_info?.name || 'EB Garamond');
+                fetch(`/docedit/api/font/${currentSessionId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify({ font_name: curFont, size_pt: newSizeNum }),
+                }).catch(() => {});
+            }
         });
     }
 
@@ -735,7 +1636,39 @@ document.addEventListener('DOMContentLoaded', () => {
                                 b.text = newText;
                                 b.is_modified = true;
                             }
+                            const curL = parseFloat(el.style.left);
+                            const curT = parseFloat(el.style.top);
+                            if (!isNaN(curL) && Math.abs(curL - b.left_pct) > 0.001) {
+                                b.left_pct = Math.round(curL * 1000) / 1000;
+                                b.is_modified = true;
+                            }
+                            if (!isNaN(curT) && Math.abs(curT - b.top_pct) > 0.001) {
+                                b.top_pct = Math.round(curT * 1000) / 1000;
+                                b.is_modified = true;
+                            }
+                            if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight, 10) >= 600) {
+                                b.is_bold = true;
+                            } else if (el.style.fontWeight === 'normal') {
+                                b.is_bold = false;
+                            }
+                            if (el.style.fontStyle === 'italic') {
+                                b.is_italic = true;
+                            } else if (el.style.fontStyle === 'normal') {
+                                b.is_italic = false;
+                            }
+                            if (el.style.textDecoration && el.style.textDecoration.includes('underline')) {
+                                b.is_underline = true;
+                            } else if (el.style.textDecoration === 'none') {
+                                b.is_underline = false;
+                            }
                         }
+
+                        // Recalculate bbox from current left_pct, top_pct, width_pct, height_pct
+                        const lx0 = (b.left_pct / 100.0) * p.width;
+                        const ly0 = (b.top_pct / 100.0) * p.height;
+                        const w_pt = ((b.width_pct || 10) / 100.0) * p.width;
+                        const h_pt = ((b.height_pct || 2) / 100.0) * p.height;
+                        b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
                     });
                 });
                 payload.pages_data = currentPagesData;

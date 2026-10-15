@@ -18,18 +18,65 @@ def clean_pdf_font_name(raw_name: str) -> str:
     """
     Cleans PostScript / PDF subset prefixes and styles:
     'ABCDEF+TimesNewRomanPS-BoldMT' -> 'Times New Roman'
+    'Calibri-Bold' -> 'Calibri'
+    'ArialMT' -> 'Arial'
     """
     if not raw_name:
         return ""
-    name = raw_name
+    name = raw_name.strip()
     # Strip subset prefix like 'ABCDEF+' or 'BAAAAA+'
-    if "+" in name and len(name.split("+")[0]) == 6:
+    name = re.sub(r"^[A-Z0-9]{6}\+", "", name)
+    if "+" in name and len(name.split("+")[0]) <= 7:
         name = name.split("+", 1)[1]
 
-    # Replace hyphens and underscores
-    name = re.sub(r"[,_]+", " ", name)
-    # Strip common PostScript suffixes
-    name = re.sub(r"(PSMT|PS|MT|Pro|Std|Regular|Bold|Italic|Light|SemiBold|Medium|Black)", "", name, flags=re.IGNORECASE)
+    # Quick canonical matching for common PDF fonts
+    known_families = [
+        ("timesnewroman", "Times New Roman"),
+        ("times", "Times New Roman"),
+        ("arialmt", "Arial"),
+        ("arial", "Arial"),
+        ("calibri", "Calibri"),
+        ("segoeui", "Segoe UI"),
+        ("aptos", "Aptos"),
+        ("georgia", "Georgia"),
+        ("cambria", "Cambria"),
+        ("verdana", "Verdana"),
+        ("tahoma", "Tahoma"),
+        ("consolas", "Consolas"),
+        ("couriernew", "Courier New"),
+        ("courier", "Courier New"),
+        ("trebuchetms", "Trebuchet MS"),
+        ("trebuchet", "Trebuchet MS"),
+        ("helvetica", "Helvetica"),
+        ("ebgaramond", "EB Garamond"),
+        ("garamond", "EB Garamond"),
+        ("librebaskerville", "Libre Baskerville"),
+        ("baskerville", "Libre Baskerville"),
+        ("librecaslon", "Libre Caslon Text"),
+        ("caslon", "Libre Caslon Text"),
+        ("playfair", "Playfair Display"),
+        ("merriweather", "Merriweather"),
+        ("roboto", "Roboto"),
+        ("opensans", "Open Sans"),
+        ("notoserifdevanagari", "Noto Serif Devanagari"),
+        ("notoserifgujarati", "Noto Serif Gujarati"),
+        ("amiri", "Amiri"),
+    ]
+
+    clean_key = re.sub(r"[^a-zA-Z0-9]", "", name).lower()
+    for prefix, display in known_families:
+        if clean_key.startswith(prefix):
+            return display
+
+    # Replace hyphens, underscores, commas, and dots with space
+    name = re.sub(r"[-_,.]+", " ", name)
+    # Strip common PostScript suffixes and style qualifiers
+    name = re.sub(
+        r"\b(PSMT|PS|MT|Pro|Std|Regular|Roman|Bold|Italic|Oblique|Light|SemiBold|Semibold|Medium|Black|Heavy|ExtraBold|ExtraLight|Hairline|Thin)\b",
+        "",
+        name,
+        flags=re.IGNORECASE,
+    )
     # Split camelCase
     name = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
     return " ".join(name.split()).strip()

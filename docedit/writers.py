@@ -174,6 +174,46 @@ def _write_pdf_layout_preserved(
     """
     import pymupdf
 
+    from .font_catalog import is_font_available_locally, _find_system_font_file, find_font_variant_file
+
+    def get_font_kwargs_for_block(
+        b_name: str,
+        preferred_path: Optional[str],
+        is_bold: bool = False,
+        is_italic: bool = False
+    ) -> Dict[str, Any]:
+        # 1. Search for matching font variant file
+        var_p = find_font_variant_file(b_name, is_bold=is_bold, is_italic=is_italic, base_font_path=preferred_path)
+        if var_p and Path(var_p).is_file():
+            return {"fontfile": str(var_p)}
+
+        # 2. PyMuPDF built-in fonts with exact style variants
+        low = (b_name or "").lower()
+        if any(s in low for s in ("times", "serif", "garamond", "georgia", "baskerville", "caslon", "cambria", "book")):
+            if is_bold and is_italic:
+                return {"fontname": "times-bolditalic"}
+            elif is_bold:
+                return {"fontname": "times-bold"}
+            elif is_italic:
+                return {"fontname": "times-italic"}
+            return {"fontname": "times"}
+        elif any(s in low for s in ("mono", "courier", "console", "consolas")):
+            if is_bold and is_italic:
+                return {"fontname": "cobi"}
+            elif is_bold:
+                return {"fontname": "cobo"}
+            elif is_italic:
+                return {"fontname": "coit"}
+            return {"fontname": "couri"}
+        else:  # Sans serif (helv, arial, calibri, segoe, etc.)
+            if is_bold and is_italic:
+                return {"fontname": "hebi"}
+            elif is_bold:
+                return {"fontname": "hebo"}
+            elif is_italic:
+                return {"fontname": "heit"}
+            return {"fontname": "helv"}
+
     # Try modifying original PDF directly if available
     if original_file_path and original_file_path.is_file() and original_file_path.suffix.lower() == ".pdf":
         try:
@@ -185,14 +225,34 @@ def _write_pdf_layout_preserved(
                     for b in p_info.get("blocks", []):
                         if b.get("is_modified", False):
                             bbox = b.get("bbox")
+                            orig_bbox = b.get("orig_bbox") or bbox
+                            # Redact original position to erase old text from document
+                            if orig_bbox and len(orig_bbox) == 4:
+                                page.add_redact_annot(pymupdf.Rect(orig_bbox), fill=(1, 1, 1))
+                            # Redact new position if moved to keep background clean
+                            if bbox and bbox != orig_bbox and len(bbox) == 4:
+                                page.add_redact_annot(pymupdf.Rect(bbox), fill=(1, 1, 1))
+                            page.apply_redactions()
+
                             if bbox and len(bbox) == 4:
                                 rect = pymupdf.Rect(bbox)
-                                page.add_redact_annot(rect, fill=(1, 1, 1))
-                                page.apply_redactions()
                                 y_pos = rect.y1 - max(2.0, rect.height * 0.15)
                                 f_size = b.get("font_size_pt", font_size_pt)
-                                font_kw = {"fontfile": font_path} if (font_path and Path(font_path).is_file()) else {"fontname": "helv"}
-                                page.insert_text(pymupdf.Point(rect.x0, y_pos), b.get("text", ""), fontsize=f_size, **font_kw)
+                                b_fname = b.get("font_name") or font_name
+                                is_b = b.get("is_bold", False)
+                                is_it = b.get("is_italic", False)
+                                b_fkw = get_font_kwargs_for_block(b_fname, font_path, is_bold=is_b, is_italic=is_it)
+                                text_str = b.get("text", "")
+                                page.insert_text(pymupdf.Point(rect.x0, y_pos), text_str, fontsize=f_size, **b_fkw)
+
+                                if b.get("is_underline", False):
+                                    try:
+                                        t_len = pymupdf.get_text_length(text_str, fontsize=f_size, **b_fkw)
+                                        ul_y = min(rect.y1, y_pos + max(1.0, f_size * 0.12))
+                                        stroke_w = max(0.6, f_size * 0.055)
+                                        page.draw_line(pymupdf.Point(rect.x0, ul_y), pymupdf.Point(rect.x0 + t_len, ul_y), color=(0, 0, 0), width=stroke_w)
+                                    except Exception as e:
+                                        logger.debug("Failed drawing underline: %s", e)
             doc.save(str(output_path))
             doc.close()
             return output_path
@@ -217,14 +277,32 @@ def _write_pdf_layout_preserved(
         for b in p_info.get("blocks", []):
             if b.get("is_modified", False):
                 bbox = b.get("bbox")
+                orig_bbox = b.get("orig_bbox") or bbox
+                if orig_bbox and len(orig_bbox) == 4:
+                    page.add_redact_annot(pymupdf.Rect(orig_bbox), fill=(1, 1, 1))
+                if bbox and bbox != orig_bbox and len(bbox) == 4:
+                    page.add_redact_annot(pymupdf.Rect(bbox), fill=(1, 1, 1))
+                page.apply_redactions()
+
                 if bbox and len(bbox) == 4:
                     rect = pymupdf.Rect(bbox)
-                    page.add_redact_annot(rect, fill=(1, 1, 1))
-                    page.apply_redactions()
                     y_pos = rect.y1 - max(2.0, rect.height * 0.15)
                     f_size = b.get("font_size_pt", font_size_pt)
-                    font_kw = {"fontfile": font_path} if (font_path and Path(font_path).is_file()) else {"fontname": "helv"}
-                    page.insert_text(pymupdf.Point(rect.x0, y_pos), b.get("text", ""), fontsize=f_size, **font_kw)
+                    b_fname = b.get("font_name") or font_name
+                    is_b = b.get("is_bold", False)
+                    is_it = b.get("is_italic", False)
+                    b_fkw = get_font_kwargs_for_block(b_fname, font_path, is_bold=is_b, is_italic=is_it)
+                    text_str = b.get("text", "")
+                    page.insert_text(pymupdf.Point(rect.x0, y_pos), text_str, fontsize=f_size, **b_fkw)
+
+                    if b.get("is_underline", False):
+                        try:
+                            t_len = pymupdf.get_text_length(text_str, fontsize=f_size, **b_fkw)
+                            ul_y = min(rect.y1, y_pos + max(1.0, f_size * 0.12))
+                            stroke_w = max(0.6, f_size * 0.055)
+                            page.draw_line(pymupdf.Point(rect.x0, ul_y), pymupdf.Point(rect.x0 + t_len, ul_y), color=(0, 0, 0), width=stroke_w)
+                        except Exception as e:
+                            logger.debug("Failed drawing underline: %s", e)
 
     doc.save(str(output_path))
     doc.close()
@@ -553,6 +631,12 @@ def _write_docx(
     font = style.font
     font.name = font_name
     font.size = Pt(font_size_pt)
+    try:
+        rPr_norm = style.element.get_or_add_rPr()
+        rFonts_norm = parse_xml(r'<w:rFonts {} w:ascii="{}" w:hAnsi="{}" w:cs="{}"/>'.format(nsdecls('w'), font_name, font_name, font_name))
+        rPr_norm.append(rFonts_norm)
+    except Exception:
+        pass
 
     # 1-inch margins
     for section in doc.sections:
@@ -569,41 +653,46 @@ def _write_docx(
     }
 
     def add_formatted_runs(p, raw_text, base_size=font_size_pt):
-        tokens = re.split(
-            r'(<strong>.*?</strong>|<em>.*?</em>|<u>.*?</u>|<br\s*/?>)',
-            raw_text,
-            flags=re.DOTALL | re.IGNORECASE
-        )
+        tokens = re.split(r'(<[^>]+>)', raw_text)
+        bold = False
+        italic = False
+        underline = False
+
         for tok in tokens:
             if not tok:
                 continue
-            if re.match(r'<br\s*/?>', tok, flags=re.IGNORECASE):
-                p.add_run('\n')
-                continue
-
-            bold = False
-            italic = False
-            underline = False
-            txt = tok
-
-            if tok.lower().startswith('<strong>') and tok.lower().endswith('</strong>'):
+            lower_tok = tok.lower()
+            if lower_tok in ('<b>', '<strong>'):
                 bold = True
-                txt = tok[8:-9]
-            elif tok.lower().startswith('<em>') and tok.lower().endswith('</em>'):
+            elif lower_tok in ('</b>', '</strong>'):
+                bold = False
+            elif lower_tok in ('<i>', '<em>'):
                 italic = True
-                txt = tok[4:-5]
-            elif tok.lower().startswith('<u>') and tok.lower().endswith('</u>'):
+            elif lower_tok in ('</i>', '</em>'):
+                italic = False
+            elif lower_tok == '<u>':
                 underline = True
-                txt = tok[3:-4]
-
-            clean = html.unescape(re.sub(r'<[^>]+>', '', txt))
-            if clean:
-                r = p.add_run(clean)
-                r.font.name = font_name
-                r.font.size = Pt(base_size)
-                r.bold = bold
-                r.italic = italic
-                r.underline = underline
+            elif lower_tok == '</u>':
+                underline = False
+            elif lower_tok in ('<br>', '<br/>', '<br />'):
+                p.add_run('\n')
+            elif tok.startswith('<') and tok.endswith('>'):
+                pass  # Ignore other structural tags in run text
+            else:
+                clean = html.unescape(tok)
+                if clean:
+                    r = p.add_run(clean)
+                    r.font.name = font_name
+                    try:
+                        rPr = r._r.get_or_add_rPr()
+                        rFonts = parse_xml(r'<w:rFonts {} w:ascii="{}" w:hAnsi="{}" w:cs="{}"/>'.format(nsdecls('w'), font_name, font_name, font_name))
+                        rPr.append(rFonts)
+                    except Exception:
+                        pass
+                    r.font.size = Pt(base_size)
+                    r.bold = bold
+                    r.italic = italic
+                    r.underline = underline
 
     for block in blocks:
         b_type = block["type"]

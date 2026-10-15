@@ -15,7 +15,10 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .conf import EXTENSION_KINDS, MIME_TYPES, conf
 from .font_catalog import (
+    download_google_font,
+    get_categorized_font_list,
     get_font_index,
+    install_uploaded_font,
     is_font_available_for_free,
     resolve_document_font,
 )
@@ -56,9 +59,12 @@ def docedit_home(request: HttpRequest) -> HttpResponse:
         for code, name in conf.OCR_LANGUAGES.items()
     ]
 
+    fonts_data = get_categorized_font_list()
+
     context = {
         "title": "Document Editor | project-h",
         "languages": languages,
+        "fonts": fonts_data,
         "max_upload_mb": conf.MAX_UPLOAD_MB,
         "allowed_extensions": allowed_exts_str,
         "accept_mime": "image/*,.pdf,.docx,.txt,.md,.html,.htm",
@@ -384,4 +390,76 @@ def change_font(request: HttpRequest, sid: str) -> JsonResponse:
         "font_info": font_res,
         "editor_font_css": editor_css,
         "message": font_res.get("message", "Font updated."),
+    })
+
+
+@require_GET
+def font_list_api(request: HttpRequest) -> JsonResponse:
+    """
+    Returns all fonts available in the system or OS + project fonts.
+    Supports ?refresh=1 to force an immediate re-scan of the operating system.
+    """
+    force_refresh = request.GET.get("refresh") in ("1", "true", "yes")
+    font_data = get_categorized_font_list(force_refresh=force_refresh)
+    return JsonResponse({
+        "success": True,
+        "total_count": font_data["total_count"],
+        "groups": {
+            "recommended": font_data["recommended"],
+            "project": font_data["project"],
+            "system": font_data["system"],
+        },
+        "all_fonts": font_data["all_names"],
+        "signature": font_data["signature"],
+    })
+
+
+@require_POST
+def install_font_api(request: HttpRequest) -> JsonResponse:
+    """
+    Installs a new font into the system and DocEdit:
+    - If font_file (.ttf/.otf) is uploaded: saves and installs into system & Windows registry.
+    - If font_name is provided: downloads from Google Fonts and installs into system & Windows registry.
+    Automatically refreshes font list and returns the updated fonts.
+    """
+    font_file = request.FILES.get("font_file")
+    if font_file:
+        ext = Path(font_file.name).suffix.lower()
+        if ext not in (".ttf", ".otf"):
+            return JsonResponse({
+                "success": False,
+                "error": f"Invalid font format '{ext}'. Please upload a .ttf or .otf font file."
+            }, status=400)
+        try:
+            res = install_uploaded_font(font_file.read(), font_file.name)
+            res["fonts"] = get_categorized_font_list(force_refresh=True)
+            return JsonResponse(res)
+        except Exception as e:
+            logger.exception("Failed installing uploaded font: %s", e)
+            return JsonResponse({"success": False, "error": f"Failed installing font: {str(e)}"}, status=500)
+
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        body = request.POST
+
+    font_name = body.get("font_name", "").strip()
+    if not font_name:
+        return JsonResponse({"success": False, "error": "No font file or font name provided."}, status=400)
+
+    free_canon = is_font_available_for_free(font_name) or font_name
+    downloaded = download_google_font(free_canon)
+    if not downloaded:
+        return JsonResponse({
+            "success": False,
+            "error": f"Could not find or download font '{font_name}' online."
+        }, status=404)
+
+    return JsonResponse({
+        "success": True,
+        "name": free_canon,
+        "path": str(downloaded),
+        "installed_to_system": conf.INSTALL_FONTS_TO_SYSTEM,
+        "message": f"Font '{free_canon}' successfully installed to your system and added to DocEdit.",
+        "fonts": get_categorized_font_list(force_refresh=True),
     })

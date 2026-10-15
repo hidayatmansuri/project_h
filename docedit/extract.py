@@ -297,6 +297,18 @@ def _extract_from_pdf(
         block_html_items = []
         b_idx = 0
 
+        # Build font resource mapping (e.g. F1 -> TimesNewRomanPSMT)
+        font_res_map: Dict[str, str] = {}
+        try:
+            for f_info in page.get_fonts(full=True):
+                basefont = f_info[3] if len(f_info) > 3 else ""
+                res_name = f_info[4] if len(f_info) > 4 else ""
+                if res_name and basefont:
+                    font_res_map[res_name] = basefont
+                    font_res_map[res_name.lstrip("/")] = basefont
+        except Exception:
+            pass
+
         dict_blocks = page.get_text("dict").get("blocks", [])
         has_text_layer = len(page_text.strip()) > 15
 
@@ -314,8 +326,22 @@ def _extract_from_pdf(
                             continue
 
                         main_span = max(line_spans, key=lambda s: len(s.get("text", "")))
-                        f_name = clean_pdf_font_name(main_span.get("font", "")) or "EB Garamond"
+                        raw_f = main_span.get("font", "")
+                        resolved_f = font_res_map.get(raw_f) or font_res_map.get(raw_f.lstrip("/")) or raw_f
+                        f_name = clean_pdf_font_name(resolved_f)
+                        if not f_name or f_name.lower() in ("default", "unknown"):
+                            f_name = None
                         f_size = round(main_span.get("size", 12.0), 1)
+
+                        span_flags = main_span.get("flags", 0)
+                        is_bold = bool(span_flags & (1 << 4))
+                        is_italic = bool(span_flags & (1 << 1))
+                        f_lower = (resolved_f or raw_f).lower()
+                        if not is_bold and any(b in f_lower for b in ["bold", "black", "heavy", "semibold", "demibold", "bd"]):
+                            is_bold = True
+                        if not is_italic and any(it in f_lower for it in ["italic", "oblique", "slant", "kursiv"]):
+                            is_italic = True
+
                         if f_name:
                             detected_fonts[f_name] = detected_fonts.get(f_name, 0) + len(line_str)
                         if f_size > 4:
@@ -335,22 +361,29 @@ def _extract_from_pdf(
                             "id": b_id,
                             "text": line_str,
                             "bbox": [round(lx0, 1), round(ly0, 1), round(lx1, 1), round(ly1, 1)],
+                            "orig_bbox": [round(lx0, 1), round(ly0, 1), round(lx1, 1), round(ly1, 1)],
                             "left_pct": left_pct,
                             "top_pct": top_pct,
                             "width_pct": width_pct,
                             "height_pct": height_pct,
-                            "font_name": f_name,
+                            "font_name": f_name or "EB Garamond",
                             "font_size_pt": f_size,
+                            "is_bold": is_bold,
+                            "is_italic": is_italic,
+                            "is_underline": False,
                             "is_header": f_size >= 15,
                             "page": page_num,
                         })
 
                         escaped = html.escape(line_str)
+                        block_font_css = f"font-family: '{f_name}', serif; " if f_name else ""
+                        weight_css = "font-weight: bold; " if is_bold else ""
+                        style_css = "font-style: italic; " if is_italic else ""
                         block_html_items.append(
                             f'<div class="docedit-text-block" '
                             f'contenteditable="true" spellcheck="false" '
                             f'data-block-id="{b_id}" data-page="{page_num}" '
-                            f'style="left: {left_pct}%; top: {top_pct}%; min-width: {width_pct}%; font-size: {f_size}pt;">'
+                            f'style="left: {left_pct}%; top: {top_pct}%; min-width: {width_pct}%; font-size: {f_size}pt; {block_font_css}{weight_css}{style_css}">'
                             f'{escaped}</div>'
                         )
                         b_idx += 1
@@ -376,21 +409,26 @@ def _extract_from_pdf(
                 est_line_pt = round((lh * 72.0 / conf.OCR_DPI) * 1.15, 1)
 
                 b_id = f"p{page_num}_b{b_idx}"
+                bbox_calc = [
+                    round(lx * (p_width / pix.width), 1),
+                    round(ly * (p_height / pix.height), 1),
+                    round((lx + lw) * (p_width / pix.width), 1),
+                    round((ly + lh) * (p_height / pix.height), 1)
+                ]
                 page_blocks.append({
                     "id": b_id,
                     "text": b_text,
-                    "bbox": [
-                        round(lx * (p_width / pix.width), 1),
-                        round(ly * (p_height / pix.height), 1),
-                        round((lx + lw) * (p_width / pix.width), 1),
-                        round((ly + lh) * (p_height / pix.height), 1)
-                    ],
+                    "bbox": bbox_calc,
+                    "orig_bbox": list(bbox_calc),
                     "left_pct": left_pct,
                     "top_pct": top_pct,
                     "width_pct": width_pct,
                     "height_pct": height_pct,
                     "font_name": "EB Garamond",
                     "font_size_pt": est_line_pt,
+                    "is_bold": False,
+                    "is_italic": False,
+                    "is_underline": False,
                     "is_header": est_line_pt >= 15,
                     "has_fuzzy": lb.get("has_fuzzy", False),
                     "page": page_num,
@@ -488,6 +526,56 @@ def _extract_from_docx(
     detected_fonts: Dict[str, int] = {}
     font_sizes: List[float] = []
 
+    # Cascade to determine default DOCX font & size
+    default_docx_font = None
+    default_docx_size = None
+    try:
+        if "Normal" in doc.styles:
+            normal_font = doc.styles["Normal"].font
+            if normal_font and normal_font.name:
+                default_docx_font = normal_font.name
+            if normal_font and normal_font.size:
+                default_docx_size = normal_font.size.pt
+
+        if not default_docx_font:
+            for rf in doc.styles.element.xpath("//w:docDefaults//w:rFonts"):
+                ascii_val = rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ascii")
+                hansi_val = rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hAnsi")
+                if ascii_val:
+                    default_docx_font = ascii_val
+                    break
+                elif hansi_val:
+                    default_docx_font = hansi_val
+                    break
+                theme_val = rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}asciiTheme")
+                if theme_val:
+                    for rel in doc.part.rels.values():
+                        if "theme" in rel.reltype:
+                            import xml.etree.ElementTree as ET
+                            t_root = ET.fromstring(rel.target_part.blob)
+                            tag = "minorFont" if "minor" in theme_val.lower() else "majorFont"
+                            for f_elem in t_root.iter():
+                                if f_elem.tag.endswith(tag):
+                                    for child in f_elem:
+                                        if child.tag.endswith("latin") and "typeface" in child.attrib:
+                                            default_docx_font = child.attrib["typeface"]
+                                            break
+                            break
+
+        if not default_docx_size:
+            for sz in doc.styles.element.xpath("//w:docDefaults//w:sz"):
+                val = sz.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val")
+                if val and val.isdigit():
+                    default_docx_size = float(val) / 2.0
+                    break
+    except Exception as e:
+        logger.debug("Failed extracting docx typography defaults: %s", e)
+
+    if not default_docx_font:
+        default_docx_font = "Calibri"
+    if not default_docx_size:
+        default_docx_size = 11.0
+
     # Map alignments
     align_map = {
         WD_ALIGN_PARAGRAPH.CENTER: "center",
@@ -516,7 +604,18 @@ def _extract_from_docx(
                 if not t:
                     continue
                 f_name = r.font.name
-                f_size = r.font.size.pt if r.font.size else None
+                if not f_name:
+                    for rf in r._r.xpath(".//w:rFonts"):
+                        f_name = rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ascii") or rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hAnsi")
+                        if f_name:
+                            break
+                if not f_name and p.style and p.style.font and p.style.font.name:
+                    f_name = p.style.font.name
+                if not f_name:
+                    f_name = default_docx_font
+
+                f_size = r.font.size.pt if r.font.size else (p.style.font.size.pt if (p.style and p.style.font and p.style.font.size) else default_docx_size)
+
                 if f_name:
                     detected_fonts[f_name] = detected_fonts.get(f_name, 0) + len(t)
                 if f_size:
@@ -576,9 +675,9 @@ def _extract_from_docx(
     if detected_fonts:
         dominant_font = max(detected_fonts.items(), key=lambda x: x[1])[0]
     else:
-        dominant_font = "Calibri"
+        dominant_font = default_docx_font or "Calibri"
 
-    avg_size = round(sum(font_sizes) / len(font_sizes), 1) if font_sizes else 11.0
+    avg_size = round(sum(font_sizes) / len(font_sizes), 1) if font_sizes else default_docx_size
 
     return {
         "html": combined_html,

@@ -519,3 +519,286 @@ class DocEditPageImageViewTests(TestCase):
             self.assertGreater(len(resp.content), 100)
 
 
+class DocEditSystemFontTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.test_dir = tempfile.mkdtemp(prefix="docedit_font_test_")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_get_system_font_signature(self):
+        sig = font_catalog.get_system_font_signature()
+        self.assertIsInstance(sig, str)
+        self.assertEqual(len(sig), 32)
+
+    def test_get_font_index_and_categorized_list(self):
+        idx = font_catalog.get_font_index()
+        self.assertIn("families", idx)
+        self.assertGreater(len(idx["families"]), 0)
+
+        categorized = font_catalog.get_categorized_font_list()
+        self.assertIn("recommended", categorized)
+        self.assertIn("project", categorized)
+        self.assertIn("system", categorized)
+        self.assertIn("all_names", categorized)
+        self.assertGreater(categorized["total_count"], 0)
+
+        # Check system fonts are included
+        system_names = [f["name"] for f in categorized["system"]]
+        self.assertTrue(len(system_names) > 0 or len(categorized["all_names"]) > 0)
+
+    def test_font_list_api(self):
+        url = reverse("docedit_font_list")
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertGreater(data["total_count"], 0)
+        self.assertIn("recommended", data["groups"])
+        self.assertIn("project", data["groups"])
+        self.assertIn("system", data["groups"])
+
+    def test_font_list_api_refresh(self):
+        url = reverse("docedit_font_list") + "?refresh=1"
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.assertGreater(data["total_count"], 0)
+
+    def test_install_font_api_upload_invalid_ext(self):
+        url = reverse("docedit_font_install")
+        bad_file = SimpleUploadedFile("bad.txt", b"not a font", content_type="text/plain")
+        resp = self.client.post(url, {"font_file": bad_file})
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.json()["success"])
+
+    def test_install_font_api_upload_valid_file(self):
+        with override_settings(DOCEDIT_FONT_LIBRARY_DIR=Path(self.test_dir) / "fonts",
+                               DOCEDIT_INSTALL_FONTS_TO_SYSTEM=False):
+            font_bytes = b"FakeTTFContentForTestingPurpose123456789"
+            test_font = SimpleUploadedFile("MockCustomBookFont-Regular.ttf", font_bytes, content_type="font/ttf")
+            url = reverse("docedit_font_install")
+            resp = self.client.post(url, {"font_file": test_font})
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertTrue(data["success"])
+            self.assertIn("MockCustomBookFont", data["name"])
+
+            # Verify it was automatically added to font list
+            cat = font_catalog.get_categorized_font_list()
+            self.assertTrue(any("MockCustomBookFont" in name for name in cat["all_names"]))
+
+    def test_install_font_api_online_not_found(self):
+        url = reverse("docedit_font_install")
+        resp = self.client.post(url, json.dumps({"font_name": "NonExistentUnknownFontXYZ999"}), content_type="application/json")
+        self.assertEqual(resp.status_code, 404)
+        self.assertFalse(resp.json()["success"])
+
+
+class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix="docedit_font_test_")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_clean_pdf_font_name_variants(self):
+        cases = {
+            "ABCDEF+TimesNewRomanPS-BoldMT": "Times New Roman",
+            "Calibri-Bold": "Calibri",
+            "ArialMT": "Arial",
+            "BAAAAA+Arial-BoldMT": "Arial",
+            "SegoeUI-Semibold": "Segoe UI",
+            "Aptos-Display": "Aptos",
+            "CustomBrandSerif-Regular": "Custom Brand Serif",
+        }
+        for raw, expected in cases.items():
+            cleaned = fontmatch.clean_pdf_font_name(raw)
+            self.assertEqual(cleaned, expected, f"Failed on raw font: {raw}")
+            self.assertFalse(cleaned.endswith("-"), f"Cleaned name has trailing hyphen: {cleaned}")
+
+    def test_find_nearest_match_categorization_never_stuck_with_garamond_for_sans_or_mono(self):
+        # Sans-serif should match a sans-serif (Calibri/Arial), NEVER EB Garamond
+        sub_aptos = font_catalog.find_nearest_match("Aptos")
+        self.assertEqual(sub_aptos["category"], "sans-serif")
+        self.assertNotEqual(sub_aptos["nearest_match"], "EB Garamond")
+        self.assertIn(sub_aptos["nearest_match"], ["Calibri", "Arial", "Roboto", "Segoe UI"])
+
+        sub_custom_sans = font_catalog.find_nearest_match("Acme Modern Grotesk Sans")
+        self.assertEqual(sub_custom_sans["category"], "sans-serif")
+        self.assertNotEqual(sub_custom_sans["nearest_match"], "EB Garamond")
+        self.assertIn(sub_custom_sans["nearest_match"], ["Calibri", "Arial", "Roboto", "Segoe UI"])
+
+        # Monospace should match a monospace font, NEVER EB Garamond
+        sub_monaco = font_catalog.find_nearest_match("Monaco Typewriter")
+        self.assertEqual(sub_monaco["category"], "monospace")
+        self.assertNotEqual(sub_monaco["nearest_match"], "EB Garamond")
+        self.assertIn(sub_monaco["nearest_match"], ["Consolas", "Courier New", "Cousine", "Inconsolata"])
+
+        # Script fonts
+        sub_hin = font_catalog.find_nearest_match("Aparajita Devanagari")
+        self.assertEqual(sub_hin["category"], "devanagari")
+        self.assertIn(sub_hin["nearest_match"], ["Mangal", "Nirmala UI", "Noto Serif Devanagari"])
+
+        sub_guj = font_catalog.find_nearest_match("Shruti Gujarati")
+        self.assertEqual(sub_guj["category"], "gujarati")
+        self.assertIn(sub_guj["nearest_match"], ["Shruti", "Noto Serif Gujarati", "Rasa"])
+
+        sub_ara = font_catalog.find_nearest_match("Traditional Arabic Book")
+        self.assertEqual(sub_ara["category"], "arabic")
+        self.assertIn(sub_ara["nearest_match"], ["Traditional Arabic", "Simplified Arabic", "Amiri"])
+
+    def test_resolve_document_font_preserves_system_font(self):
+        res_calibri = font_catalog.resolve_document_font("Calibri")
+        self.assertEqual(res_calibri["name"], "Calibri")
+        self.assertTrue(res_calibri["is_system"])
+        self.assertFalse(res_calibri["is_alternative"])
+
+        res_times = font_catalog.resolve_document_font("Times New Roman")
+        self.assertEqual(res_times["name"], "Times New Roman")
+        self.assertTrue(res_times["is_system"])
+
+    def test_change_font_api_with_font_and_size(self):
+        with override_settings(DOCEDIT_WORK_DIR=self.test_dir):
+            sid = storage.create_session("sample.txt", b"Hello typography testing.")
+            url = reverse("docedit_change_font", args=[sid])
+            payload = {"font_name": "Calibri", "size_pt": 14.5}
+            resp = self.client.post(url, json.dumps(payload), content_type="application/json")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertTrue(data["success"])
+            self.assertEqual(data["font_info"]["name"], "Calibri")
+            self.assertEqual(data["font_info"]["size_pt"], 14.5)
+
+            meta = storage.get_session_meta(sid)
+            self.assertEqual(meta["font_info"]["size_pt"], 14.5)
+            self.assertEqual(meta["font_info"]["name"], "Calibri")
+
+    def test_docx_extract_detects_run_font_and_size(self):
+        doc = docx.Document()
+        p = doc.add_paragraph()
+        run = p.add_run("Testing specific font extraction.")
+        run.font.name = "Arial"
+        run.font.size = docx.shared.Pt(15.0)
+        docx_path = Path(self.test_dir) / "test_font.docx"
+        doc.save(str(docx_path))
+
+        res = extract._extract_from_docx(docx_path)
+        self.assertEqual(res["detected_font_name"], "Arial")
+        self.assertEqual(res["font_size_pt"], 15.0)
+
+    def test_font_variant_resolution(self):
+        """Verifies find_font_variant_file accurately identifies bold and italic files."""
+        from .font_catalog import find_font_variant_file
+
+        # Windows system fonts resolution
+        if os.name == "nt":
+            bold_arial = find_font_variant_file("Arial", is_bold=True)
+            self.assertIsNotNone(bold_arial)
+            self.assertTrue(Path(bold_arial).is_file())
+            self.assertTrue("arial" in bold_arial.lower())
+
+            italic_arial = find_font_variant_file("Arial", is_italic=True)
+            self.assertIsNotNone(italic_arial)
+            self.assertTrue(Path(italic_arial).is_file())
+
+            bi_arial = find_font_variant_file("Arial", is_bold=True, is_italic=True)
+            self.assertIsNotNone(bi_arial)
+            self.assertTrue(Path(bi_arial).is_file())
+
+    def test_pdf_bold_italic_extraction(self):
+        """Verifies _extract_from_pdf extracts is_bold and is_italic span flags and names."""
+        import pymupdf
+
+        pdf_path = Path(self.test_dir) / "test_styled.pdf"
+        doc = pymupdf.open()
+        page = doc.new_page(width=595, height=842)
+        # Insert bold text with built-in font
+        page.insert_text(pymupdf.Point(72, 100), "Chapter 1: The Beginning", fontsize=16, fontname="hebo")
+        # Insert italic text
+        page.insert_text(pymupdf.Point(72, 140), "An introduction into typography.", fontsize=12, fontname="heit")
+        # Insert regular text
+        page.insert_text(pymupdf.Point(72, 180), "Standard paragraph text without styling.", fontsize=11, fontname="helv")
+        doc.save(str(pdf_path))
+        doc.close()
+
+        res = extract._extract_from_pdf(pdf_path)
+        self.assertTrue(res["is_layout_preserved"])
+        blocks = res["pages"][0]["blocks"]
+        self.assertTrue(len(blocks) >= 3)
+
+        # Check bold block
+        bold_blocks = [b for b in blocks if "Chapter 1" in b["text"]]
+        self.assertTrue(len(bold_blocks) > 0)
+        self.assertTrue(bold_blocks[0]["is_bold"])
+
+        # Check italic block
+        italic_blocks = [b for b in blocks if "introduction" in b["text"]]
+        self.assertTrue(len(italic_blocks) > 0)
+        self.assertTrue(italic_blocks[0]["is_italic"])
+
+    def test_pdf_layout_preserved_bold_italic_underline(self):
+        """Verifies _write_pdf_layout_preserved renders bold, italic, underline, and moved bbox."""
+        import pymupdf
+        from .writers import _write_pdf_layout_preserved
+
+        out_pdf = Path(self.test_dir) / "out_layout_styled.pdf"
+        pages_data = [{
+            "page_num": 1,
+            "width": 595.0,
+            "height": 842.0,
+            "blocks": [
+                {
+                    "id": "p1_b0",
+                    "text": "Edited Bold & Underlined Headline",
+                    "bbox": [80.0, 120.0, 320.0, 145.0],
+                    "orig_bbox": [72.0, 100.0, 300.0, 125.0],
+                    "left_pct": 13.4,
+                    "top_pct": 14.2,
+                    "font_name": "Arial",
+                    "font_size_pt": 14.0,
+                    "is_bold": True,
+                    "is_italic": False,
+                    "is_underline": True,
+                    "is_modified": True,
+                }
+            ]
+        }]
+
+        res_path = _write_pdf_layout_preserved(
+            pages_data=pages_data,
+            original_file_path=None,
+            output_path=out_pdf,
+            font_name="Arial",
+            font_path=None,
+            font_size_pt=14.0,
+        )
+        self.assertTrue(res_path.is_file())
+        self.assertGreater(res_path.stat().st_size, 500)
+
+    def test_docx_nested_formatting(self):
+        """Verifies _write_docx handles bold, italic, underline, and nested tags."""
+        import docx
+        from .writers import _write_docx
+
+        out_docx = Path(self.test_dir) / "out_formatted.docx"
+        html_input = '<p>Regular <b>Bold Text</b> and <i>Italic Text</i> and <u>Underline Text</u> and <b><i><u>All Three</u></i></b></p>'
+        res_path = _write_docx(html_input, out_docx, "Calibri", 12.0)
+        self.assertTrue(res_path.is_file())
+
+        doc = docx.Document(str(res_path))
+        p = doc.paragraphs[0]
+        # Check run styles
+        bold_runs = [r for r in p.runs if r.bold and not r.italic and not r.underline]
+        self.assertTrue(len(bold_runs) > 0)
+        self.assertIn("Bold Text", bold_runs[0].text)
+
+        all_three_runs = [r for r in p.runs if r.bold and r.italic and r.underline]
+        self.assertTrue(len(all_three_runs) > 0)
+        self.assertIn("All Three", all_three_runs[0].text)
+
+
+
+
