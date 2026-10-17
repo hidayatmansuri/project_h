@@ -799,6 +799,95 @@ class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
         self.assertTrue(len(all_three_runs) > 0)
         self.assertIn("All Three", all_three_runs[0].text)
 
+    def test_save_document_autosave_endpoint(self):
+        """Verifies save_document handles is_autosave smoothly and quickly."""
+        with override_settings(DOCEDIT_WORK_DIR=self.test_dir):
+            sid = storage.create_session("sample.pdf", b"%PDF-1.4 sample")
+            url = reverse("docedit_save", args=[sid])
+            payload = {
+                "is_autosave": True,
+                "html_content": "<p>Auto-saved paragraph content</p>",
+                "font_name": "Calibri",
+                "font_size_pt": 13.0,
+                "export_format": "pdf",
+                "pages_data": [{
+                    "page_num": 1,
+                    "width": 600,
+                    "height": 800,
+                    "blocks": [{
+                        "id": "b1",
+                        "text": "Auto-saved block",
+                        "font_name": "Calibri",
+                        "font_size_pt": 13.0,
+                        "is_modified": True,
+                        "left_pct": 10.0,
+                        "top_pct": 20.0,
+                        "width_pct": 30.0,
+                        "height_pct": 5.0,
+                        "bbox": [60, 160, 240, 200]
+                    }]
+                }]
+            }
+            resp = self.client.post(url, json.dumps(payload), content_type="application/json")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertTrue(data["success"])
+            self.assertTrue(data.get("is_autosave"))
+
+            # Check that content was saved in workspace session
+            saved_html = storage.get_document_content(sid)
+            self.assertIn("Auto-saved paragraph content", saved_html)
+
+            # Check pages metadata updated
+            meta = storage.get_session_meta(sid)
+            self.assertEqual(meta["font_info"]["name"], "Calibri")
+            self.assertEqual(meta["font_info"]["size_pt"], 13.0)
+            self.assertEqual(len(meta["pages"]), 1)
+            self.assertEqual(meta["pages"][0]["blocks"][0]["text"], "Auto-saved block")
+
+    def test_docx_per_run_font_and_size_preservation(self):
+        """Verifies _write_docx preserves inline run-level font-family and font-size from spans."""
+        import docx
+        from docx.shared import Pt
+        from .writers import _write_docx
+
+        out_docx = Path(self.test_dir) / "out_run_fonts.docx"
+        html_input = (
+            '<p>'
+            '<span style="font-family: \'Arial\'; font-size: 16pt;">Arial Heading Run</span> '
+            '<span style="font-family: \'Courier New\'; font-size: 10pt;">Courier Monospace Run</span>'
+            '</p>'
+        )
+        res_path = _write_docx(html_input, out_docx, "Calibri", 12.0)
+        self.assertTrue(res_path.is_file())
+
+        doc = docx.Document(str(res_path))
+        p = doc.paragraphs[0]
+        self.assertGreaterEqual(len(p.runs), 2)
+
+        arial_run = next((r for r in p.runs if "Arial" in r.text), None)
+        self.assertIsNotNone(arial_run)
+        self.assertEqual(arial_run.font.name, "Arial")
+        self.assertEqual(arial_run.font.size, Pt(16.0))
+
+        courier_run = next((r for r in p.runs if "Courier" in r.text), None)
+        self.assertIsNotNone(courier_run)
+        self.assertEqual(courier_run.font.name, "Courier New")
+        self.assertEqual(courier_run.font.size, Pt(10.0))
+
+    def test_find_font_variant_file_does_not_mismatch_base_font(self):
+        """Verifies find_font_variant_file does not return base_font_path if family differs."""
+        from .font_catalog import find_font_variant_file
+        # When asking for Arial with base_font_path being EB Garamond, it must NOT return EB Garamond
+        fake_garamond = Path(self.test_dir) / "EBGaramond-Regular.ttf"
+        fake_garamond.write_bytes(b"dummy")
+
+        res = find_font_variant_file("Arial", is_bold=False, is_italic=False, base_font_path=str(fake_garamond))
+        if res:
+            self.assertNotIn("garamond", res.lower())
+            self.assertIn("arial", res.lower())
+
+
 
 
 

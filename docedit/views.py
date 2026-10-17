@@ -247,11 +247,27 @@ def save_document(request: HttpRequest, sid: str) -> JsonResponse:
     if chosen_ext not in EXTENSION_KINDS:
         chosen_ext = orig_ext
 
+    is_autosave = bool(body.get("is_autosave", False))
+
     # Save HTML to workspace
     if html_content is not None:
         save_document_content(sid, html_content)
     if pages_data:
         update_session(sid, pages=pages_data)
+
+    if is_autosave:
+        update_session(
+            sid,
+            font_info=font_info,
+            export_format=chosen_ext,
+            edited_saved_at=time.time(),
+        )
+        return JsonResponse({
+            "success": True,
+            "is_autosave": True,
+            "message": "Changes saved automatically.",
+            "saved_at": time.time(),
+        })
 
     # Render & write export file matching chosen format
     work_dir = get_session_dir(sid)

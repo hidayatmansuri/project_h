@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbInstallFontBtn = document.getElementById('tbInstallFontBtn');
     const tbFontSizeSelect = document.getElementById('tbFontSizeSelect');
     const tbFuzzyToggle = document.getElementById('tbFuzzyToggle');
+    const tbAutoSaveIndicator = document.getElementById('tbAutoSaveIndicator');
+    const tbAutoSaveIcon = document.getElementById('tbAutoSaveIcon');
+    const tbAutoSaveText = document.getElementById('tbAutoSaveText');
+    const panAutoSaveStatus = document.getElementById('panAutoSaveStatus');
 
     // Font Installation Modal Elements
     const installFontModal = document.getElementById('doceditInstallFontModal');
@@ -138,6 +142,197 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hideNotice() {
         noticeBanner.classList.remove('show');
+    }
+
+    // Check if redirected to /docedit/ after successful save & download
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasDownloadQuery = urlParams.get('downloaded') === '1';
+        let hasDownloadStorage = false;
+        if (sessionStorage.getItem('docedit_download_success') === '1') {
+            hasDownloadStorage = true;
+            sessionStorage.removeItem('docedit_download_success');
+        }
+
+        if (hasDownloadQuery || hasDownloadStorage) {
+            showNotice(
+                'Document downloaded successfully to your system!',
+                'Note: This file has not been permanently saved on the server. Please keep your downloaded copy in your desired folder.'
+            );
+            if (hasDownloadQuery) {
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        }
+    } catch (e) {
+        console.warn('Could not check download notification status:', e);
+    }
+
+    // --------------------------------------------------------------------------
+    // Real-Time Auto-Save Engine
+    // --------------------------------------------------------------------------
+    let autoSaveTimeout = null;
+    let isAutoSaving = false;
+
+    function setAutoSaveStatus(status) {
+        if (tbAutoSaveIndicator) {
+            if (status === 'saving') {
+                tbAutoSaveIndicator.style.background = 'rgba(234, 179, 8, 0.15)';
+                tbAutoSaveIndicator.style.color = '#ca8a04';
+                if (tbAutoSaveIcon) tbAutoSaveIcon.className = 'fa-solid fa-arrows-rotate fa-spin';
+                if (tbAutoSaveText) tbAutoSaveText.textContent = 'Saving...';
+            } else if (status === 'saved') {
+                tbAutoSaveIndicator.style.background = 'rgba(16, 185, 129, 0.12)';
+                tbAutoSaveIndicator.style.color = '#059669';
+                if (tbAutoSaveIcon) tbAutoSaveIcon.className = 'fa-solid fa-cloud-arrow-up';
+                if (tbAutoSaveText) tbAutoSaveText.textContent = 'Saved';
+            } else if (status === 'modified') {
+                tbAutoSaveIndicator.style.background = 'rgba(59, 130, 246, 0.12)';
+                tbAutoSaveIndicator.style.color = '#2563eb';
+                if (tbAutoSaveIcon) tbAutoSaveIcon.className = 'fa-solid fa-pen-to-square';
+                if (tbAutoSaveText) tbAutoSaveText.textContent = 'Unsaved changes';
+            } else if (status === 'error') {
+                tbAutoSaveIndicator.style.background = 'rgba(239, 68, 68, 0.15)';
+                tbAutoSaveIndicator.style.color = '#dc2626';
+                if (tbAutoSaveIcon) tbAutoSaveIcon.className = 'fa-solid fa-triangle-exclamation';
+                if (tbAutoSaveText) tbAutoSaveText.textContent = 'Save error';
+            }
+        }
+        if (panAutoSaveStatus) {
+            if (status === 'saving') {
+                panAutoSaveStatus.style.background = 'rgba(234, 179, 8, 0.18)';
+                panAutoSaveStatus.style.color = '#b45309';
+                panAutoSaveStatus.style.borderColor = 'rgba(234, 179, 8, 0.35)';
+                panAutoSaveStatus.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i> Auto-saving...';
+            } else if (status === 'saved') {
+                panAutoSaveStatus.style.background = 'rgba(16, 185, 129, 0.15)';
+                panAutoSaveStatus.style.color = '#059669';
+                panAutoSaveStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                panAutoSaveStatus.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> All changes saved';
+            } else if (status === 'modified') {
+                panAutoSaveStatus.style.background = 'rgba(59, 130, 246, 0.15)';
+                panAutoSaveStatus.style.color = '#1d4ed8';
+                panAutoSaveStatus.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                panAutoSaveStatus.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editing...';
+            } else if (status === 'error') {
+                panAutoSaveStatus.style.background = 'rgba(239, 68, 68, 0.15)';
+                panAutoSaveStatus.style.color = '#b91c1c';
+                panAutoSaveStatus.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                panAutoSaveStatus.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Save error';
+            }
+        }
+    }
+
+    function syncBlocksFromDom() {
+        if (currentMode !== 'layout_preserved' || !currentPagesData || currentPagesData.length === 0) return;
+        currentPagesData.forEach(p => {
+            if (!p.blocks) return;
+            p.blocks.forEach(b => {
+                const el = document.querySelector(`.docedit-text-block[data-block-id="${b.id}"]`);
+                if (!el) return;
+                const newText = el.innerText.trim();
+                if (newText !== b.text) {
+                    b.text = newText;
+                    b.is_modified = true;
+                }
+                if (el.style.fontFamily) {
+                    const cleanFont = el.style.fontFamily.replace(/['",]/g, '').replace(/\s*(serif|sans-serif|monospace)\s*$/i, '').trim();
+                    if (cleanFont && cleanFont !== b.font_name) {
+                        b.font_name = cleanFont;
+                        b.is_modified = true;
+                    }
+                }
+                if (el.style.fontSize) {
+                    const parsedSize = parseFloat(el.style.fontSize);
+                    if (!isNaN(parsedSize) && Math.abs(parsedSize - (b.font_size_pt || 12)) > 0.1) {
+                        b.font_size_pt = parsedSize;
+                        b.is_modified = true;
+                    }
+                }
+                const curL = parseFloat(el.style.left);
+                const curT = parseFloat(el.style.top);
+                if (!isNaN(curL) && Math.abs(curL - b.left_pct) > 0.001) {
+                    b.left_pct = Math.round(curL * 1000) / 1000;
+                    b.is_modified = true;
+                }
+                if (!isNaN(curT) && Math.abs(curT - b.top_pct) > 0.001) {
+                    b.top_pct = Math.round(curT * 1000) / 1000;
+                    b.is_modified = true;
+                }
+                if (el.style.fontWeight === 'bold' || parseInt(el.style.fontWeight, 10) >= 600) {
+                    if (!b.is_bold) { b.is_bold = true; b.is_modified = true; }
+                } else if (el.style.fontWeight === 'normal') {
+                    if (b.is_bold) { b.is_bold = false; b.is_modified = true; }
+                }
+                if (el.style.fontStyle === 'italic') {
+                    if (!b.is_italic) { b.is_italic = true; b.is_modified = true; }
+                } else if (el.style.fontStyle === 'normal') {
+                    if (b.is_italic) { b.is_italic = false; b.is_modified = true; }
+                }
+                if (el.style.textDecoration && el.style.textDecoration.includes('underline')) {
+                    if (!b.is_underline) { b.is_underline = true; b.is_modified = true; }
+                } else if (el.style.textDecoration === 'none') {
+                    if (b.is_underline) { b.is_underline = false; b.is_modified = true; }
+                }
+
+                // Recalculate bbox from current left_pct, top_pct, width_pct, height_pct
+                const lx0 = (b.left_pct / 100.0) * p.width;
+                const ly0 = (b.top_pct / 100.0) * p.height;
+                const w_pt = ((b.width_pct || 10) / 100.0) * p.width;
+                const h_pt = ((b.height_pct || 2) / 100.0) * p.height;
+                b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
+            });
+        });
+    }
+
+    function triggerAutoSave(delayMs = 600) {
+        if (!currentSessionId) return;
+        setAutoSaveStatus('modified');
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(async () => {
+            if (!currentSessionId || isAutoSaving) return;
+            isAutoSaving = true;
+            setAutoSaveStatus('saving');
+            try {
+                syncBlocksFromDom();
+                const fontName = tbFontSelect ? tbFontSelect.value : (panFontName.textContent || 'EB Garamond');
+                const fontSize = tbFontSizeSelect ? parseFloat(tbFontSizeSelect.value) : 12;
+                const chosenFormat = (panDownloadFormat ? panDownloadFormat.value : 'pdf') || 'pdf';
+
+                const payload = {
+                    is_autosave: true,
+                    font_name: fontName,
+                    font_size_pt: fontSize,
+                    export_format: chosenFormat,
+                    html_content: editorPaper.innerHTML,
+                };
+                if (currentMode === 'layout_preserved' && currentPagesData && currentPagesData.length > 0) {
+                    payload.pages_data = currentPagesData;
+                }
+
+                const resp = await fetch(`/docedit/api/save/${currentSessionId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const resData = await resp.json();
+                if (resData.success) {
+                    setAutoSaveStatus('saved');
+                } else {
+                    setAutoSaveStatus('error');
+                }
+            } catch (err) {
+                console.warn('Auto-save error:', err);
+                setAutoSaveStatus('error');
+            } finally {
+                isAutoSaving = false;
+            }
+        }, delayMs);
     }
 
     // --------------------------------------------------------------------------
@@ -452,6 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     b.is_modified = true;
                     blockDiv.classList.add('is-edited');
                     updateFloatingToolbarPosition();
+                    triggerAutoSave(700);
                 });
 
                 blockDiv.addEventListener('blur', () => {
@@ -459,6 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (b.is_modified) {
                         blockDiv.classList.add('is-edited');
                     }
+                    triggerAutoSave(100);
                 });
 
                 blockDiv.addEventListener('keydown', (e) => {
@@ -660,6 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeBlockData.is_modified = true;
         activeBlockEl.classList.add('is-edited');
         updateToolbarEffectStates();
+        triggerAutoSave(200);
     }
 
     function toggleActiveBlockItalic() {
@@ -669,6 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeBlockData.is_modified = true;
         activeBlockEl.classList.add('is-edited');
         updateToolbarEffectStates();
+        triggerAutoSave(200);
     }
 
     function toggleActiveBlockUnderline() {
@@ -678,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeBlockData.is_modified = true;
         activeBlockEl.classList.add('is-edited');
         updateToolbarEffectStates();
+        triggerAutoSave(200);
     }
 
     function updateToolbarEffectStates() {
@@ -796,6 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const w_pt = ((b.width_pct || 10) / 100.0) * p.width;
             const h_pt = ((b.height_pct || 2) / 100.0) * p.height;
             b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
+            triggerAutoSave(200);
         }
 
         window.addEventListener('mousemove', onMouseMove);
@@ -835,6 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => { guideV.style.display = 'none'; }, 1000);
             }
         }
+        triggerAutoSave(200);
     }
 
     function nudgeActiveBlock(dxPct, dyPct) {
@@ -857,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
         b.bbox = [Math.round(lx0 * 10) / 10, Math.round(ly0 * 10) / 10, Math.round((lx0 + w_pt) * 10) / 10, Math.round((ly0 + h_pt) * 10) / 10];
 
         updateFloatingToolbarPosition();
+        triggerAutoSave(200);
     }
 
     // Dismiss active block and floating toolbar on outside click
@@ -984,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.execCommand(cmd, false, val);
             editorPaper.focus();
+            triggerAutoSave(200);
         });
     });
 
@@ -1396,18 +1600,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const blocks = editorPaper.querySelectorAll('.docedit-text-block');
                     blocks.forEach(b => {
                         b.style.fontFamily = `"${newFont}", serif`;
+                        b.classList.add('is-edited');
                     });
                     if (currentPagesData && currentPagesData.length > 0) {
                         currentPagesData.forEach(p => {
                             if (p.blocks) {
                                 p.blocks.forEach(b => {
                                     b.font_name = newFont;
+                                    b.is_modified = true;
                                 });
                             }
                         });
                     }
                 }
             }
+            triggerAutoSave(100);
 
             if (currentSessionId) {
                 try {
@@ -1453,18 +1660,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const blocks = editorPaper.querySelectorAll('.docedit-text-block');
                     blocks.forEach(b => {
                         b.style.fontSize = `${newSize}pt`;
+                        b.classList.add('is-edited');
                     });
                     if (currentPagesData && currentPagesData.length > 0) {
                         currentPagesData.forEach(p => {
                             if (p.blocks) {
                                 p.blocks.forEach(b => {
                                     b.font_size_pt = newSizeNum;
+                                    b.is_modified = true;
                                 });
                             }
                         });
                     }
                 }
             }
+            triggerAutoSave(100);
 
             if (currentSessionId) {
                 const curFont = tbFontSelect ? tbFontSelect.value : (currentMeta?.font_info?.name || 'EB Garamond');
@@ -1525,6 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             editorPaper.focus();
             document.execCommand('insertHTML', false, tableHtml);
+            triggerAutoSave(200);
         });
     }
 
@@ -1559,6 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     newRow.appendChild(newCell);
                 }
                 tbody.appendChild(newRow);
+                triggerAutoSave(200);
             } else {
                 alert('Please place your cursor inside a table or click Table button first.');
             }
@@ -1569,6 +1781,13 @@ document.addEventListener('DOMContentLoaded', () => {
         tbInsertLine.addEventListener('click', () => {
             editorPaper.focus();
             document.execCommand('insertHTML', false, '<hr class="docedit-line" style="border: none; border-top: 1px solid #777; margin: 1.5rem 0;" /><p><br></p>');
+            triggerAutoSave(200);
+        });
+    }
+
+    if (editorPaper) {
+        editorPaper.addEventListener('input', () => {
+            triggerAutoSave(700);
         });
     }
 
@@ -1602,6 +1821,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (confirmModal) {
+        confirmModal.addEventListener('click', (e) => {
+            if (e.target === confirmModal) {
+                confirmModal.classList.remove('show');
+            }
+        });
+    }
+
     if (modalBtnConfirm) {
         modalBtnConfirm.addEventListener('click', async () => {
             confirmModal.classList.remove('show');
@@ -1611,6 +1838,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function executeSaveAndDownload() {
         if (!currentSessionId) return;
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = null;
+        }
+        syncBlocksFromDom();
         panBtnDownload.disabled = true;
         panBtnDownload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving & Preparing Download...';
 
@@ -1702,6 +1934,13 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadLink.click();
             document.body.removeChild(downloadLink);
 
+            // Store notification flag in sessionStorage before navigating to /docedit/
+            try {
+                sessionStorage.setItem('docedit_download_success', '1');
+            } catch (e) {
+                console.warn('Could not set sessionStorage item:', e);
+            }
+
             // REQUIRED NOTICE: Display success message with note that file has not been saved on server
             showNotice(
                 'Document downloaded successfully to your system!',
@@ -1709,10 +1948,12 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             panBtnDownload.disabled = false;
-            panBtnDownload.innerHTML = '<i class="fa-solid fa-check"></i> Downloaded';
+            panBtnDownload.innerHTML = '<i class="fa-solid fa-check"></i> Downloaded! Redirecting...';
+
+            // Bring user back to /docedit/
             setTimeout(() => {
-                panBtnDownload.innerHTML = '<i class="fa-solid fa-file-arrow-down"></i> Save & Download Document';
-            }, 3000);
+                window.location.href = '/docedit/';
+            }, 800);
         } catch (err) {
             console.error('Save & Download error:', err);
             alert('Failed to save & download: ' + err.message);

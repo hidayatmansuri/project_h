@@ -173,6 +173,11 @@
                     <span id="tbZoomLevel" class="tb-zoom-level">100%</span>
                     <button type="button" id="tbZoomIn" class="tb-btn" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
                 </div>
+
+                <div class="tb-separator"></div>
+                <div id="tbAutoSaveIndicator" class="tb-autosave-indicator" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: #059669; padding: 3px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.12); font-weight: 500;" title="Automatic saving is active">
+                    <i id="tbAutoSaveIcon" class="fa-solid fa-cloud-arrow-up"></i> <span id="tbAutoSaveText">Saved</span>
+                </div>
             </div>
 
             <!-- Paper Editor Canvas -->
@@ -230,6 +235,12 @@
                     <div class="pan-meta-row">
                         <span class="pan-meta-label">Characters:</span>
                         <span id="panChars" class="pan-meta-val">0</span>
+                    </div>
+                    <div class="pan-meta-row">
+                        <span class="pan-meta-label">Auto-save:</span>
+                        <span id="panAutoSaveStatus" class="pan-badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 500;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> All changes saved
+                        </span>
                     </div>
                 </div>
             </div>

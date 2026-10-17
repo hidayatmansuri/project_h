@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 # Known high-quality free open-source substitutes for common book fonts
 FONT_SUBSTITUTES: Dict[str, Dict[str, str]] = {
     # Serif & Traditional Book Typefaces
-    "times new roman": {"match": "Tinos", "category": "serif", "reason": "Metric-compatible free book serif"},
-    "times": {"match": "Tinos", "category": "serif", "reason": "Metric-compatible free book serif"},
+    "times new roman": {"match": "Tinos", "category": "serif", "reason": "Standard serif book face"},
+    "times": {"match": "Tinos", "category": "serif", "reason": "Standard serif book face"},
     "baskerville": {"match": "Libre Baskerville", "category": "serif", "reason": "Faithful open-source revival of John Baskerville's classic book type"},
     "monotype baskerville": {"match": "Libre Baskerville", "category": "serif", "reason": "Faithful open-source revival"},
     "caslon": {"match": "Libre Caslon Text", "category": "serif", "reason": "Revival of William Caslon's 18th-century English book type"},
@@ -40,7 +40,7 @@ FONT_SUBSTITUTES: Dict[str, Dict[str, str]] = {
     "palatino": {"match": "Cormorant Garamond", "category": "serif", "reason": "Classical humanist renaissance book face with tall x-height"},
     "palatino linotype": {"match": "Cormorant Garamond", "category": "serif", "reason": "Humanist book face match"},
     "book antiqua": {"match": "Cormorant Garamond", "category": "serif", "reason": "Humanist renaissance serif match"},
-    "georgia": {"match": "Gelasio", "category": "serif", "reason": "Metric-compatible open serif with sturdy book proportions"},
+    "georgia": {"match": "Georgia", "category": "serif", "reason": "Sturdy book serif with wide proportions"},
     "bodoni": {"match": "Bodoni Moda", "category": "serif", "reason": "Didone high-contrast modern book face"},
     "didot": {"match": "Playfair Display", "category": "serif", "reason": "High-contrast 18th-century European editorial type"},
     "minion": {"match": "Crimson Pro", "category": "serif", "reason": "Traditional book face with optical sizes designed for heavy reading"},
@@ -48,13 +48,13 @@ FONT_SUBSTITUTES: Dict[str, Dict[str, str]] = {
     "bembo": {"match": "Cardo", "category": "serif", "reason": "Classic Aldine renaissance humanist book face"},
     "sabon": {"match": "Alegreya", "category": "serif", "reason": "Designed specifically for continuous literature reading"},
     "centaur": {"match": "EB Garamond", "category": "serif", "reason": "Venetian classical proportions"},
-    "cambria": {"match": "Caladea", "category": "serif", "reason": "Metric-compatible open-source substitute"},
+    "cambria": {"match": "Cambria", "category": "serif", "reason": "Standard document serif"},
     "bookman": {"match": "Merriweather", "category": "serif", "reason": "Legible, robust serif designed for sustained book reading"},
     "bookman old style": {"match": "Merriweather", "category": "serif", "reason": "Robust vintage book serif"},
 
     # Sans-Serif
-    "helvetica": {"match": "Roboto", "category": "sans-serif", "reason": "Modern neo-grotesque sans-serif with excellent legibility"},
-    "helvetica neue": {"match": "Roboto", "category": "sans-serif", "reason": "Modern neo-grotesque sans-serif"},
+    "helvetica": {"match": "Arial", "category": "sans-serif", "reason": "System-native metric-compatible sans-serif substitute"},
+    "helvetica neue": {"match": "Arial", "category": "sans-serif", "reason": "System-native metric-compatible sans-serif substitute"},
     "arial": {"match": "Arial", "category": "sans-serif", "reason": "Universal modern sans-serif"},
     "calibri": {"match": "Calibri", "category": "sans-serif", "reason": "Standard modern book & document sans-serif"},
     "aptos": {"match": "Calibri", "category": "sans-serif", "reason": "Modern Microsoft sans-serif, matched to Calibri"},
@@ -63,14 +63,14 @@ FONT_SUBSTITUTES: Dict[str, Dict[str, str]] = {
     "tahoma": {"match": "Segoe UI", "category": "sans-serif", "reason": "Clear humanist sans-serif"},
     "trebuchet": {"match": "Trebuchet MS", "category": "sans-serif", "reason": "Humanist sans-serif"},
     "trebuchet ms": {"match": "Trebuchet MS", "category": "sans-serif", "reason": "Humanist sans-serif"},
-    "century gothic": {"match": "Jost", "category": "sans-serif", "reason": "Geometric sans-serif match"},
-    "futura": {"match": "Jost", "category": "sans-serif", "reason": "Geometric sans-serif revival"},
+    "century gothic": {"match": "Century Gothic", "category": "sans-serif", "reason": "Geometric sans-serif match"},
+    "futura": {"match": "Century Gothic", "category": "sans-serif", "reason": "Geometric sans-serif revival"},
     "gill sans": {"match": "Cabin", "category": "sans-serif", "reason": "Humanist sans-serif proportions"},
-    "verdana": {"match": "Open Sans", "category": "sans-serif", "reason": "Wide letterforms with generous spacing"},
+    "verdana": {"match": "Verdana", "category": "sans-serif", "reason": "Wide letterforms with generous spacing"},
 
     # Monospace / Typewriter
-    "courier": {"match": "Cousine", "category": "monospace", "reason": "Metric-compatible vintage typewriter monospace"},
-    "courier new": {"match": "Cousine", "category": "monospace", "reason": "Metric-compatible typewriter monospace"},
+    "courier": {"match": "Courier New", "category": "monospace", "reason": "Metric-compatible vintage typewriter monospace"},
+    "courier new": {"match": "Courier New", "category": "monospace", "reason": "Metric-compatible typewriter monospace"},
     "consolas": {"match": "Inconsolata", "category": "monospace", "reason": "Clean monospaced programming/manuscript font"},
 
     # Hindi / Devanagari book fonts
@@ -475,6 +475,25 @@ def is_font_available_locally(font_name: str) -> Optional[Dict[str, Any]]:
                     entry = dict(v)
                     break
 
+    # 5. Standard common aliases
+    if not entry:
+        FONT_ALIASES = {
+            "times": "times new roman",
+            "times-roman": "times new roman",
+            "times roman": "times new roman",
+            "tiro": "times new roman",
+            "helv": "arial",
+            "helvetica": "arial",
+            "helvetica neue": "arial",
+            "couri": "courier new",
+            "courier": "courier new",
+            "aptos": "calibri",
+            "aptos display": "calibri",
+        }
+        alias = FONT_ALIASES.get(norm) or FONT_ALIASES.get(norm.replace("-", " "))
+        if alias and alias in idx["families"]:
+            entry = dict(idx["families"][alias])
+
     if entry:
         if not entry.get("path") or not Path(entry["path"]).is_file():
             resolved_p = _find_system_font_file(entry.get("filename") or entry.get("name"))
@@ -500,10 +519,13 @@ def find_font_variant_file(
     if not font_name and not base_font_path:
         return None
 
-    # If neither bold nor italic, return base font if valid or local family font
+    # If neither bold nor italic, return base font ONLY if valid and actually matching font_name
     if not is_bold and not is_italic:
         if base_font_path and Path(base_font_path).is_file():
-            return str(base_font_path)
+            base_stem = Path(base_font_path).stem.lower().replace("-", "").replace("_", "")
+            clean_target = re.sub(r"[^a-zA-Z0-9]", "", font_name or "").lower()
+            if not clean_target or clean_target in base_stem or base_stem in clean_target:
+                return str(base_font_path)
         loc = is_font_available_locally(font_name)
         if loc and loc.get("path") and Path(loc["path"]).is_file():
             return loc["path"]
@@ -624,7 +646,10 @@ def find_font_variant_file(
                     pass
 
     if base_font_path and Path(base_font_path).is_file():
-        return str(base_font_path)
+        base_stem_low = Path(base_font_path).stem.lower().replace("-", "").replace("_", "")
+        clean_target = re.sub(r"[^a-zA-Z0-9]", "", font_name or "").lower()
+        if not clean_target or clean_target in base_stem_low or base_stem_low in clean_target:
+            return str(base_font_path)
 
     loc = is_font_available_locally(font_name)
     if loc and loc.get("path") and Path(loc["path"]).is_file():

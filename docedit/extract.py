@@ -628,12 +628,26 @@ def _extract_from_docx(
                     esc = f"<em>{esc}</em>"
                 if r.underline:
                     esc = f"<u>{esc}</u>"
+
+                run_styles = []
+                if f_name:
+                    run_styles.append(f"font-family: '{f_name}';")
+                if f_size:
+                    run_styles.append(f"font-size: {f_size}pt;")
+                if run_styles:
+                    esc = f'<span style="{" ".join(run_styles)}">{esc}</span>'
+
                 run_html.append(esc)
 
             if run_html:
                 content = "".join(run_html)
                 style_name = p.style.name.lower() if p.style else ""
-                style_attr = f' style="{align_css}"' if align_css else ""
+                p_styles = []
+                if align_css:
+                    p_styles.append(align_css.rstrip(";"))
+                if p.style and p.style.font and p.style.font.name:
+                    p_styles.append(f"font-family: '{p.style.font.name}'")
+                style_attr = f' style="{"; ".join(p_styles)};"' if p_styles else ""
 
                 if "heading 1" in style_name or "title" in style_name:
                     elements_html.append(f"<h1{style_attr}>{content}</h1>")

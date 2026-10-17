@@ -57,6 +57,12 @@ class DocumentHtmlBlockParser(HTMLParser):
             elif t in ("td", "th"):
                 self.current_cell_tag = t
                 self.text_buf = []
+            elif t == "span":
+                style_val = attrs_dict.get("style", "")
+                if style_val:
+                    self.text_buf.append(f'<span style="{style_val}">')
+                else:
+                    self.text_buf.append('<span>')
             elif t in ("b", "strong"):
                 self.text_buf.append("<strong>")
             elif t in ("i", "em"):
@@ -73,6 +79,12 @@ class DocumentHtmlBlockParser(HTMLParser):
         elif t == "hr":
             self._flush_block()
             self.blocks.append({"type": "hr"})
+        elif t == "span":
+            style_val = attrs_dict.get("style", "")
+            if style_val:
+                self.text_buf.append(f'<span style="{style_val}">')
+            else:
+                self.text_buf.append('<span>')
         elif t in ("b", "strong"):
             self.text_buf.append("<strong>")
         elif t in ("i", "em"):
@@ -100,6 +112,8 @@ class DocumentHtmlBlockParser(HTMLParser):
                 if self.current_row:
                     self.table_rows.append(self.current_row)
                     self.current_row = []
+            elif t == "span":
+                self.text_buf.append("</span>")
             elif t in ("b", "strong"):
                 self.text_buf.append("</strong>")
             elif t in ("i", "em"):
@@ -108,6 +122,8 @@ class DocumentHtmlBlockParser(HTMLParser):
                 self.text_buf.append("</u>")
         elif t in ("h1", "h2", "h3", "p", "li", "blockquote"):
             self._flush_block()
+        elif t == "span":
+            self.text_buf.append("</span>")
         elif t in ("b", "strong"):
             self.text_buf.append("</strong>")
         elif t in ("i", "em"):
@@ -133,10 +149,17 @@ class DocumentHtmlBlockParser(HTMLParser):
                 elif "text-align: left" in style_str:
                     align = "left"
 
+                font_match = re.search(r'font-family:\s*[\'"]?([^\'";]+)[\'"]?', style_str, re.IGNORECASE)
+                b_font_name = font_match.group(1).split(",")[0].strip().strip("'\"") if font_match else None
+                size_match = re.search(r'font-size:\s*([\d\.]+)pt', style_str, re.IGNORECASE)
+                b_font_size = float(size_match.group(1)) if size_match else None
+
                 self.blocks.append({
                     "type": self.current_block_tag,
                     "html": content,
                     "align": align,
+                    "font_name": b_font_name,
+                    "font_size_pt": b_font_size,
                 })
             self.current_block_tag = None
             self.current_block_attrs = {}
@@ -174,7 +197,7 @@ def _write_pdf_layout_preserved(
     """
     import pymupdf
 
-    from .font_catalog import is_font_available_locally, _find_system_font_file, find_font_variant_file
+    from .font_catalog import is_font_available_locally, _find_system_font_file, find_font_variant_file, resolve_document_font
 
     def get_font_kwargs_for_block(
         b_name: str,
@@ -187,16 +210,27 @@ def _write_pdf_layout_preserved(
         if var_p and Path(var_p).is_file():
             return {"fontfile": str(var_p)}
 
-        # 2. PyMuPDF built-in fonts with exact style variants
+        # 2. Try resolving via font catalog (system lookup or free download)
+        try:
+            res = resolve_document_font(b_name)
+            if res and res.get("font_path") and Path(res["font_path"]).is_file():
+                var_p2 = find_font_variant_file(res.get("resolved_name", b_name), is_bold=is_bold, is_italic=is_italic, base_font_path=res["font_path"])
+                if var_p2 and Path(var_p2).is_file():
+                    return {"fontfile": str(var_p2)}
+                return {"fontfile": str(res["font_path"])}
+        except Exception:
+            pass
+
+        # 3. PyMuPDF built-in Base 14 fonts with exact style variants
         low = (b_name or "").lower()
         if any(s in low for s in ("times", "serif", "garamond", "georgia", "baskerville", "caslon", "cambria", "book")):
             if is_bold and is_italic:
-                return {"fontname": "times-bolditalic"}
+                return {"fontname": "tibi"}
             elif is_bold:
-                return {"fontname": "times-bold"}
+                return {"fontname": "tibo"}
             elif is_italic:
-                return {"fontname": "times-italic"}
-            return {"fontname": "times"}
+                return {"fontname": "tiit"}
+            return {"fontname": "tiro"}
         elif any(s in low for s in ("mono", "courier", "console", "consolas")):
             if is_bold and is_italic:
                 return {"fontname": "cobi"}
@@ -323,6 +357,7 @@ def _write_image_layout_preserved(
     page borders, tables, graphics, and background texture.
     """
     from PIL import Image, ImageDraw, ImageFont
+    from .font_catalog import find_font_variant_file, resolve_document_font
 
     pil_font = None
     if font_path and Path(font_path).is_file():
@@ -362,15 +397,49 @@ def _write_image_layout_preserved(
                     iy0 = int(y0 * scale_y)
                     ix1 = int(x1 * scale_x)
                     iy1 = int(y1 * scale_y)
-                    # Mask old text with background
-                    draw.rectangle([ix0, iy0, ix1, iy1], fill=(255, 255, 255))
+
+                    # Sample local background color for clean masking
+                    bg_color = (255, 255, 255)
+                    try:
+                        sample_x = max(0, min(w_img - 1, ix0 - 2))
+                        sample_y = max(0, min(h_img - 1, iy0 - 2))
+                        pixel_val = base_img.getpixel((sample_x, sample_y))
+                        if isinstance(pixel_val, int):
+                            bg_color = (pixel_val, pixel_val, pixel_val)
+                        elif isinstance(pixel_val, (tuple, list)) and len(pixel_val) >= 3:
+                            bg_color = tuple(pixel_val[:3])
+                    except Exception:
+                        bg_color = (255, 255, 255)
+
+                    draw.rectangle([ix0, iy0, ix1, iy1], fill=bg_color)
                     b_size = int(b.get("font_size_pt", font_size_pt) * scale_y * 1.3)
+
+                    b_fname = b.get("font_name") or font_name
+                    is_b = b.get("is_bold", False)
+                    is_it = b.get("is_italic", False)
+                    b_fpath = find_font_variant_file(b_fname, is_bold=is_b, is_italic=is_it, base_font_path=font_path)
+                    if not b_fpath:
+                        try:
+                            res = resolve_document_font(b_fname)
+                            if res and res.get("font_path") and Path(res["font_path"]).is_file():
+                                b_fpath = find_font_variant_file(res.get("resolved_name", b_fname), is_bold=is_b, is_italic=is_it, base_font_path=res["font_path"]) or res["font_path"]
+                        except Exception:
+                            pass
+
                     cur_font = None
-                    if font_path and Path(font_path).is_file():
+                    if b_fpath and Path(b_fpath).is_file():
+                        try:
+                            cur_font = ImageFont.truetype(str(b_fpath), size=max(10, b_size))
+                        except Exception:
+                            cur_font = pil_font
+                    elif font_path and Path(font_path).is_file():
                         try:
                             cur_font = ImageFont.truetype(str(font_path), size=max(10, b_size))
                         except Exception:
                             cur_font = pil_font
+                    else:
+                        cur_font = pil_font
+
                     draw.text((ix0, iy0), b.get("text", ""), fill=(20, 20, 20), font=cur_font)
 
         rendered_pages.append(base_img)
@@ -652,11 +721,13 @@ def _write_docx(
         "left": WD_ALIGN_PARAGRAPH.LEFT,
     }
 
-    def add_formatted_runs(p, raw_text, base_size=font_size_pt):
+    def add_formatted_runs(p, raw_text, base_size=font_size_pt, default_run_font=font_name):
         tokens = re.split(r'(<[^>]+>)', raw_text)
         bold = False
         italic = False
         underline = False
+        font_stack: List[Optional[str]] = []
+        size_stack: List[Optional[float]] = []
 
         for tok in tokens:
             if not tok:
@@ -676,20 +747,34 @@ def _write_docx(
                 underline = False
             elif lower_tok in ('<br>', '<br/>', '<br />'):
                 p.add_run('\n')
+            elif lower_tok.startswith('<span') and lower_tok.endswith('>'):
+                f_match = re.search(r'font-family:\s*[\'"]?([^\'";]+)[\'"]?', tok, re.IGNORECASE)
+                s_match = re.search(r'font-size:\s*([\d\.]+)pt', tok, re.IGNORECASE)
+                cur_f = f_match.group(1).split(",")[0].strip().strip("'\"") if f_match else None
+                cur_s = float(s_match.group(1)) if s_match else None
+                font_stack.append(cur_f)
+                size_stack.append(cur_s)
+            elif lower_tok == '</span>':
+                if font_stack:
+                    font_stack.pop()
+                if size_stack:
+                    size_stack.pop()
             elif tok.startswith('<') and tok.endswith('>'):
                 pass  # Ignore other structural tags in run text
             else:
                 clean = html.unescape(tok)
                 if clean:
                     r = p.add_run(clean)
-                    r.font.name = font_name
+                    active_font = next((f for f in reversed(font_stack) if f), default_run_font)
+                    active_size = next((s for s in reversed(size_stack) if s is not None), base_size)
+                    r.font.name = active_font
                     try:
                         rPr = r._r.get_or_add_rPr()
-                        rFonts = parse_xml(r'<w:rFonts {} w:ascii="{}" w:hAnsi="{}" w:cs="{}"/>'.format(nsdecls('w'), font_name, font_name, font_name))
+                        rFonts = parse_xml(r'<w:rFonts {} w:ascii="{}" w:hAnsi="{}" w:cs="{}"/>'.format(nsdecls('w'), active_font, active_font, active_font))
                         rPr.append(rFonts)
                     except Exception:
                         pass
-                    r.font.size = Pt(base_size)
+                    r.font.size = Pt(active_size)
                     r.bold = bold
                     r.italic = italic
                     r.underline = underline
@@ -712,8 +797,9 @@ def _write_docx(
             align = block.get("align")
             if align in align_map:
                 p_h.alignment = align_map[align]
-            h_size = font_size_pt + (6 - level * 2)
-            add_formatted_runs(p_h, block["html"], base_size=h_size)
+            h_size = block.get("font_size_pt") or (font_size_pt + (6 - level * 2))
+            b_font = block.get("font_name") or font_name
+            add_formatted_runs(p_h, block["html"], base_size=h_size, default_run_font=b_font)
 
         elif b_type == "table":
             rows = block["rows"]
@@ -749,14 +835,18 @@ def _write_docx(
 
         elif b_type == "li":
             p_li = doc.add_paragraph(style="List Bullet")
-            add_formatted_runs(p_li, block["html"])
+            b_size = block.get("font_size_pt") or font_size_pt
+            b_font = block.get("font_name") or font_name
+            add_formatted_runs(p_li, block["html"], base_size=b_size, default_run_font=b_font)
 
         else:  # Paragraph 'p' or blockquote
             p = doc.add_paragraph()
             align = block.get("align")
             if align in align_map:
                 p.alignment = align_map[align]
-            add_formatted_runs(p, block["html"])
+            b_size = block.get("font_size_pt") or font_size_pt
+            b_font = block.get("font_name") or font_name
+            add_formatted_runs(p, block["html"], base_size=b_size, default_run_font=b_font)
 
     doc.save(str(output_path))
     return output_path
