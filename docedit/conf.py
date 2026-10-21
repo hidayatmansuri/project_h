@@ -7,6 +7,7 @@ Every value can be overridden from ``project_h/settings.py`` using the
 """
 import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from django.conf import settings
 
@@ -78,6 +79,22 @@ class DocEditConf:
     def MAX_PAGES(self) -> int:
         return int(_get("MAX_PAGES", 200))
 
+    @property
+    def MAX_IMAGE_PIXELS(self) -> int:
+        return int(_get("MAX_IMAGE_PIXELS", 50_000_000))
+
+    @property
+    def UPLOAD_THROTTLE_LIMIT(self) -> int:
+        return int(_get("UPLOAD_THROTTLE_LIMIT", 15))
+
+    @property
+    def UPLOAD_THROTTLE_WINDOW(self) -> int:
+        return int(_get("UPLOAD_THROTTLE_WINDOW", 60))
+
+    @property
+    def MAX_WORKERS(self) -> int:
+        return int(_get("MAX_WORKERS", 4))
+
     # -------------------------------------------------------------------- OCR
     @property
     def TESSERACT_CMD(self):
@@ -97,9 +114,21 @@ class DocEditConf:
         return "tesseract"
 
     @property
+    def TESSDATA_MODEL_SET(self) -> str:
+        """Model set to download / prefer: 'best' (tessdata_best), 'standard' (tessdata), or 'fast' (tessdata_fast)."""
+        return _get("TESSDATA_MODEL_SET", "best").lower()
+
+    @property
     def TESSDATA_URL(self) -> str:
-        # "tessdata" = good balance of speed/accuracy. Use tessdata_best for max accuracy.
-        return _get("TESSDATA_URL", "https://github.com/tesseract-ocr/tessdata/raw/main/{lang}.traineddata")
+        explicit = _get("TESSDATA_URL", None)
+        if explicit:
+            return explicit
+        model_set = self.TESSDATA_MODEL_SET
+        if model_set == "best":
+            return "https://github.com/tesseract-ocr/tessdata_best/raw/main/{lang}.traineddata"
+        elif model_set == "fast":
+            return "https://github.com/tesseract-ocr/tessdata_fast/raw/main/{lang}.traineddata"
+        return "https://github.com/tesseract-ocr/tessdata/raw/main/{lang}.traineddata"
 
     @property
     def OCR_DPI(self) -> int:
@@ -111,13 +140,61 @@ class DocEditConf:
         return int(_get("OCR_LOW_CONFIDENCE", 70))
 
     @property
-    def OCR_LANGUAGES(self) -> dict:
-        return _get("OCR_LANGUAGES", {
+    def OCR_PREPROCESS_PROFILE(self) -> str:
+        """Default preprocessing pipeline: 'raw_grayscale' (top benchmark), 'grayscale_contrast', or 'binarized'."""
+        return _get("OCR_PREPROCESS_PROFILE", "raw_grayscale").lower()
+
+    @property
+    def OCR_DESKEW(self) -> bool:
+        """Automatically detect and correct page rotation/skew angle."""
+        return bool(_get("OCR_DESKEW", True))
+
+    @property
+    def OCR_DEWARP(self) -> bool:
+        """Optional dewarp/page-curl correction for book spine curvature."""
+        return bool(_get("OCR_DEWARP", False))
+
+    @property
+    def OCR_PSM(self) -> int:
+        """Tesseract Page Segmentation Mode (PSM). Default 3 (Fully automatic page segmentation)."""
+        return int(_get("OCR_PSM", 3))
+
+    @property
+    def DOCEDIT_ENABLED_LANGUAGES(self) -> List[str]:
+        """
+        Enabled OCR languages for editing and recognition.
+        Currently supports English and other Latin-script text only (default: ["eng"]).
+        Non-Latin languages (Hindi, Gujarati, Arabic, Urdu) are on hold pending
+        full complex-script shaping and RTL support. See MULTILINGUAL_RE_ENABLING_CHECKLIST.md.
+        """
+        val = getattr(settings, "DOCEDIT_ENABLED_LANGUAGES", None)
+        if val is not None:
+            return list(val)
+        return list(_get("ENABLED_LANGUAGES", ["eng"]))
+
+    @property
+    def ALL_OCR_LANGUAGES(self) -> dict:
+        """
+        Master catalog of supported OCR languages.
+        Code paths are preserved for Hindi, Gujarati, Arabic, and Urdu.
+        """
+        return _get("ALL_OCR_LANGUAGES", {
             "eng": "English",
             "hin": "Hindi",
             "guj": "Gujarati",
             "ara": "Arabic",
+            "urd": "Urdu",
         })
+
+    @property
+    def OCR_LANGUAGES(self) -> dict:
+        """
+        Active OCR languages, gated behind DOCEDIT_ENABLED_LANGUAGES.
+        Keeps non-enabled languages hidden in the UI while preserving their code paths.
+        """
+        enabled = set(self.DOCEDIT_ENABLED_LANGUAGES)
+        all_langs = self.ALL_OCR_LANGUAGES
+        return {k: v for k, v in all_langs.items() if k in enabled}
 
     # ------------------------------------------------------------------ fonts
     @property
@@ -128,7 +205,7 @@ class DocEditConf:
     @property
     def INSTALL_FONTS_TO_SYSTEM(self) -> bool:
         """Install downloaded fonts for the current OS user (no admin rights needed)."""
-        return bool(_get("INSTALL_FONTS_TO_SYSTEM", True))
+        return bool(_get("INSTALL_FONTS_TO_SYSTEM", False))
 
     @property
     def GOOGLE_FONTS_METADATA_URL(self) -> str:
@@ -156,6 +233,7 @@ EXTENSION_KINDS = {
     "png": "image", "jpg": "image", "jpeg": "image", "tif": "image", "tiff": "image",
     "bmp": "image", "webp": "image",
     "pdf": "pdf",
+    "searchable_pdf": "searchable_pdf",
     "docx": "docx",
     "txt": "text", "md": "markdown", "markdown": "markdown",
     "html": "html", "htm": "html",
@@ -165,6 +243,7 @@ MIME_TYPES = {
     "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "tif": "image/tiff",
     "tiff": "image/tiff", "bmp": "image/bmp", "webp": "image/webp",
     "pdf": "application/pdf",
+    "searchable_pdf": "application/pdf",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "txt": "text/plain", "md": "text/markdown", "markdown": "text/markdown",
     "html": "text/html", "htm": "text/html",
@@ -173,8 +252,10 @@ MIME_TYPES = {
 KIND_LABELS = {
     "image": "Scanned image",
     "pdf": "PDF document",
+    "searchable_pdf": "Searchable PDF (scanned)",
     "docx": "Word document",
     "text": "Plain text",
     "markdown": "Markdown",
     "html": "Web page (HTML)",
 }
+

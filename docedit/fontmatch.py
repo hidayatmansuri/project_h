@@ -7,9 +7,16 @@ fonts, and produces the required CSS rules for the editor.
 """
 import logging
 import re
-from typing import Any, Dict, List, Optional
+import urllib.parse
+from typing import Any, Dict, List, Optional, Tuple
 
-from .font_catalog import resolve_document_font
+from .font_catalog import (
+    find_nearest_match_with_fonttools,
+    generate_document_all_fonts_css,
+    resolve_document_font,
+    resolve_font_with_fallback,
+)
+from .security import sanitize_font_name
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +47,11 @@ def clean_pdf_font_name(raw_name: str) -> str:
         ("tibi", "Times New Roman"),
         ("arialmt", "Arial"),
         ("arial", "Arial"),
-        ("helv", "Arial"),
-        ("hebo", "Arial"),
-        ("heit", "Arial"),
-        ("hebi", "Arial"),
-        ("helvetica", "Arial"),
+        ("helv", "Helvetica"),
+        ("hebo", "Helvetica"),
+        ("heit", "Helvetica"),
+        ("hebi", "Helvetica"),
+        ("helvetica", "Helvetica"),
         ("calibri", "Calibri"),
         ("segoeui", "Segoe UI"),
         ("aptos", "Aptos"),
@@ -108,6 +115,71 @@ def clean_pdf_font_name(raw_name: str) -> str:
     return " ".join(name.split()).strip()
 
 
+_NON_LATIN_SCRIPT_RANGES = [
+    ("arabic", [
+        (0x0600, 0x06FF),  # Arabic / Urdu
+        (0x0750, 0x077F),  # Arabic Supplement
+        (0x08A0, 0x08FF),  # Arabic Extended-A
+        (0xFB50, 0xFDFF),  # Arabic Presentation Forms-A
+        (0xFE70, 0xFEFF),  # Arabic Presentation Forms-B
+    ]),
+    ("devanagari", [
+        (0x0900, 0x097F),  # Devanagari (Hindi, Marathi, Sanskrit)
+        (0xA8E0, 0xA8FF),  # Devanagari Extended
+    ]),
+    ("gujarati", [
+        (0x0A80, 0x0AFF),  # Gujarati
+    ]),
+    ("bengali", [
+        (0x0980, 0x09FF),  # Bengali / Assamese
+    ]),
+    ("gurmukhi", [
+        (0x0A00, 0x0A7F),  # Gurmukhi
+    ]),
+    ("tamil", [
+        (0x0B80, 0x0BFF),  # Tamil
+    ]),
+    ("telugu", [
+        (0x0C00, 0x0C7F),  # Telugu
+    ]),
+    ("kannada", [
+        (0x0C80, 0x0CFF),  # Kannada
+    ]),
+    ("malayalam", [
+        (0x0D00, 0x0D7F),  # Malayalam
+    ]),
+    ("hebrew", [
+        (0x0590, 0x05FF),  # Hebrew
+        (0xFB1D, 0xFB4F),  # Hebrew Presentation Forms
+    ]),
+    ("thai", [
+        (0x0E00, 0x0E7F),  # Thai
+    ]),
+]
+
+
+def is_non_latin_script(text: str) -> Tuple[bool, Optional[str]]:
+    """
+    Checks if a string contains non-Latin complex script characters (Arabic, Indic, Hebrew, etc.)
+    that cannot be properly inserted into a PDF text layer without shaping or bidirectional RTL handling.
+    Returns (True, script_name) if any non-Latin character is found, otherwise (False, None).
+    """
+    if not text:
+        return False, None
+
+    for ch in text:
+        cp = ord(ch)
+        # Fast path: ASCII, Latin-1 Supplement, Latin Extended-A/B, and common Latin punctuation are safe
+        if cp < 0x0590:
+            continue
+        for script_name, ranges in _NON_LATIN_SCRIPT_RANGES:
+            for start, end in ranges:
+                if start <= cp <= end:
+                    return True, script_name
+
+    return False, None
+
+
 def detect_script(text: str) -> str:
     """
     Detects predominant script from text sample.
@@ -167,7 +239,8 @@ def get_editor_font_css(font_info: Dict[str, Any]) -> str:
     """
     Generates CSS @font-face or Google Fonts @import rule for the editor.
     """
-    family = font_info.get("name", "EB Garamond")
+    raw_family = font_info.get("name", "EB Garamond")
+    family = sanitize_font_name(raw_family)
     font_path = font_info.get("font_path")
 
     # If it's a project font or static font file in static/
@@ -189,5 +262,5 @@ def get_editor_font_css(font_info: Dict[str, Any]) -> str:
         return ""
 
     # Google Fonts import fallback so browser renders it with 100% fidelity
-    safe_family = family.replace(" ", "+")
+    safe_family = urllib.parse.quote_plus(family)
     return f"@import url('https://fonts.googleapis.com/css2?family={safe_family}:ital,wght@0,400;0,700;1,400;1,700&display=swap');"

@@ -9,12 +9,14 @@ Coordinates the end-to-end upload pipeline:
 """
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from .conf import conf
 from .extract import extract_document
 from .font_catalog import resolve_document_font
 from .fontmatch import get_editor_font_css
+from .security import validate_ocr_lang
 from .storage import (
     get_original_file_path,
     get_session_dir,
@@ -25,12 +27,49 @@ from .storage import (
 
 logger = logging.getLogger(__name__)
 
+_EXECUTOR: Optional[ThreadPoolExecutor] = None
+_EXECUTOR_LOCK = threading.Lock()
 
-def process_session(sid: str, ocr_lang: str = "eng") -> None:
+
+def get_processing_executor() -> ThreadPoolExecutor:
+    """Returns the singleton bounded thread pool executor for document processing tasks."""
+    global _EXECUTOR
+    if _EXECUTOR is None:
+        with _EXECUTOR_LOCK:
+            if _EXECUTOR is None:
+                max_w = getattr(conf, "MAX_WORKERS", 4)
+                _EXECUTOR = ThreadPoolExecutor(
+                    max_workers=max_w,
+                    thread_name_prefix="docedit-proc"
+                )
+    return _EXECUTOR
+
+
+
+def process_session(
+    sid: str,
+    ocr_lang: str = "eng",
+    ocr_profile: Optional[str] = None,
+    ocr_deskew: Optional[bool] = None,
+    ocr_dewarp: Optional[bool] = None,
+) -> None:
     """
     Executes the document processing pipeline.
-    Can be run in a background thread or synchronously.
+    Can be run in a bounded worker pool or synchronously.
     """
+    try:
+        ocr_lang = validate_ocr_lang(ocr_lang)
+    except ValueError as e:
+        update_session(
+            sid,
+            status="error",
+            error=f"Invalid OCR language: {e}",
+            progress=0,
+            progress_message="Error: invalid language",
+            is_editable=False,
+        )
+        return
+
     orig_path = get_original_file_path(sid)
     if not orig_path or not orig_path.is_file():
         update_session(
@@ -54,7 +93,10 @@ def process_session(sid: str, ocr_lang: str = "eng") -> None:
             ocr_lang=ocr_lang,
             work_dir=work_dir,
             sid=sid,
-            progress_callback=on_progress
+            progress_callback=on_progress,
+            ocr_profile=ocr_profile,
+            ocr_deskew=ocr_deskew,
+            ocr_dewarp=ocr_dewarp,
         )
 
         on_progress(80, "Matching document typography and checking fonts...")
@@ -65,6 +107,9 @@ def process_session(sid: str, ocr_lang: str = "eng") -> None:
         # Merge extracted font size
         font_res["size_pt"] = extracted.get("font_size_pt", 12.0)
         editor_css = get_editor_font_css(font_res)
+        all_fonts_css = extracted.get("all_fonts_css", "")
+        if all_fonts_css:
+            editor_css = f"{all_fonts_css}\n{editor_css}"
 
         # Save HTML and plain text
         html_content = extracted.get("html", "")
@@ -85,6 +130,7 @@ def process_session(sid: str, ocr_lang: str = "eng") -> None:
             stats=stats,
             fuzzy_words=extracted.get("fuzzy_words", []),
             editor_font_css=editor_css,
+            all_fonts_css=all_fonts_css,
             error=None,
         )
     except Exception as e:
@@ -99,17 +145,32 @@ def process_session(sid: str, ocr_lang: str = "eng") -> None:
         )
 
 
-def start_session_processing(sid: str, ocr_lang: str = "eng") -> None:
+def start_session_processing(
+    sid: str,
+    ocr_lang: str = "eng",
+    ocr_profile: Optional[str] = None,
+    ocr_deskew: Optional[bool] = None,
+    ocr_dewarp: Optional[bool] = None,
+) -> None:
     """
-    Starts session processing in a thread (or synchronously if configured).
+    Starts session processing in a bounded thread pool (or synchronously if configured).
     """
     if conf.SYNC_PROCESSING:
-        process_session(sid, ocr_lang=ocr_lang)
-    else:
-        t = threading.Thread(
-            target=process_session,
-            args=(sid,),
-            kwargs={"ocr_lang": ocr_lang},
-            daemon=True
+        process_session(
+            sid,
+            ocr_lang=ocr_lang,
+            ocr_profile=ocr_profile,
+            ocr_deskew=ocr_deskew,
+            ocr_dewarp=ocr_dewarp,
         )
-        t.start()
+    else:
+        executor = get_processing_executor()
+        executor.submit(
+            process_session,
+            sid,
+            ocr_lang=ocr_lang,
+            ocr_profile=ocr_profile,
+            ocr_deskew=ocr_deskew,
+            ocr_dewarp=ocr_dewarp,
+        )
+

@@ -10,21 +10,4 @@ PyMuPDF>=1.24.0
 python-docx>=1.1.0
 fonttools>=4.50.0
 numpy>=1.26.0
-
-
-
-
-from utilitytracker.models import UtilityReading
-import datetime
-
-# 1. Fetch the reading by date
-reading = UtilityReading.objects.filter(date=datetime.date(2026, 5, 30)).first()
-
-if reading:
-    # 2. Update values
-    reading.electricity = 29.53
-    reading.gas = 16.26
-    reading.save()
-    print("Reading updated successfully!")
-else:
-    print("Reading not found.")
+nh3>=0.2.14

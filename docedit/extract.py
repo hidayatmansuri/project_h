@@ -18,8 +18,19 @@ from PIL import Image
 import numpy as np
 
 from .conf import EXTENSION_KINDS, conf
-from .fontmatch import clean_pdf_font_name, detect_visual_font_for_scanned_book
+from .embedded_fonts import extract_all_embedded_fonts, serialize_embedded_font_summary
+from .fontmatch import (
+    clean_pdf_font_name,
+    detect_visual_font_for_scanned_book,
+    generate_document_all_fonts_css,
+    is_non_latin_script,
+    resolve_font_with_fallback,
+)
 from .ocr import ocr_image
+from .security import sanitize_document_html, sanitize_font_name
+
+# Guard against decompression bomb DoS
+Image.MAX_IMAGE_PIXELS = getattr(conf, "MAX_IMAGE_PIXELS", 50_000_000)
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +40,16 @@ def extract_document(
     ocr_lang: str = "eng",
     work_dir: Optional[Path] = None,
     sid: Optional[str] = None,
-    progress_callback=None
+    progress_callback=None,
+    ocr_profile: Optional[str] = None,
+    ocr_deskew: Optional[bool] = None,
+    ocr_dewarp: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Main extraction dispatcher preserving tables, lines, and layout.
     For non-editable documents (PDF and images with text), preserves separate pages,
     exact layout geometry, background drawings/tables, and extracts in-place text blocks.
+    Sanitizes all extracted HTML with an allowlist before returning.
     """
     ext = file_path.suffix.lstrip(".").lower()
     kind = EXTENSION_KINDS.get(ext, "unknown")
@@ -43,15 +58,38 @@ def extract_document(
         progress_callback(10, f"Analyzing {ext.upper()} document structure...")
 
     if kind == "image":
-        return _extract_from_image(file_path, ocr_lang=ocr_lang, work_dir=work_dir, sid=sid, progress_callback=progress_callback)
+        res = _extract_from_image(
+            file_path,
+            ocr_lang=ocr_lang,
+            work_dir=work_dir,
+            sid=sid,
+            progress_callback=progress_callback,
+            ocr_profile=ocr_profile,
+            ocr_deskew=ocr_deskew,
+            ocr_dewarp=ocr_dewarp,
+        )
     elif kind == "pdf":
-        return _extract_from_pdf(file_path, ocr_lang=ocr_lang, work_dir=work_dir, sid=sid, progress_callback=progress_callback)
+        res = _extract_from_pdf(
+            file_path,
+            ocr_lang=ocr_lang,
+            work_dir=work_dir,
+            sid=sid,
+            progress_callback=progress_callback,
+            ocr_profile=ocr_profile,
+            ocr_deskew=ocr_deskew,
+            ocr_dewarp=ocr_dewarp,
+        )
     elif kind == "docx":
-        return _extract_from_docx(file_path, progress_callback=progress_callback)
+        res = _extract_from_docx(file_path, progress_callback=progress_callback)
     elif kind in ("text", "markdown", "html"):
-        return _extract_from_text(file_path, kind=kind, progress_callback=progress_callback)
+        res = _extract_from_text(file_path, kind=kind, progress_callback=progress_callback)
     else:
-        return _extract_from_text(file_path, kind="text", progress_callback=progress_callback)
+        res = _extract_from_text(file_path, kind="text", progress_callback=progress_callback)
+
+    if res and res.get("html"):
+        res["html"] = sanitize_document_html(res["html"])
+
+    return res
 
 
 def _detect_image_horizontal_lines(img_gray: Image.Image) -> List[int]:
@@ -97,7 +135,10 @@ def _extract_from_image(
     ocr_lang: str = "eng",
     work_dir: Optional[Path] = None,
     sid: Optional[str] = None,
-    progress_callback=None
+    progress_callback=None,
+    ocr_profile: Optional[str] = None,
+    ocr_deskew: Optional[bool] = None,
+    ocr_dewarp: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Extracts text, divider lines, and separate page structures from scanned book pages via OCR.
@@ -106,10 +147,18 @@ def _extract_from_image(
     if progress_callback:
         progress_callback(20, "Loading image and analyzing page layout & lines...")
 
-    img = Image.open(str(file_path))
+    Image.MAX_IMAGE_PIXELS = getattr(conf, "MAX_IMAGE_PIXELS", 50_000_000)
+    try:
+        img = Image.open(str(file_path))
+    except Image.DecompressionBombError as e:
+        raise ValueError(
+            f"Image decompression bomb detected: image exceeds maximum pixel limit of {conf.MAX_IMAGE_PIXELS:,} pixels."
+        ) from e
+
     pages_html = []
     pages_data = []
     all_fuzzy_words = []
+    all_words = []
     all_text = []
     page_count = 0
     font_sizes = []
@@ -117,13 +166,38 @@ def _extract_from_image(
     try:
         frame_idx = 0
         while True:
+            if page_count >= conf.MAX_PAGES:
+                raise ValueError(f"Image document exceeds maximum page limit of {conf.MAX_PAGES} pages.")
             img.seek(frame_idx)
+            orig_w, orig_h = img.size
+            if orig_w * orig_h > conf.MAX_IMAGE_PIXELS:
+                raise ValueError(
+                    f"Image frame {frame_idx + 1} ({orig_w}x{orig_h} = {orig_w * orig_h:,} pixels) "
+                    f"exceeds maximum allowed limit of {conf.MAX_IMAGE_PIXELS:,} pixels."
+                )
             page_count += 1
             if progress_callback:
                 progress_callback(30 + min(40, frame_idx * 10), f"Extracting page {page_count}...")
 
             cur_frame = img.copy()
-            orig_w, orig_h = cur_frame.size
+
+            # Read real DPI from metadata (fallback: derive from page width assuming ~8.27 in A4 width)
+            info_dpi = cur_frame.info.get("dpi")
+            real_dpi = None
+            if isinstance(info_dpi, (tuple, list)) and len(info_dpi) >= 2:
+                try:
+                    real_dpi = float(info_dpi[0])
+                except (ValueError, TypeError):
+                    pass
+            elif isinstance(info_dpi, (int, float)) and info_dpi > 0:
+                real_dpi = float(info_dpi)
+
+            if not real_dpi or real_dpi < 30 or real_dpi > 2400:
+                derived = orig_w / 8.27
+                if 72 <= derived <= 600:
+                    real_dpi = round(derived, 1)
+                else:
+                    real_dpi = float(conf.OCR_DPI)
 
             if work_dir:
                 try:
@@ -139,8 +213,18 @@ def _extract_from_image(
             gray = cur_frame.convert("L")
             detected_lines = _detect_image_horizontal_lines(gray)
 
-            res = ocr_image(cur_frame, lang=ocr_lang, dpi=conf.OCR_DPI)
+            res = ocr_image(
+                cur_frame,
+                lang=ocr_lang,
+                dpi=int(round(real_dpi)),
+                profile=ocr_profile,
+                deskew=ocr_deskew,
+                dewarp=ocr_dewarp,
+                page_num=page_count,
+            )
             line_boxes = res.get("line_boxes", [])
+            for w_item in res.get("words", []):
+                all_words.append(w_item)
             avg_pt = res.get("avg_font_size_pt", 12.0)
             if avg_pt:
                 font_sizes.append(avg_pt)
@@ -154,36 +238,82 @@ def _extract_from_image(
                 if not b_text:
                     continue
                 lx, ly, lw, lh = lb["bbox"]
-                left_pct = round((lx / max(1, orig_w)) * 100, 3)
-                top_pct = round((ly / max(1, orig_h)) * 100, 3)
-                width_pct = round((lw / max(1, orig_w)) * 100, 3)
-                height_pct = round((lh / max(1, orig_h)) * 100, 3)
-                est_line_pt = round((lh * 72.0 / conf.OCR_DPI) * 1.15, 1)
-                est_line_pt = max(9.0, min(est_line_pt, 48.0))
+                left_pct = round((lx / max(1, orig_w)) * 100, 4)
+                top_pct = round((ly / max(1, orig_h)) * 100, 4)
+                width_pct = round((lw / max(1, orig_w)) * 100, 4)
+                height_pct = round((lh / max(1, orig_h)) * 100, 4)
+                est_line_pt = round(lh * 72.0 / real_dpi, 1)
+                est_line_pt = max(6.0, min(est_line_pt, 72.0))
+
+                is_non_latin, script_name = is_non_latin_script(b_text)
+                readonly_reason = (
+                    f"Non-Latin script ({script_name.title() if script_name else 'Complex'}) is currently read-only. "
+                    f"PyMuPDF insert_text does not shape Arabic/Indic scripts and does not handle RTL."
+                ) if is_non_latin else None
 
                 b_id = f"p{page_count}_b{b_idx}"
                 page_blocks.append({
                     "id": b_id,
                     "text": b_text,
+                    "unit": "px",
                     "bbox": [lx, ly, lx + lw, ly + lh],
+                    "orig_bbox": [lx, ly, lx + lw, ly + lh],
+                    "size_src": lh,
+                    "font_size_pt": est_line_pt,
+                    "line_height_src": lh,
                     "left_pct": left_pct,
                     "top_pct": top_pct,
                     "width_pct": width_pct,
                     "height_pct": height_pct,
+                    "rotation": 0,
                     "font_name": "EB Garamond",
-                    "font_size_pt": est_line_pt,
+                    "orig_font_name": "EB Garamond",
+                    "orig_font_size_pt": est_line_pt,
+                    "orig_text": b_text,
+                    "orig_is_bold": False,
+                    "orig_is_italic": False,
+                    "orig_is_underline": False,
+                    "is_modified": False,
                     "is_header": est_line_pt >= 16,
-                    "has_fuzzy": lb.get("has_fuzzy", False),
+                    "has_fuzzy": lb.get("has_fuzzy", False) and not is_non_latin,
+                    "is_readonly": is_non_latin,
+                    "readonly_reason": readonly_reason,
+                    "script": script_name or "latin",
                     "page": page_count,
+                    "words": lb.get("words", []),
                 })
 
-                escaped = html.escape(b_text)
+                word_spans = []
+                for w in lb.get("words", []):
+                    w_esc = html.escape(w["text"])
+                    is_w_fuzzy = w.get("is_fuzzy") and not is_non_latin
+                    w_cls = "ocr-word" + (" docedit-fuzzy" if is_w_fuzzy else "")
+                    fuzzy_attr = ' data-fuzzy-word="true"' if is_w_fuzzy else ""
+                    conf_val = w.get("conf", 85)
+                    tier = w.get("conf_tier", "high")
+                    word_spans.append(
+                        f'<span class="{w_cls}" data-word-id="{w.get("id", "")}" '
+                        f'data-conf="{conf_val}" data-conf-tier="{tier}"{fuzzy_attr}>{w_esc}</span>'
+                    )
+                escaped = " ".join(word_spans) if word_spans else html.escape(b_text)
+
+                readonly_class = " docedit-block-readonly" if is_non_latin else ""
+                readonly_attr = (
+                    f'contenteditable="false" data-readonly="true" '
+                    f'data-readonly-reason="{html.escape(readonly_reason or "")}" '
+                    f'data-script="{html.escape(script_name or "")}"'
+                ) if is_non_latin else 'contenteditable="true"'
+                readonly_badge = (
+                    f'<span class="docedit-readonly-badge" title="{html.escape(readonly_reason or "")}">'
+                    f'<i class="fa-solid fa-lock"></i> {html.escape((script_name or "Non-Latin").title())} (Read-Only)</span>'
+                ) if is_non_latin else ""
+
                 block_html_items.append(
-                    f'<div class="docedit-text-block{" has-fuzzy" if lb.get("has_fuzzy") else ""}" '
-                    f'contenteditable="true" spellcheck="false" '
-                    f'data-block-id="{b_id}" data-page="{page_count}" '
-                    f'style="left: {left_pct}%; top: {top_pct}%; min-width: {width_pct}%; font-size: {est_line_pt}pt;">'
-                    f'{escaped}</div>'
+                    f'<div class="docedit-text-block{" has-fuzzy" if (lb.get("has_fuzzy") and not is_non_latin) else ""}{readonly_class}" '
+                    f'{readonly_attr} spellcheck="false" '
+                    f'data-block-id="{b_id}" data-page="{page_count}" data-font-size-pt="{est_line_pt}" '
+                    f'style="--x-src: {lx}; --y-src: {ly}; --w-src: {lw}; --h-src: {lh}; --size-src: {lh};">'
+                    f'{readonly_badge}{escaped}</div>'
                 )
                 b_idx += 1
 
@@ -191,8 +321,10 @@ def _extract_from_image(
 
             pages_data.append({
                 "page_num": page_count,
+                "unit": "px",
                 "width": orig_w,
                 "height": orig_h,
+                "dpi": round(real_dpi, 1),
                 "aspect_ratio": round(orig_h / max(1, orig_w), 4),
                 "image_url": img_url,
                 "blocks": page_blocks,
@@ -201,9 +333,9 @@ def _extract_from_image(
             sheet_html = f'''<div class="docedit-page-sheet" data-page="{page_count}" id="doceditPage_{page_count}">
   <div class="page-sheet-header">
     <div class="page-sheet-badge"><i class="fa-solid fa-file-image"></i> Page {page_count}</div>
-    <div class="page-sheet-dims">{orig_w} × {orig_h} px</div>
+    <div class="page-sheet-dims">{orig_w} × {orig_h} px ({int(round(real_dpi))} DPI)</div>
   </div>
-  <div class="page-sheet-canvas" style="aspect-ratio: {orig_w} / {orig_h};">
+  <div class="page-sheet-canvas" style="aspect-ratio: {orig_w} / {orig_h}; --scale: 1.0; --page-width: {orig_w};">
     <img class="page-bg-img" src="{img_url}" alt="Page {page_count} Original Layout" draggable="false" />
     <div class="page-text-overlay">
       {"".join(block_html_items)}
@@ -213,8 +345,9 @@ def _extract_from_image(
             pages_html.append(sheet_html)
             all_text.append(res["text"])
             for fw in res.get("fuzzy_words", []):
-                fw["page"] = page_count
-                all_fuzzy_words.append(fw)
+                if not is_non_latin_script(fw.get("text", ""))[0]:
+                    fw["page"] = page_count
+                    all_fuzzy_words.append(fw)
 
             frame_idx += 1
     except EOFError:
@@ -224,18 +357,33 @@ def _extract_from_image(
     combined_html = "\n".join(pages_html)
     avg_size = round(sum(font_sizes) / len(font_sizes), 1) if font_sizes else 12.0
     matched_font = detect_visual_font_for_scanned_book(full_text)
+    font_res = resolve_font_with_fallback(matched_font, text_sample=full_text, sid=sid)
+    all_resolved_fonts = [font_res]
 
     for p in pages_data:
         for b in p["blocks"]:
-            b["font_name"] = matched_font
+            b["font_info"] = dict(font_res)
+            b["font_name"] = font_res["used"]
+            b["orig_font_name"] = font_res["used"]
+            b["font_requested"] = font_res["requested"]
+
+    all_fonts_css = generate_document_all_fonts_css(all_resolved_fonts, sid=sid)
+
+    if sid and all_words:
+        try:
+            from .storage import save_session_words
+            save_session_words(sid, all_words)
+        except Exception as e:
+            logger.debug("Could not save session words: %s", e)
 
     return {
         "html": combined_html,
         "raw_text": full_text,
-        "detected_font_name": matched_font,
+        "detected_font_name": font_res["used"],
         "font_size_pt": avg_size,
         "is_layout_preserved": True,
         "pages": pages_data,
+        "all_fonts_css": all_fonts_css,
         "stats": {
             "page_count": page_count,
             "word_count": len(full_text.split()),
@@ -243,6 +391,7 @@ def _extract_from_image(
             "fuzzy_word_count": len(all_fuzzy_words),
         },
         "fuzzy_words": all_fuzzy_words[:100],
+        "words": all_words,
         "needs_ocr": True,
         "is_scanned": True,
     }
@@ -253,13 +402,18 @@ def _extract_from_pdf(
     ocr_lang: str = "eng",
     work_dir: Optional[Path] = None,
     sid: Optional[str] = None,
-    progress_callback=None
+    progress_callback=None,
+    ocr_profile: Optional[str] = None,
+    ocr_deskew: Optional[bool] = None,
+    ocr_dewarp: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Extracts text, TABLES, lines, and formatting from PDF.
     Preserves exact tables, vector rules, and separate page structures.
     Renders high-resolution background pages so all tables, lines, borders,
     and graphics remain completely intact while text is editable in-place.
+    Identifies embedded fonts, preserves span-level typography and colors,
+    and groups lines into paragraph blocks with union bounding boxes.
     """
     import pymupdf
 
@@ -268,21 +422,36 @@ def _extract_from_pdf(
 
     doc = pymupdf.open(str(file_path))
     page_count = len(doc)
+    if page_count > conf.MAX_PAGES:
+        doc.close()
+        raise ValueError(f"Document exceeds maximum page limit of {conf.MAX_PAGES} pages (found {page_count} pages).")
+
+    # Extract all embedded fonts from the document
+    embedded_catalog = extract_all_embedded_fonts(doc, session_dir=work_dir)
+    embedded_summary = {
+        clean_name: serialize_embedded_font_summary(f_info)
+        for clean_name, f_info in embedded_catalog.get("by_clean_name", {}).items()
+    }
 
     pages_html = []
     pages_data = []
     all_text = []
     all_fuzzy_words = []
+    all_words = []
     detected_fonts: Dict[str, int] = {}
     font_sizes: List[float] = []
     pages_needing_ocr = 0
+    all_resolved_fonts: List[Dict[str, Any]] = []
 
     for idx, page in enumerate(doc):
         page_num = idx + 1
         page_text = page.get_text()
         rect = page.rect
+        cropbox = getattr(page, "cropbox", rect)
         p_width = round(rect.width, 1)
         p_height = round(rect.height, 1)
+        crop_x0 = round(cropbox.x0, 2)
+        crop_y0 = round(cropbox.y0, 2)
 
         if work_dir:
             try:
@@ -315,84 +484,298 @@ def _extract_from_pdf(
         if has_text_layer:
             for b in dict_blocks:
                 if b.get("type") == 0:  # Text block
-                    lines = b.get("lines", [])
-                    for line in lines:
-                        line_bbox = line.get("bbox", (0, 0, 0, 0))
-                        line_spans = line.get("spans", [])
-                        if not line_spans:
-                            continue
-                        line_str = "".join(s.get("text", "") for s in line_spans).strip()
-                        if not line_str:
-                            continue
+                    raw_lines = b.get("lines", [])
+                    if not raw_lines:
+                        continue
 
-                        main_span = max(line_spans, key=lambda s: len(s.get("text", "")))
-                        raw_f = main_span.get("font", "")
-                        resolved_f = font_res_map.get(raw_f) or font_res_map.get(raw_f.lstrip("/")) or raw_f
-                        f_name = clean_pdf_font_name(resolved_f)
-                        if not f_name or f_name.lower() in ("default", "unknown"):
-                            f_name = None
-                        f_size = round(main_span.get("size", 12.0), 1)
+                    current_paragraph: List[Dict[str, Any]] = []
 
-                        span_flags = main_span.get("flags", 0)
-                        is_bold = bool(span_flags & (1 << 4))
-                        is_italic = bool(span_flags & (1 << 1))
-                        f_lower = (resolved_f or raw_f).lower()
-                        if not is_bold and any(b in f_lower for b in ["bold", "black", "heavy", "semibold", "demibold", "bd"]):
-                            is_bold = True
-                        if not is_italic and any(it in f_lower for it in ["italic", "oblique", "slant", "kursiv"]):
-                            is_italic = True
+                    def emit_paragraph(p_lines: List[Dict[str, Any]]) -> None:
+                        nonlocal b_idx
+                        if not p_lines:
+                            return
 
-                        if f_name:
-                            detected_fonts[f_name] = detected_fonts.get(f_name, 0) + len(line_str)
-                        if f_size > 4:
-                            font_sizes.append(f_size)
+                        all_spans = [s for l in p_lines for s in l["spans"]]
+                        if not all_spans:
+                            return
 
-                        lx0, ly0, lx1, ly1 = line_bbox
-                        w_box = max(1.0, lx1 - lx0)
-                        h_box = max(1.0, ly1 - ly0)
+                        min_x0 = min(l["bbox"][0] for l in p_lines)
+                        min_y0 = min(l["bbox"][1] for l in p_lines)
+                        max_x1 = max(l["bbox"][2] for l in p_lines)
+                        max_y1 = max(l["bbox"][3] for l in p_lines)
 
-                        left_pct = round((lx0 / max(1, p_width)) * 100, 3)
-                        top_pct = round((ly0 / max(1, p_height)) * 100, 3)
+                        w_box = max(1.0, max_x1 - min_x0)
+                        h_box = max(1.0, max_y1 - min_y0)
+                        avg_lh = sum(max(1.0, l["bbox"][3] - l["bbox"][1]) for l in p_lines) / max(1, len(p_lines))
+
+                        first_span = all_spans[0]
+                        origin = first_span.get("origin", [min_x0, max_y1])
+
+                        # Dominant font & size
+                        font_counts: Dict[str, int] = {}
+                        for s in all_spans:
+                            f = s.get("font") or "EB Garamond"
+                            font_counts[f] = font_counts.get(f, 0) + max(1, len(s.get("text", "")))
+                        dom_font = max(font_counts.items(), key=lambda x: x[1])[0] if font_counts else "EB Garamond"
+                        dom_size = max(all_spans, key=lambda s: len(s.get("text", ""))).get("size", 12.0)
+
+                        is_bold = any(s.get("is_bold") for s in all_spans)
+                        is_italic = any(s.get("is_italic") for s in all_spans)
+
+                        # Dominant colour
+                        color_counts: Dict[Tuple[str, int, Tuple[float, float, float]], int] = {}
+                        for s in all_spans:
+                            key = (s.get("colour", "#000000"), s.get("color_int", 0), s.get("color_rgb", (0.0, 0.0, 0.0)))
+                            color_counts[key] = color_counts.get(key, 0) + max(1, len(s.get("text", "")))
+                        dom_color_entry = max(color_counts.items(), key=lambda x: x[1])[0] if color_counts else ("#000000", 0, (0.0, 0.0, 0.0))
+                        dom_hex, dom_int, dom_rgb = dom_color_entry
+
+                        rot = p_lines[0].get("rotation", 0)
+                        dir_vec = p_lines[0].get("dir", [1.0, 0.0])
+
+                        # Render positions in canvas space
+                        if rot == 90:
+                            # Vertical upwards (bottom-to-top)
+                            render_x = min_x0
+                            render_y = max_y1
+                            render_w = h_box
+                            render_h = w_box
+                            transform_css = "transform: rotate(-90deg); transform-origin: top left; "
+                        elif rot == 270:
+                            # Vertical downwards (top-to-bottom)
+                            render_x = max_x1
+                            render_y = min_y0
+                            render_w = h_box
+                            render_h = w_box
+                            transform_css = "transform: rotate(90deg); transform-origin: top left; "
+                        elif rot == 180:
+                            # Upside-down
+                            render_x = max_x1
+                            render_y = max_y1
+                            render_w = w_box
+                            render_h = h_box
+                            transform_css = "transform: rotate(180deg); transform-origin: top left; "
+                        else:
+                            render_x = min_x0
+                            render_y = min_y0
+                            render_w = w_box
+                            render_h = h_box
+                            transform_css = ""
+
+                        full_text = "\n".join(l["text"] for l in p_lines)
+                        b_id = f"p{page_num}_b{b_idx}"
+
+                        is_non_latin, script_name = is_non_latin_script(full_text)
+                        readonly_reason = (
+                            f"Non-Latin script ({script_name.title() if script_name else 'Complex'}) is currently read-only. "
+                            f"PyMuPDF insert_text does not shape Arabic/Indic scripts and does not handle RTL."
+                        ) if is_non_latin else None
+
+                        left_pct = round((min_x0 / max(1, p_width)) * 100, 3)
+                        top_pct = round((min_y0 / max(1, p_height)) * 100, 3)
                         width_pct = round((w_box / max(1, p_width)) * 100, 3)
                         height_pct = round((h_box / max(1, p_height)) * 100, 3)
 
-                        b_id = f"p{page_num}_b{b_idx}"
+                        if dom_font:
+                            detected_fonts[dom_font] = detected_fonts.get(dom_font, 0) + len(full_text)
+                        if dom_size > 4:
+                            font_sizes.append(dom_size)
+
+                        b_font_res = resolve_font_with_fallback(
+                            dom_font,
+                            embedded_catalog=embedded_summary,
+                            text_sample=full_text,
+                            is_bold=is_bold,
+                            is_italic=is_italic,
+                            sid=sid,
+                        )
+                        all_resolved_fonts.append(b_font_res)
+                        resolved_used_name = b_font_res["used"]
+                        resolved_req_name = b_font_res["requested"]
+
                         page_blocks.append({
                             "id": b_id,
-                            "text": line_str,
-                            "bbox": [round(lx0, 1), round(ly0, 1), round(lx1, 1), round(ly1, 1)],
-                            "orig_bbox": [round(lx0, 1), round(ly0, 1), round(lx1, 1), round(ly1, 1)],
+                            "text": full_text,
+                            "unit": "pt",
+                            "bbox": [round(min_x0, 1), round(min_y0, 1), round(max_x1, 1), round(max_y1, 1)],
+                            "orig_bbox": [round(min_x0, 1), round(min_y0, 1), round(max_x1, 1), round(max_y1, 1)],
+                            "render_x": round(render_x, 2),
+                            "render_y": round(render_y, 2),
+                            "render_w": round(render_w, 2),
+                            "render_h": round(render_h, 2),
+                            "size_src": dom_size,
+                            "line_height_src": round(avg_lh, 2),
                             "left_pct": left_pct,
                             "top_pct": top_pct,
                             "width_pct": width_pct,
                             "height_pct": height_pct,
-                            "font_name": f_name or "EB Garamond",
-                            "font_size_pt": f_size,
+                            "rotation": rot,
+                            "dir": dir_vec,
+                            "origin": [round(origin[0], 2), round(origin[1], 2)],
+                            "color": dom_hex,
+                            "colour": dom_hex,
+                            "color_int": dom_int,
+                            "color_rgb": dom_rgb,
+                            "font_info": b_font_res,
+                            "font_name": resolved_used_name,
+                            "font_size_pt": dom_size,
+                            "orig_text": full_text,
+                            "orig_font_name": resolved_used_name,
+                            "font_requested": resolved_req_name,
+                            "orig_font_size_pt": dom_size,
+                            "orig_is_bold": is_bold,
+                            "orig_is_italic": is_italic,
+                            "orig_is_underline": False,
+                            "is_modified": False,
                             "is_bold": is_bold,
                             "is_italic": is_italic,
                             "is_underline": False,
-                            "is_header": f_size >= 15,
+                            "is_header": dom_size >= 15,
+                            "is_readonly": is_non_latin,
+                            "readonly_reason": readonly_reason,
+                            "script": script_name or "latin",
                             "page": page_num,
+                            "lines": p_lines,
+                            "spans": all_spans,
                         })
 
-                        escaped = html.escape(line_str)
-                        block_font_css = f"font-family: '{f_name}', serif; " if f_name else ""
+                        escaped_lines = [html.escape(l["text"]) for l in p_lines]
+                        escaped_content = "<br>".join(escaped_lines)
+                        is_serif = any(s in (resolved_used_name or "").lower() for s in ["times", "serif", "garamond", "georgia", "baskerville", "caslon", "cambria", "book", "minion", "palatino"])
+                        fallback_generic = "serif" if is_serif else "sans-serif"
+                        safe_font = html.escape(sanitize_font_name(resolved_used_name), quote=True) if resolved_used_name else ""
+                        block_font_css = f"font-family: '{safe_font}', {fallback_generic}; " if safe_font else ""
                         weight_css = "font-weight: bold; " if is_bold else ""
                         style_css = "font-style: italic; " if is_italic else ""
+                        color_css = f"color: {dom_hex}; --block-color: {dom_hex}; "
+
+                        readonly_class = " docedit-block-readonly" if is_non_latin else ""
+                        readonly_attr = (
+                            f'contenteditable="false" data-readonly="true" '
+                            f'data-readonly-reason="{html.escape(readonly_reason or "")}" '
+                            f'data-script="{html.escape(script_name or "")}"'
+                        ) if is_non_latin else 'contenteditable="true"'
+                        readonly_badge = (
+                            f'<span class="docedit-readonly-badge" title="{html.escape(readonly_reason or "")}">'
+                            f'<i class="fa-solid fa-lock"></i> {html.escape((script_name or "Non-Latin").title())} (Read-Only)</span>'
+                        ) if is_non_latin else ""
+
                         block_html_items.append(
-                            f'<div class="docedit-text-block" '
-                            f'contenteditable="true" spellcheck="false" '
-                            f'data-block-id="{b_id}" data-page="{page_num}" '
-                            f'style="left: {left_pct}%; top: {top_pct}%; min-width: {width_pct}%; font-size: {f_size}pt; {block_font_css}{weight_css}{style_css}">'
-                            f'{escaped}</div>'
+                            f'<div class="docedit-text-block{readonly_class}" '
+                            f'{readonly_attr} spellcheck="false" '
+                            f'data-block-id="{b_id}" data-page="{page_num}" data-font-size-pt="{dom_size}" data-rotation="{rot}" '
+                            f'style="--x-src: {round(render_x, 2)}; --y-src: {round(render_y, 2)}; --w-src: {round(render_w, 2)}; --h-src: {round(render_h, 2)}; --lh-src: {round(avg_lh, 2)}; --size-src: {dom_size}; {color_css}{transform_css}{block_font_css}{weight_css}{style_css}">'
+                            f'{readonly_badge}{escaped_content}</div>'
                         )
                         b_idx += 1
+
+                    for raw_line in raw_lines:
+                        line_spans_raw = raw_line.get("spans", [])
+                        if not line_spans_raw:
+                            continue
+                        line_str = "".join(s.get("text", "") for s in line_spans_raw).strip()
+                        if not line_str:
+                            continue
+
+                        dx, dy = raw_line.get("dir", (1.0, 0.0))
+                        if abs(dx) >= abs(dy):
+                            line_rot = 0 if dx >= 0 else 180
+                        else:
+                            line_rot = 90 if dy < 0 else 270
+
+                        line_bbox = list(raw_line.get("bbox", (0, 0, 0, 0)))
+
+                        parsed_spans = []
+                        for s in line_spans_raw:
+                            s_text = s.get("text", "")
+                            s_color_int = s.get("color", 0)
+                            sr = (s_color_int >> 16) & 255
+                            sg = (s_color_int >> 8) & 255
+                            sb = s_color_int & 255
+                            s_hex = f"#{sr:02x}{sg:02x}{sb:02x}"
+                            s_rgb = (round(sr / 255.0, 3), round(sg / 255.0, 3), round(sb / 255.0, 3))
+                            s_flags = s.get("flags", 0)
+                            s_bold = bool(s_flags & (1 << 4))
+                            s_italic = bool(s_flags & (1 << 1))
+                            s_raw_f = s.get("font", "")
+                            s_resolved_f = font_res_map.get(s_raw_f) or font_res_map.get(s_raw_f.lstrip("/")) or s_raw_f
+                            s_fname = clean_pdf_font_name(s_resolved_f)
+                            if s_fname:
+                                s_fname = sanitize_font_name(s_fname, default="EB Garamond")
+                            if not s_fname or s_fname.lower() in ("default", "unknown"):
+                                s_fname = None
+                            s_lower = (s_resolved_f or s_raw_f).lower()
+                            if not s_bold and any(b_w in s_lower for b_w in ["bold", "black", "heavy", "semibold", "demibold", "bd"]):
+                                s_bold = True
+                            if not s_italic and any(it in s_lower for it in ["italic", "oblique", "slant", "kursiv"]):
+                                s_italic = True
+                            s_size = round(s.get("size", 12.0), 1)
+                            s_origin = list(s.get("origin", (line_bbox[0], line_bbox[3])))
+
+                            parsed_spans.append({
+                                "text": s_text,
+                                "font": s_fname or "EB Garamond",
+                                "raw_font": s_raw_f,
+                                "size": s_size,
+                                "flags": s_flags,
+                                "is_bold": s_bold,
+                                "is_italic": s_italic,
+                                "colour": s_hex,
+                                "color": s_hex,
+                                "color_int": s_color_int,
+                                "color_rgb": s_rgb,
+                                "origin": [round(s_origin[0], 2), round(s_origin[1], 2)],
+                                "bbox": [round(x, 2) for x in s.get("bbox", line_bbox)],
+                            })
+
+                        parsed_line = {
+                            "text": line_str,
+                            "bbox": line_bbox,
+                            "dir": [round(dx, 4), round(dy, 4)],
+                            "rotation": line_rot,
+                            "spans": parsed_spans,
+                        }
+
+                        if not current_paragraph:
+                            current_paragraph.append(parsed_line)
+                        else:
+                            prev_line = current_paragraph[-1]
+                            same_rot = (parsed_line["rotation"] == prev_line["rotation"])
+                            if same_rot and line_rot == 0:
+                                prev_y0 = prev_line["bbox"][1]
+                                prev_y1 = prev_line["bbox"][3]
+                                curr_y0 = parsed_line["bbox"][1]
+                                prev_h = max(1.0, prev_y1 - prev_y0)
+                                is_same_row = abs(curr_y0 - prev_y0) < 4.0
+                                is_stacked = (curr_y0 >= prev_y0 - 2.0) and (curr_y0 - prev_y1 <= prev_h * 1.6)
+                                if is_stacked and not is_same_row:
+                                    current_paragraph.append(parsed_line)
+                                else:
+                                    emit_paragraph(current_paragraph)
+                                    current_paragraph = [parsed_line]
+                            else:
+                                emit_paragraph(current_paragraph)
+                                current_paragraph = [parsed_line]
+
+                    if current_paragraph:
+                        emit_paragraph(current_paragraph)
+
             all_text.append(page_text)
         else:
             pages_needing_ocr += 1
             pix = page.get_pixmap(dpi=conf.OCR_DPI)
             p_img = Image.open(io.BytesIO(pix.tobytes("png")))
-            res = ocr_image(p_img, lang=ocr_lang, dpi=conf.OCR_DPI)
+            res = ocr_image(
+                p_img,
+                lang=ocr_lang,
+                dpi=conf.OCR_DPI,
+                profile=ocr_profile,
+                deskew=ocr_deskew,
+                dewarp=ocr_dewarp,
+                page_num=page_num,
+            )
+            for w_item in res.get("words", []):
+                all_words.append(w_item)
             avg_pt = res.get("avg_font_size_pt", 12.0)
             if avg_pt:
                 font_sizes.append(avg_pt)
@@ -406,52 +789,156 @@ def _extract_from_pdf(
                 top_pct = round((ly / max(1, pix.height)) * 100, 3)
                 width_pct = round((lw / max(1, pix.width)) * 100, 3)
                 height_pct = round((lh / max(1, pix.height)) * 100, 3)
-                est_line_pt = round((lh * 72.0 / conf.OCR_DPI) * 1.15, 1)
+                est_line_pt = round(lh * 72.0 / conf.OCR_DPI, 1)
+
+                pt_x = round(lx * (p_width / pix.width), 2)
+                pt_y = round(ly * (p_height / pix.height), 2)
+                pt_w = round(lw * (p_width / pix.width), 2)
+                pt_h = round(lh * (p_height / pix.height), 2)
 
                 b_id = f"p{page_num}_b{b_idx}"
-                bbox_calc = [
-                    round(lx * (p_width / pix.width), 1),
-                    round(ly * (p_height / pix.height), 1),
-                    round((lx + lw) * (p_width / pix.width), 1),
-                    round((ly + lh) * (p_height / pix.height), 1)
-                ]
+                ocr_font_res = resolve_font_with_fallback(
+                    detect_visual_font_for_scanned_book(b_text),
+                    text_sample=b_text,
+                    sid=sid,
+                )
+                all_resolved_fonts.append(ocr_font_res)
+                ocr_used_name = ocr_font_res["used"]
+                ocr_req_name = ocr_font_res["requested"]
+
+                is_non_latin, script_name = is_non_latin_script(b_text)
+                readonly_reason = (
+                    f"Non-Latin script ({script_name.title() if script_name else 'Complex'}) is currently read-only. "
+                    f"PyMuPDF insert_text does not shape Arabic/Indic scripts and does not handle RTL."
+                ) if is_non_latin else None
+
                 page_blocks.append({
                     "id": b_id,
                     "text": b_text,
+                    "unit": "pt",
                     "bbox": bbox_calc,
                     "orig_bbox": list(bbox_calc),
+                    "render_x": pt_x,
+                    "render_y": pt_y,
+                    "render_w": pt_w,
+                    "render_h": pt_h,
+                    "size_src": est_line_pt,
+                    "line_height_src": pt_h,
                     "left_pct": left_pct,
                     "top_pct": top_pct,
                     "width_pct": width_pct,
                     "height_pct": height_pct,
-                    "font_name": "EB Garamond",
+                    "rotation": 0,
+                    "dir": [1.0, 0.0],
+                    "origin": [pt_x, round(pt_y + pt_h * 0.82, 2)],
+                    "color": "#000000",
+                    "colour": "#000000",
+                    "color_int": 0,
+                    "color_rgb": (0.0, 0.0, 0.0),
+                    "font_info": ocr_font_res,
+                    "font_name": ocr_used_name,
                     "font_size_pt": est_line_pt,
+                    "orig_text": b_text,
+                    "orig_font_name": ocr_used_name,
+                    "font_requested": ocr_req_name,
+                    "orig_font_size_pt": est_line_pt,
+                    "orig_is_bold": False,
+                    "orig_is_italic": False,
+                    "orig_is_underline": False,
+                    "is_modified": False,
                     "is_bold": False,
                     "is_italic": False,
                     "is_underline": False,
                     "is_header": est_line_pt >= 15,
-                    "has_fuzzy": lb.get("has_fuzzy", False),
+                    "has_fuzzy": lb.get("has_fuzzy", False) and not is_non_latin,
+                    "is_readonly": is_non_latin,
+                    "readonly_reason": readonly_reason,
+                    "script": script_name or "latin",
                     "page": page_num,
+                    "lines": [{
+                        "text": b_text,
+                        "bbox": bbox_calc,
+                        "dir": [1.0, 0.0],
+                        "rotation": 0,
+                        "spans": [{
+                            "text": b_text,
+                            "font": "EB Garamond",
+                            "raw_font": "EB Garamond",
+                            "size": est_line_pt,
+                            "flags": 0,
+                            "is_bold": False,
+                            "is_italic": False,
+                            "colour": "#000000",
+                            "color": "#000000",
+                            "color_int": 0,
+                            "color_rgb": (0.0, 0.0, 0.0),
+                            "origin": [pt_x, round(pt_y + pt_h * 0.82, 2)],
+                            "bbox": bbox_calc,
+                        }],
+                    }],
+                    "spans": [{
+                        "text": b_text,
+                        "font": "EB Garamond",
+                        "raw_font": "EB Garamond",
+                        "size": est_line_pt,
+                        "flags": 0,
+                        "is_bold": False,
+                        "is_italic": False,
+                        "colour": "#000000",
+                        "color": "#000000",
+                        "color_int": 0,
+                        "color_rgb": (0.0, 0.0, 0.0),
+                        "origin": [pt_x, round(pt_y + pt_h * 0.82, 2)],
+                        "bbox": bbox_calc,
+                    }],
+                    "words": lb.get("words", []),
                 })
-                escaped = html.escape(b_text)
+                word_spans = []
+                for w in lb.get("words", []):
+                    w_esc = html.escape(w["text"])
+                    is_w_fuzzy = w.get("is_fuzzy") and not is_non_latin
+                    w_cls = "ocr-word" + (" docedit-fuzzy" if is_w_fuzzy else "")
+                    fuzzy_attr = ' data-fuzzy-word="true"' if is_w_fuzzy else ""
+                    conf_val = w.get("conf", 85)
+                    tier = w.get("conf_tier", "high")
+                    word_spans.append(
+                        f'<span class="{w_cls}" data-word-id="{w.get("id", "")}" '
+                        f'data-conf="{conf_val}" data-conf-tier="{tier}"{fuzzy_attr}>{w_esc}</span>'
+                    )
+                escaped = " ".join(word_spans) if word_spans else html.escape(b_text)
+
+                readonly_class = " docedit-block-readonly" if is_non_latin else ""
+                readonly_attr = (
+                    f'contenteditable="false" data-readonly="true" '
+                    f'data-readonly-reason="{html.escape(readonly_reason or "")}" '
+                    f'data-script="{html.escape(script_name or "")}"'
+                ) if is_non_latin else 'contenteditable="true"'
+                readonly_badge = (
+                    f'<span class="docedit-readonly-badge" title="{html.escape(readonly_reason or "")}">'
+                    f'<i class="fa-solid fa-lock"></i> {html.escape((script_name or "Non-Latin").title())} (Read-Only)</span>'
+                ) if is_non_latin else ""
+
                 block_html_items.append(
-                    f'<div class="docedit-text-block{" has-fuzzy" if lb.get("has_fuzzy") else ""}" '
-                    f'contenteditable="true" spellcheck="false" '
-                    f'data-block-id="{b_id}" data-page="{page_num}" '
-                    f'style="left: {left_pct}%; top: {top_pct}%; min-width: {width_pct}%; font-size: {est_line_pt}pt;">'
-                    f'{escaped}</div>'
+                    f'<div class="docedit-text-block{" has-fuzzy" if (lb.get("has_fuzzy") and not is_non_latin) else ""}{readonly_class}" '
+                    f'{readonly_attr} spellcheck="false" '
+                    f'data-block-id="{b_id}" data-page="{page_num}" data-font-size-pt="{est_line_pt}" '
+                    f'style="--x-src: {pt_x}; --y-src: {pt_y}; --w-src: {pt_w}; --h-src: {pt_h}; --lh-src: {pt_h}; --size-src: {est_line_pt}; color: #000000; --block-color: #000000;">'
+                    f'{readonly_badge}{escaped}</div>'
                 )
                 b_idx += 1
 
             all_text.append(res["text"])
             for fw in res.get("fuzzy_words", []):
-                fw["page"] = page_num
-                all_fuzzy_words.append(fw)
+                if not is_non_latin_script(fw.get("text", ""))[0]:
+                    fw["page"] = page_num
+                    all_fuzzy_words.append(fw)
 
         pages_data.append({
             "page_num": page_num,
+            "unit": "pt",
             "width": p_width,
             "height": p_height,
+            "crop_offset": [crop_x0, crop_y0],
             "aspect_ratio": round(p_height / max(1, p_width), 4),
             "image_url": img_url,
             "blocks": page_blocks,
@@ -462,7 +949,7 @@ def _extract_from_pdf(
     <div class="page-sheet-badge"><i class="fa-solid fa-file-pdf"></i> Page {page_num} of {page_count}</div>
     <div class="page-sheet-dims">{int(p_width)} × {int(p_height)} pt</div>
   </div>
-  <div class="page-sheet-canvas" style="aspect-ratio: {p_width} / {p_height};">
+  <div class="page-sheet-canvas" style="aspect-ratio: {p_width} / {p_height}; --scale: 1.0; --page-width: {p_width};">
     <img class="page-bg-img" src="{img_url}" alt="Page {page_num} Original Layout" draggable="false" />
     <div class="page-text-overlay">
       {"".join(block_html_items)}
@@ -479,20 +966,41 @@ def _extract_from_pdf(
     else:
         dominant_font = detect_visual_font_for_scanned_book(full_text)
 
+    dom_res = resolve_font_with_fallback(
+        dominant_font,
+        embedded_catalog=embedded_summary,
+        text_sample=full_text,
+        sid=sid,
+    )
+    all_resolved_fonts.append(dom_res)
+
     for p in pages_data:
         for b in p["blocks"]:
-            if not b.get("font_name") or b["font_name"] == "EB Garamond":
-                b["font_name"] = dominant_font
+            if not b.get("font_info"):
+                b["font_info"] = dict(dom_res)
+                b["font_name"] = dom_res["used"]
+                b["orig_font_name"] = dom_res["used"]
+                b["font_requested"] = dom_res["requested"]
 
+    all_fonts_css = generate_document_all_fonts_css(all_resolved_fonts, sid=sid)
     avg_size = round(sum(font_sizes) / len(font_sizes), 1) if font_sizes else 12.0
+
+    if sid and all_words:
+        try:
+            from .storage import save_session_words
+            save_session_words(sid, all_words)
+        except Exception as e:
+            logger.debug("Could not save session words: %s", e)
 
     return {
         "html": combined_html,
         "raw_text": full_text,
-        "detected_font_name": dominant_font,
+        "detected_font_name": dom_res["used"],
         "font_size_pt": avg_size,
         "is_layout_preserved": True,
         "pages": pages_data,
+        "embedded_fonts": embedded_summary,
+        "all_fonts_css": all_fonts_css,
         "stats": {
             "page_count": page_count,
             "word_count": len(full_text.split()),
@@ -500,6 +1008,7 @@ def _extract_from_pdf(
             "fuzzy_word_count": len(all_fuzzy_words),
         },
         "fuzzy_words": all_fuzzy_words[:100],
+        "words": all_words,
         "needs_ocr": pages_needing_ocr > 0,
         "is_scanned": pages_needing_ocr == page_count,
     }
@@ -584,12 +1093,236 @@ def _extract_from_docx(
         WD_ALIGN_PARAGRAPH.LEFT: "left",
     }
 
+    def _extract_drawing_data_uri(d_elem) -> Optional[str]:
+        import base64
+        blips = d_elem.xpath(".//a:blip/@r:embed") or d_elem.xpath(".//@r:embed")
+        if not blips:
+            return None
+        r_id = blips[0]
+        if r_id in doc.part.rels:
+            try:
+                rel = doc.part.rels[r_id]
+                target_part = rel.target_part
+                content_type = getattr(target_part, "content_type", "image/png")
+                blob = target_part.blob
+                b64 = base64.b64encode(blob).decode("ascii")
+                return f"data:{content_type};base64,{b64}"
+            except Exception:
+                return None
+        return None
+
+    def _render_drawing_icon(uri: str, descr: str = "icon") -> str:
+        safe_descr = html.escape(descr, quote=True)
+        return (
+            f'<img src="{uri}" alt="{safe_descr}" class="docedit-docx-icon" '
+            f'style="height: 1.1em; max-height: 18px; vertical-align: -0.15em; margin: 0 4px; display: inline-block;">'
+        )
+
+    def _format_docx_paragraph_runs(p_obj) -> str:
+        # Collect anchored drawings in this paragraph, sorted by horizontal position posH
+        anchors = []
+        for d in p_obj._p.xpath(".//wp:anchor"):
+            uri = _extract_drawing_data_uri(d)
+            if uri:
+                posH_nodes = d.xpath(".//wp:positionH/wp:posOffset/text()")
+                posH = int(posH_nodes[0]) if (posH_nodes and posH_nodes[0].isdigit()) else 0
+                descr_nodes = d.xpath(".//wp:docPr/@descr") or d.xpath(".//wp:docPr/@name")
+                descr = descr_nodes[0] if descr_nodes else "icon"
+                anchors.append({"posH": posH, "uri": uri, "descr": descr})
+        anchors.sort(key=lambda x: x["posH"])
+
+        # Extract items in document sequence
+        items = []
+        for child in p_obj._p:
+            tag = child.tag.split("}")[-1]
+            if tag == "hyperlink":
+                r_id = child.attrib.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id")
+                target = doc.part.rels[r_id].target_ref if (r_id and r_id in doc.part.rels) else ""
+                hl_text_pieces = []
+                for sub_r in child.xpath(".//w:r"):
+                    for sub in sub_r:
+                        stag = sub.tag.split("}")[-1]
+                        if stag == "t" and sub.text:
+                            hl_text_pieces.append(sub.text)
+                        elif stag == "tab":
+                            hl_text_pieces.append("\t")
+                        elif stag == "br":
+                            hl_text_pieces.append("\n")
+                if hl_text_pieces:
+                    hl_txt = "".join(hl_text_pieces)
+                    all_text.append(hl_txt)
+                    items.append({
+                        "type": "hyperlink",
+                        "target": target,
+                        "text": hl_txt,
+                        "elem": child,
+                    })
+            elif tag == "r":
+                # Check for inline drawings
+                for idr in child.xpath(".//wp:inline"):
+                    uri = _extract_drawing_data_uri(idr)
+                    if uri:
+                        descr_nodes = idr.xpath(".//wp:docPr/@descr") or idr.xpath(".//wp:docPr/@name")
+                        descr = descr_nodes[0] if descr_nodes else "icon"
+                        items.append({"type": "image", "uri": uri, "descr": descr, "elem": child})
+                # Check text, tabs, line breaks
+                run_text_pieces = []
+                for sub in child:
+                    stag = sub.tag.split("}")[-1]
+                    if stag == "t" and sub.text:
+                        run_text_pieces.append(sub.text)
+                    elif stag == "tab":
+                        run_text_pieces.append("\t")
+                    elif stag == "br":
+                        run_text_pieces.append("\n")
+                if run_text_pieces:
+                    full_t = "".join(run_text_pieces)
+                    f_name = None
+                    for rf in child.xpath(".//w:rFonts"):
+                        f_name = rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ascii") or rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hAnsi")
+                        if f_name:
+                            break
+                    if not f_name and p_obj.style and p_obj.style.font and p_obj.style.font.name:
+                        f_name = p_obj.style.font.name
+                    if not f_name:
+                        f_name = default_docx_font
+                    f_name = sanitize_font_name(f_name, default="Calibri")
+
+                    f_size = None
+                    for sz in child.xpath(".//w:sz"):
+                        val = sz.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val")
+                        if val and val.isdigit():
+                            f_size = float(val) / 2.0
+                            break
+                    if not f_size and p_obj.style and p_obj.style.font and p_obj.style.font.size:
+                        f_size = p_obj.style.font.size.pt
+                    if not f_size:
+                        f_size = default_docx_size
+
+                    if f_name:
+                        detected_fonts[f_name] = detected_fonts.get(f_name, 0) + len(full_t)
+                    if f_size:
+                        font_sizes.append(f_size)
+
+                    r_color = None
+                    for wc in child.xpath(".//w:color"):
+                        val = wc.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val")
+                        if val and re.match(r"^[0-9a-fA-F]{6}$", val) and val.lower() != "auto":
+                            r_color = f"#{val.lower()}"
+                            break
+
+                    is_bold = bool(child.xpath(".//w:b"))
+                    is_italic = bool(child.xpath(".//w:i"))
+                    is_underline = bool(child.xpath(".//w:u"))
+
+                    items.append({
+                        "type": "run",
+                        "text": full_t,
+                        "bold": is_bold,
+                        "italic": is_italic,
+                        "underline": is_underline,
+                        "font_name": f_name,
+                        "font_size": f_size,
+                        "color": r_color,
+                        "elem": child,
+                    })
+
+        def _wrap_styled_span(txt_escaped, pt):
+            if pt.get("bold"):
+                txt_escaped = f"<strong>{txt_escaped}</strong>"
+            if pt.get("italic"):
+                txt_escaped = f"<em>{txt_escaped}</em>"
+            if pt.get("underline"):
+                txt_escaped = f"<u>{txt_escaped}</u>"
+            run_styles = []
+            fn = pt.get("font_name")
+            if fn:
+                safe_fn = html.escape(fn, quote=True)
+                run_styles.append(f"font-family: '{safe_fn}';")
+            fs = pt.get("font_size")
+            if fs:
+                run_styles.append(f"font-size: {fs}pt;")
+            rc = pt.get("color")
+            if rc:
+                run_styles.append(f"color: {rc};")
+            if run_styles:
+                return f'<span style="{" ".join(run_styles)}">{txt_escaped}</span>'
+            return txt_escaped
+
+        # If anchored drawings exist, interleave them into whitespace gaps in posH order
+        if anchors:
+            expanded = []
+            for it in items:
+                if it["type"] == "run":
+                    tokens = re.split(r'(\t+|\s{3,})', it["text"])
+                    for tok in tokens:
+                        if not tok:
+                            continue
+                        if re.match(r'^(\t+|\s{3,})$', tok):
+                            expanded.append({"type": "gap", "text": tok, "elem": it["elem"]})
+                        else:
+                            sub_it = dict(it)
+                            sub_it["text"] = tok
+                            expanded.append(sub_it)
+                else:
+                    expanded.append(it)
+
+            anc_idx = 0
+            final_pieces = []
+            for ep in expanded:
+                if ep["type"] == "gap":
+                    if anc_idx < len(anchors):
+                        anc = anchors[anc_idx]
+                        anc_idx += 1
+                        final_pieces.append(_render_drawing_icon(anc["uri"], anc["descr"]) + " ")
+                    else:
+                        final_pieces.append("&emsp;&emsp;")
+                elif ep["type"] == "hyperlink":
+                    esc = html.escape(ep["text"])
+                    tgt = html.escape(ep.get("target", ""))
+                    final_pieces.append(f'<a href="{tgt}" style="color: inherit; text-decoration: underline;">{esc}</a>')
+                elif ep["type"] == "run":
+                    esc_t = html.escape(ep["text"]).replace("\t", "&emsp;&emsp;").replace("\n", "<br>")
+                    final_pieces.append(_wrap_styled_span(esc_t, ep))
+                elif ep["type"] == "image":
+                    final_pieces.append(_render_drawing_icon(ep["uri"], ep["descr"]))
+
+            while anc_idx < len(anchors):
+                anc = anchors[anc_idx]
+                anc_idx += 1
+                final_pieces.insert(0, _render_drawing_icon(anc["uri"], anc["descr"]) + " ")
+
+            return "".join(final_pieces)
+
+        # Standard rendering without anchored drawings
+        final_pieces = []
+        for it in items:
+            if it["type"] == "hyperlink":
+                esc = html.escape(it["text"])
+                tgt = html.escape(it.get("target", ""))
+                final_pieces.append(f'<a href="{tgt}" style="color: inherit; text-decoration: underline;">{esc}</a>')
+            elif it["type"] == "run":
+                esc_t = html.escape(it["text"]).replace("\t", "&emsp;&emsp;").replace("\n", "<br>")
+                final_pieces.append(_wrap_styled_span(esc_t, it))
+            elif it["type"] == "image":
+                final_pieces.append(_render_drawing_icon(it["uri"], it["descr"]))
+
+        return "".join(final_pieces)
+
+    current_list_items = []
+
+    def _flush_list():
+        if current_list_items:
+            elements_html.append(f'<ul style="margin: 2pt 0 4pt 0; padding-left: 18pt;">\n' + "\n".join(current_list_items) + "\n</ul>")
+            current_list_items.clear()
+
     # Iterate paragraphs AND tables in exact document sequence
     for item in doc.iter_inner_content():
         if isinstance(item, docx.text.paragraph.Paragraph):
             p = item
             txt = p.text
-            if not txt.strip():
+            has_drawings = bool(p._p.xpath(".//w:drawing"))
+            if not txt.strip() and not has_drawings:
                 continue
             all_text.append(txt)
 
@@ -598,70 +1331,38 @@ def _extract_from_docx(
             if p.alignment and p.alignment in align_map and align_map[p.alignment] != "left":
                 align_css = f'text-align: {align_map[p.alignment]};'
 
-            run_html = []
-            for r in p.runs:
-                t = r.text
-                if not t:
-                    continue
-                f_name = r.font.name
-                if not f_name:
-                    for rf in r._r.xpath(".//w:rFonts"):
-                        f_name = rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}ascii") or rf.attrib.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hAnsi")
-                        if f_name:
-                            break
-                if not f_name and p.style and p.style.font and p.style.font.name:
-                    f_name = p.style.font.name
-                if not f_name:
-                    f_name = default_docx_font
-
-                f_size = r.font.size.pt if r.font.size else (p.style.font.size.pt if (p.style and p.style.font and p.style.font.size) else default_docx_size)
-
-                if f_name:
-                    detected_fonts[f_name] = detected_fonts.get(f_name, 0) + len(t)
-                if f_size:
-                    font_sizes.append(f_size)
-
-                esc = html.escape(t)
-                if r.bold:
-                    esc = f"<strong>{esc}</strong>"
-                if r.italic:
-                    esc = f"<em>{esc}</em>"
-                if r.underline:
-                    esc = f"<u>{esc}</u>"
-
-                run_styles = []
-                if f_name:
-                    run_styles.append(f"font-family: '{f_name}';")
-                if f_size:
-                    run_styles.append(f"font-size: {f_size}pt;")
-                if run_styles:
-                    esc = f'<span style="{" ".join(run_styles)}">{esc}</span>'
-
-                run_html.append(esc)
-
-            if run_html:
-                content = "".join(run_html)
+            content = _format_docx_paragraph_runs(p)
+            if content:
                 style_name = p.style.name.lower() if p.style else ""
+                has_numpr = bool(p._p.xpath(".//w:numPr"))
+                is_list = ("list" in style_name) or has_numpr
+
                 p_styles = []
                 if align_css:
                     p_styles.append(align_css.rstrip(";"))
                 if p.style and p.style.font and p.style.font.name:
-                    p_styles.append(f"font-family: '{p.style.font.name}'")
+                    safe_pfn = html.escape(sanitize_font_name(p.style.font.name, default="Calibri"), quote=True)
+                    p_styles.append(f"font-family: '{safe_pfn}'")
                 style_attr = f' style="{"; ".join(p_styles)};"' if p_styles else ""
 
-                if "heading 1" in style_name or "title" in style_name:
-                    elements_html.append(f"<h1{style_attr}>{content}</h1>")
-                elif "heading 2" in style_name:
-                    elements_html.append(f"<h2{style_attr}>{content}</h2>")
-                elif "heading 3" in style_name:
-                    elements_html.append(f"<h3{style_attr}>{content}</h3>")
-                elif "list bullet" in style_name:
-                    elements_html.append(f"<ul><li{style_attr}>{content}</li></ul>")
+                if is_list:
+                    current_list_items.append(f'<li{style_attr} style="margin: 1.5pt 0;">{content}</li>')
                 else:
-                    elements_html.append(f"<p{style_attr}>{content}</p>")
+                    _flush_list()
+                    if "heading 1" in style_name or "title" in style_name or bool(re.search(r'font-size:\s*(?:1[6-9]|[2-9]\d)\.?\d*pt', content)):
+                        elements_html.append(f"<h1{style_attr}>{content}</h1>")
+                    elif "heading 2" in style_name:
+                        elements_html.append(f"<h2{style_attr}>{content}</h2>")
+                    elif "heading 3" in style_name:
+                        elements_html.append(f"<h3{style_attr}>{content}</h3>")
+                    elif any(txt.strip().lower() == h.lower() for h in ["Personal Profile", "Work experience", "Education", "Reference(s)"]):
+                        elements_html.append(f"<h2{style_attr}>{content}</h2>")
+                    else:
+                        elements_html.append(f"<p{style_attr}>{content}</p>")
 
         elif isinstance(item, docx.table.Table):
-            # Extract Full Table
+            _flush_list()
+            # Extract Full Table preserving runs, formatting, and colors
             table = item
             tbl_rows_html = []
             for r_idx, row in enumerate(table.rows):
@@ -670,10 +1371,16 @@ def _extract_from_docx(
                 cell_style = "border: 1px solid #777; padding: 6px 10px; font-weight: bold; background: rgba(128,128,128,0.12);" if is_header else "border: 1px solid #777; padding: 6px 10px;"
                 row_cells_html = []
                 for cell in row.cells:
-                    cell_text = cell.text.strip()
-                    all_text.append(cell_text)
-                    esc_cell = html.escape(cell_text)
-                    row_cells_html.append(f'<{cell_tag} style="{cell_style}">{esc_cell}</{cell_tag}>')
+                    cell_p_html = []
+                    for cp in cell.paragraphs:
+                        cp_text = cp.text.strip()
+                        if cp_text:
+                            all_text.append(cp_text)
+                        rendered_cp = _format_docx_paragraph_runs(cp)
+                        if rendered_cp:
+                            cell_p_html.append(rendered_cp)
+                    cell_inner = "<br>".join(cell_p_html) if cell_p_html else html.escape(cell.text.strip())
+                    row_cells_html.append(f'<{cell_tag} style="{cell_style}">{cell_inner}</{cell_tag}>')
                 tbl_rows_html.append(f'<tr>{"".join(row_cells_html)}</tr>')
 
             full_tbl_html = (
@@ -683,21 +1390,25 @@ def _extract_from_docx(
             )
             elements_html.append(full_tbl_html)
 
+    _flush_list()
     full_text = "\n\n".join(all_text)
-    combined_html = "\n".join(elements_html)
+    combined_html = sanitize_document_html("\n".join(elements_html))
 
     if detected_fonts:
         dominant_font = max(detected_fonts.items(), key=lambda x: x[1])[0]
     else:
         dominant_font = default_docx_font or "Calibri"
 
+    docx_font_res = resolve_font_with_fallback(dominant_font)
+    all_fonts_css = generate_document_all_fonts_css([docx_font_res])
     avg_size = round(sum(font_sizes) / len(font_sizes), 1) if font_sizes else default_docx_size
 
     return {
         "html": combined_html,
         "raw_text": full_text,
-        "detected_font_name": dominant_font,
+        "detected_font_name": docx_font_res["used"],
         "font_size_pt": avg_size,
+        "all_fonts_css": all_fonts_css,
         "stats": {
             "page_count": 1,
             "word_count": len(full_text.split()),
@@ -720,7 +1431,7 @@ def _extract_from_text(
         progress_callback(40, "Loading document content...")
 
     content = ""
-    for enc in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+    for enc in ("utf-8", "utf-8-sig", "cp1252", "latin-1"):
         try:
             content = file_path.read_text(encoding=enc)
             break
@@ -782,6 +1493,8 @@ def _extract_from_text(
             html_paras.append(f"<p>{esc}</p>")
         html_out = "\n".join(html_paras)
         plain_text = content
+
+    html_out = sanitize_document_html(html_out)
 
     matched_font = detect_visual_font_for_scanned_book(plain_text)
 

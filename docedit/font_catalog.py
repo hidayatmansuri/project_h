@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .conf import conf
+from .security import sanitize_font_name
 
 logger = logging.getLogger(__name__)
 
@@ -778,9 +779,9 @@ def find_nearest_match(font_name: str) -> Dict[str, Any]:
 
     # 3. Categorization heuristic
     # Monospace / typewriter
-    mono_kw = ("mono", "typewriter", "courier", "console", "consolas", "code", "terminal", "cascadia", "inconsolata", "monaco", "menlo")
+    mono_kw = ("mono", "typewriter", "courier", "console", "consolas", "code", "terminal", "cascadia", "inconsolata", "monaco", "menlo", "letter gothic", "lettergothic")
     if any(s in norm for s in mono_kw):
-        for candidate in ("Consolas", "Courier New", "Cousine", "Inconsolata"):
+        for candidate in ("Letter Gothic", "Consolas", "Courier New", "Cousine", "Inconsolata"):
             loc = is_font_available_locally(candidate)
             if loc:
                 return {"original": font_name, "nearest_match": loc["name"], "reason": "Nearest available monospace type", "category": "monospace"}
@@ -957,10 +958,14 @@ def install_uploaded_font(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         clean_stem = stem.replace("_", " ").strip()
         family_name = clean_stem.title() if clean_stem.islower() else clean_stem
 
-    # Save to FONT_LIBRARY_DIR
+    from .security import sanitize_font_name
+    family_name = sanitize_font_name(family_name)
+
+    # Save to FONT_LIBRARY_DIR with safe filename (prevent path traversal)
+    safe_filename = Path(filename).name
     target_dir = conf.FONT_LIBRARY_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
-    target_path = target_dir / filename
+    target_path = target_dir / safe_filename
     target_path.write_bytes(file_bytes)
 
     # Install to Windows system
@@ -974,94 +979,407 @@ def install_uploaded_font(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     return {
         "success": True,
         "name": family_name,
-        "filename": filename,
+        "filename": safe_filename,
         "path": str(target_path),
         "installed_to_system": installed_sys,
         "message": f"Font '{family_name}' successfully installed to your system and added to DocEdit.",
     }
 
 
-def resolve_document_font(detected_font_name: Optional[str] = None) -> Dict[str, Any]:
+def get_font_metrics_from_file(font_path: Path) -> Dict[str, Any]:
     """
-    Core font decision logic:
-    1. If font is available locally -> use it.
-    2. If font is available free online -> download, use it, install to system.
-    3. If not free or not available -> inform user of original & nearest match.
-       If nearest match is available free online -> download, use it, install to system.
+    Extracts font metrics using fontTools:
+    - usWeightClass (100..900)
+    - usWidthClass (1..9)
+    - sxHeight / unitsPerEm (x-height ratio)
+    - serif vs sans classification (from sFamilyClass, panose bSerifStyle, or post isFixedPitch)
     """
-    target = (detected_font_name or "").strip()
-    if not target or target.lower() in ("default", "unknown", "serif", "sans-serif"):
-        # Default book font (EB Garamond or Playfair/Gotu)
-        target = "EB Garamond"
+    metrics = {
+        "weight": 400,
+        "width": 5,
+        "x_height_ratio": 0.5,
+        "is_serif": False,
+        "is_sans": False,
+        "is_mono": False,
+        "units_per_em": 1000,
+    }
+    try:
+        from fontTools.ttLib import TTFont
+        tt = TTFont(str(font_path), fontNumber=0, lazy=True)
+        os2 = tt.get("OS/2")
+        head = tt.get("head")
+        post = tt.get("post")
+        upm = head.unitsPerEm if head and getattr(head, "unitsPerEm", None) else 1000
+        metrics["units_per_em"] = upm
+        if os2:
+            metrics["weight"] = getattr(os2, "usWeightClass", 400)
+            metrics["width"] = getattr(os2, "usWidthClass", 5)
+            s_xh = getattr(os2, "sxHeight", None)
+            if s_xh and upm:
+                metrics["x_height_ratio"] = round(s_xh / upm, 3)
+            # Classification
+            if hasattr(os2, "sFamilyClass"):
+                cls = os2.sFamilyClass >> 8
+                if 1 <= cls <= 7:
+                    metrics["is_serif"] = True
+                elif cls == 8:
+                    metrics["is_sans"] = True
+            if not metrics["is_serif"] and not metrics["is_sans"] and hasattr(os2, "panose"):
+                b = getattr(os2.panose, "bSerifStyle", 0)
+                if 2 <= b <= 10:
+                    metrics["is_serif"] = True
+                elif 11 <= b <= 13:
+                    metrics["is_sans"] = True
+        if post and getattr(post, "isFixedPitch", 0):
+            metrics["is_mono"] = True
+        # Fallback from font file name
+        stem = font_path.stem.lower()
+        if not metrics["is_serif"] and not metrics["is_sans"] and not metrics["is_mono"]:
+            if any(s in stem for s in ("serif", "garamond", "baskerville", "caslon", "times", "georgia")):
+                metrics["is_serif"] = True
+            elif any(s in stem for s in ("sans", "asap", "arial", "helv", "calibri")):
+                metrics["is_sans"] = True
+            elif any(s in stem for s in ("mono", "courier", "console")):
+                metrics["is_mono"] = True
+    except Exception as e:
+        logger.debug("Failed extracting metrics from %s: %s", font_path, e)
+    return metrics
 
-    # Step 1: Is it available locally?
-    local_info = is_font_available_locally(target)
-    if local_info:
-        return {
-            "name": local_info["name"],
-            "resolved_name": local_info["name"],
-            "is_system": local_info.get("is_system", False),
-            "is_downloaded": False,
-            "is_alternative": False,
-            "alternative_to": None,
-            "installed_to_system": True,
-            "font_path": local_info.get("path"),
-            "status": "system_available",
-            "message": f"Using font '{local_info['name']}' from your system.",
-        }
 
-    # Step 2: Is it freely available online?
-    free_canon = is_font_available_for_free(target)
-    if free_canon:
-        downloaded = download_google_font(free_canon)
-        if downloaded:
+def infer_font_metrics_from_name(font_name: str, is_bold: bool = False, is_italic: bool = False) -> Dict[str, Any]:
+    """Infers approximate visual metrics from font name and style flags."""
+    norm = normalize_font_name(font_name)
+    weight = 700 if is_bold else 400
+    if any(w in norm for w in ("black", "heavy", "extrabold")):
+        weight = 800
+    elif any(w in norm for w in ("bold", "bd")):
+        weight = 700
+    elif any(w in norm for w in ("semibold", "demibold")):
+        weight = 600
+    elif any(w in norm for w in ("medium", "med")):
+        weight = 500
+    elif any(w in norm for w in ("light", "thin")):
+        weight = 300
+
+    width = 5
+    if any(w in norm for w in ("condensed", "narrow", "cond")):
+        width = 3
+    elif any(w in norm for w in ("expanded", "extended", "wide")):
+        width = 7
+
+    is_mono = any(m in norm for m in ("mono", "typewriter", "courier", "console", "consolas", "code"))
+    sans_kw = ("sans", "gothic", "grotesk", "arial", "calibri", "helvetica", "segoe", "tahoma", "verdana", "inter", "roboto")
+    is_sans = any(s in norm for s in sans_kw) and not is_mono
+    serif_kw = ("serif", "times", "garamond", "baskerville", "caslon", "georgia", "cambria", "book", "minion", "palatino")
+    is_serif = (any(s in norm for s in serif_kw) or not is_sans) and not is_mono
+
+    xh = 0.52 if is_sans else 0.44
+    return {
+        "weight": weight,
+        "width": width,
+        "x_height_ratio": xh,
+        "is_serif": is_serif,
+        "is_sans": is_sans,
+        "is_mono": is_mono,
+    }
+
+
+def score_font_distance(target: Dict[str, Any], candidate: Dict[str, Any]) -> float:
+    """Computes quantitative distance between target and candidate font metrics."""
+    penalty = 0.0
+    if target.get("is_mono") != candidate.get("is_mono"):
+        penalty += 100.0
+    if target.get("is_serif") != candidate.get("is_serif") or target.get("is_sans") != candidate.get("is_sans"):
+        penalty += 50.0
+    weight_diff = abs(target.get("weight", 400) - candidate.get("weight", 400)) / 100.0
+    width_diff = abs(target.get("width", 5) - candidate.get("width", 5)) * 2.0
+    xh_diff = abs(target.get("x_height_ratio", 0.5) - candidate.get("x_height_ratio", 0.5)) * 20.0
+    return penalty + weight_diff + width_diff + xh_diff
+
+
+def find_nearest_match_with_fonttools(
+    font_name: str,
+    is_bold: bool = False,
+    is_italic: bool = False,
+) -> Dict[str, Any]:
+    """
+    Finds nearest font match using quantitative fontTools metrics
+    (serif/sans classification, usWeightClass, usWidthClass, and x-height).
+    """
+    target_metrics = infer_font_metrics_from_name(font_name, is_bold=is_bold, is_italic=is_italic)
+    norm = normalize_font_name(font_name)
+    sub = FONT_SUBSTITUTES.get(norm)
+    if not sub:
+        for k, v in FONT_SUBSTITUTES.items():
+            if k in norm:
+                sub = v
+                break
+
+    candidates = []
+    seen_cand_names = set()
+    all_dirs = conf.PROJECT_FONT_DIRS + [conf.FONT_LIBRARY_DIR]
+    for d in all_dirs:
+        if d.is_dir():
+            for p in d.rglob("*.ttf"):
+                c_metrics = get_font_metrics_from_file(p)
+                c_name = sanitize_font_name(p.stem.split("-")[0])
+                if c_name not in seen_cand_names:
+                    seen_cand_names.add(c_name)
+                    candidates.append({
+                        "name": c_name,
+                        "path": str(p),
+                        "metrics": c_metrics,
+                    })
+
+    standard_fallbacks = [
+        ("Libre Baskerville", True, False, 400, 0.44, False),
+        ("EB Garamond", True, False, 400, 0.40, False),
+        ("Playfair Display", True, False, 400, 0.51, False),
+        ("Arial", False, True, 400, 0.52, False),
+        ("Calibri", False, True, 400, 0.46, False),
+        ("Asap", False, True, 400, 0.52, False),
+        ("Courier New", False, False, 400, 0.43, True),
+        ("Consolas", False, False, 400, 0.48, True),
+    ]
+    for fb_name, is_ser, is_sa, wt, xh, is_m in standard_fallbacks:
+        if fb_name not in seen_cand_names:
+            loc = is_font_available_locally(fb_name)
+            p_str = loc.get("path") if loc else None
+            candidates.append({
+                "name": fb_name,
+                "path": p_str,
+                "metrics": {
+                    "is_serif": is_ser,
+                    "is_sans": is_sa,
+                    "weight": wt,
+                    "width": 5,
+                    "x_height_ratio": xh,
+                    "is_mono": is_m,
+                }
+            })
+            seen_cand_names.add(fb_name)
+
+    scored = []
+    for cand in candidates:
+        dist = score_font_distance(target_metrics, cand["metrics"])
+        if sub and cand["name"].lower() == sub["match"].lower():
+            dist -= 20.0
+        scored.append((dist, cand))
+
+    scored.sort(key=lambda x: x[0])
+    best = scored[0][1] if scored else {"name": "EB Garamond" if target_metrics["is_serif"] else "Arial", "path": None}
+
+    reason = "Nearest match by visual font metrics (serif/sans, weight, width, x-height)"
+    if sub and best["name"].lower() == sub["match"].lower():
+        reason = sub.get("reason", reason)
+
+    return {
+        "original": font_name,
+        "nearest_match": best["name"],
+        "reason": reason,
+        "font_path": best.get("path"),
+        "distance": scored[0][0] if scored else 0.0,
+    }
+
+
+def resolve_font_with_fallback(
+    font_name: Optional[str],
+    embedded_catalog: Optional[Dict[str, Any]] = None,
+    text_sample: str = "",
+    is_bold: bool = False,
+    is_italic: bool = False,
+    sid: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Implements Phase 4 font resolution order:
+    1. embedded/exact font identity (extracted in Phase 2)
+    2. exact local font (project font, library font, or system font)
+    3. free font (Google Fonts / OFL)
+    4. nearest match (by serif/sans, weight, width, x-height using fontTools)
+    5. default fallback
+
+    Returns:
+    {
+        "requested": str,
+        "used": str,
+        "reason": "embedded" | "exact_local" | "google_font" | "nearest_match" | "default",
+        "is_exact": bool,
+        "font_path": Optional[str],
+        "font_url": Optional[str],
+        "file_name": Optional[str],
+        "is_embedded": bool,
+    }
+    """
+    from .fontmatch import clean_pdf_font_name, detect_visual_font_for_scanned_book
+    from .security import sanitize_font_name
+
+    raw_target = (font_name or "").strip()
+    if not raw_target or raw_target.lower() in ("default", "unknown"):
+        detected_default = detect_visual_font_for_scanned_book(text_sample) if text_sample else "EB Garamond"
+        raw_target = detected_default
+
+    clean_name = clean_pdf_font_name(raw_target)
+    safe_name = sanitize_font_name(clean_name or raw_target)
+
+    # 1. Embedded font in current session
+    if embedded_catalog:
+        for k, v in embedded_catalog.items():
+            k_clean = clean_pdf_font_name(k)
+            v_clean = v.get("clean_name", "")
+            v_ps = v.get("ps_name", "")
+            targets = (normalize_font_name(clean_name), normalize_font_name(raw_target), normalize_font_name(safe_name))
+            if any(normalize_font_name(x) in targets for x in (k, k_clean, v_clean, v_ps) if x):
+                f_path = v.get("file_path")
+                f_name = v.get("file_name") or (Path(f_path).name if f_path else None)
+                font_url = f"/docedit/api/font-file/{sid}/{f_name}" if (sid and f_name) else None
+                used_name = sanitize_font_name(v.get("clean_name") or safe_name)
+                return {
+                    "requested": raw_target,
+                    "used": used_name,
+                    "reason": "embedded",
+                    "is_exact": True,
+                    "font_path": f_path,
+                    "file_name": f_name,
+                    "font_url": font_url,
+                    "is_embedded": True,
+                }
+
+    # 2. Exact local font (project fonts, library fonts, system fonts)
+    norm_safe = normalize_font_name(safe_name)
+    loc_info = is_font_available_locally(safe_name)
+    if loc_info and loc_info.get("path") and Path(loc_info["path"]).is_file():
+        norm_loc = normalize_font_name(loc_info.get("name", ""))
+        alias_names = ("helv", "helvetica", "helvetica neue", "times", "times-roman", "times roman", "tiro", "couri", "courier", "aptos")
+        # Only treat as exact_local if the local font name actually matches the target, not an alias/substitute
+        if norm_loc == norm_safe and norm_safe not in alias_names:
+            f_path = loc_info["path"]
+            f_name = Path(f_path).name
+            font_url = f"/docedit/api/font-file/{sid or 'shared'}/{f_name}"
             return {
-                "name": free_canon,
-                "resolved_name": free_canon,
-                "is_system": False,
-                "is_downloaded": True,
-                "is_alternative": False,
-                "alternative_to": None,
-                "installed_to_system": conf.INSTALL_FONTS_TO_SYSTEM,
-                "font_path": str(downloaded),
-                "status": "downloaded_free",
-                "message": f"Font '{free_canon}' downloaded and installed to your system for future reference.",
+                "requested": raw_target,
+                "used": loc_info["name"],
+                "reason": "exact_local",
+                "is_exact": True,
+                "font_path": f_path,
+                "file_name": f_name,
+                "font_url": font_url,
+                "is_embedded": False,
             }
 
-    # Step 3: Not freely available -> find nearest match
-    sub = find_nearest_match(target)
-    alt_name = sub["nearest_match"]
-    reason = sub["reason"]
-
-    # Check if alternative is available locally or online
-    alt_local = is_font_available_locally(alt_name)
-    if alt_local:
+    # 3. Free font (Google Fonts / OFL)
+    free_canon = is_font_available_for_free(safe_name)
+    if free_canon:
+        downloaded = download_google_font(free_canon)
+        f_path = str(downloaded) if downloaded else None
+        f_name = downloaded.name if downloaded else None
+        font_url = f"/docedit/api/font-file/{sid or 'shared'}/{f_name}" if f_name else None
         return {
-            "name": alt_local["name"],
-            "resolved_name": alt_local["name"],
-            "is_system": alt_local.get("is_system", False),
-            "is_downloaded": False,
-            "is_alternative": True,
-            "alternative_to": target,
-            "nearest_match_reason": reason,
-            "installed_to_system": True,
-            "font_path": alt_local.get("path"),
-            "status": "alternative_local",
-            "message": f"Original font '{target}' is not freely available. Nearest free match is '{alt_local['name']}' ({reason}).",
+            "requested": raw_target,
+            "used": free_canon,
+            "reason": "google_font",
+            "is_exact": True,
+            "font_path": f_path,
+            "file_name": f_name,
+            "font_url": font_url,
+            "is_embedded": False,
         }
 
-    # Download the nearest match
-    downloaded_alt = download_google_font(alt_name)
+    # 4. Nearest match using fontTools metrics
+    nearest = find_nearest_match_with_fonttools(safe_name, is_bold=is_bold, is_italic=is_italic)
+    used_name = nearest["nearest_match"]
+    f_path = nearest.get("font_path")
+    if not f_path:
+        loc_alt = is_font_available_locally(used_name)
+        if loc_alt and loc_alt.get("path"):
+            f_path = loc_alt["path"]
+        elif conf.ALLOW_DOWNLOADS:
+            dl_alt = download_google_font(used_name)
+            if dl_alt:
+                f_path = str(dl_alt)
+
+    f_name = Path(f_path).name if f_path else None
+    font_url = f"/docedit/api/font-file/{sid or 'shared'}/{f_name}" if f_name else None
     return {
-        "name": alt_name,
-        "resolved_name": alt_name,
-        "is_system": False,
-        "is_downloaded": bool(downloaded_alt),
-        "is_alternative": True,
-        "alternative_to": target,
-        "nearest_match_reason": reason,
-        "installed_to_system": bool(downloaded_alt and conf.INSTALL_FONTS_TO_SYSTEM),
-        "font_path": str(downloaded_alt) if downloaded_alt else None,
-        "status": "alternative_downloaded",
-        "message": f"Original font '{target}' is not freely available. Downloaded nearest free match '{alt_name}' and installed to system ({reason}).",
+        "requested": raw_target,
+        "used": used_name,
+        "reason": "nearest_match",
+        "is_exact": False,
+        "font_path": f_path,
+        "file_name": f_name,
+        "font_url": font_url,
+        "is_embedded": False,
+        "nearest_match_reason": nearest.get("reason"),
+    }
+
+
+def generate_document_all_fonts_css(font_resolutions: List[Dict[str, Any]], sid: Optional[str] = None) -> str:
+    """
+    Generates CSS @font-face rules for EVERY font used on the document.
+    Ensures browser renders each block with the exact identical font file used in export.
+    """
+    from .security import sanitize_font_name
+    css_rules = []
+    seen_used = set()
+    for f in font_resolutions:
+        used = f.get("used")
+        if not used or used in seen_used:
+            continue
+        seen_used.add(used)
+        safe_family = sanitize_font_name(used)
+        font_url = f.get("font_url")
+        file_name = f.get("file_name")
+        font_path = f.get("font_path")
+
+        if not font_url and file_name and sid:
+            font_url = f"/docedit/api/font-file/{sid}/{file_name}"
+        elif not font_url and font_path and "static" in font_path:
+            rel = font_path.split("static", 1)[1].replace("\\", "/").lstrip("/")
+            font_url = f"/static/{rel}"
+
+        if font_url:
+            css_rules.append(f"""@font-face {{
+    font-family: '{safe_family}';
+    src: url('{font_url}') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}}""")
+        else:
+            q_fam = urllib.parse.quote_plus(safe_family)
+            css_rules.append(f"@import url('https://fonts.googleapis.com/css2?family={q_fam}:ital,wght@0,400;0,700;1,400;1,700&display=swap');")
+
+    return "\n".join(css_rules)
+
+
+def resolve_document_font(detected_font_name: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Backward-compatible document-level font resolution:
+    Wraps resolve_font_with_fallback and returns full dictionary with both legacy and Phase 4 keys.
+    """
+    res = resolve_font_with_fallback(detected_font_name)
+    used_name = res["used"]
+    loc_info = is_font_available_locally(used_name)
+
+    is_sys = loc_info.get("is_system", False) if loc_info else False
+    is_alt = not res["is_exact"]
+    reason = res.get("nearest_match_reason") or res.get("reason", "")
+
+    return {
+        "requested": res["requested"],
+        "used": used_name,
+        "reason": res["reason"],
+        "is_exact": res["is_exact"],
+        "name": used_name,
+        "resolved_name": used_name,
+        "is_system": is_sys,
+        "is_downloaded": res["reason"] == "google_font",
+        "is_alternative": is_alt,
+        "alternative_to": res["requested"] if is_alt else None,
+        "nearest_match_reason": reason if is_alt else None,
+        "installed_to_system": conf.INSTALL_FONTS_TO_SYSTEM if res["reason"] == "google_font" else is_sys,
+        "font_path": res.get("font_path"),
+        "font_url": res.get("font_url"),
+        "file_name": res.get("file_name"),
+        "status": "system_available" if is_sys else ("downloaded_free" if res["reason"] == "google_font" else "alternative_local"),
+        "message": f"Using font '{used_name}' ({res['reason']}).",
     }

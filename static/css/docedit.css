@@ -178,42 +178,57 @@
    ========================================================================== */
 .docedit-workspace {
     display: none;
-    gap: 1.5rem;
-    align-items: flex-start;
+    align-items: stretch;
+    /* App-style workspace: fills the viewport so only the canvas / side pan scroll */
+    height: calc(100vh - var(--docedit-chrome, 100px));
+    min-height: 480px;
 }
 
 .docedit-workspace.active {
     display: flex;
 }
 
-@media screen and (max-width: 1024px) {
-    .docedit-workspace {
-        flex-direction: column-reverse;
-    }
-}
-
 /* --------------------------------------------------------------------------
-   Editor Canvas (Main Column)
+   Editor Canvas (Main Column): toolbar / scrolling stage / status bar
    -------------------------------------------------------------------------- */
 .editor-main-col {
-    flex: 1 1 65%;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    background: var(--bg-color);
+    container-type: inline-size;
+    container-name: editor;
 }
 
 .editor-toolbar {
+    flex: 0 0 auto;
     background: var(--bg-color);
-    border: 1px solid var(--text-color);
-    border-bottom: none;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.4);
+    padding: 0.4rem 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    z-index: 20;
+}
+
+.tb-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem;
-    box-shadow: var(--box-shadow);
+    gap: 0.3rem 0.45rem;
+}
+
+.tb-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .tb-btn {
@@ -242,16 +257,32 @@
     border-color: var(--text-color);
 }
 
+.tb-btn-save {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #1d4ed8 !important;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+.tb-btn-save:hover {
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1e40af !important;
+}
+
 .tb-separator {
     width: 1px;
     height: 18px;
     background: var(--text-color);
     opacity: 0.3;
-    margin: 0 0.3rem;
+    margin: 0 0.25rem;
 }
 
 .tb-select {
-    padding: 0.3rem 0.5rem;
+    padding: 0.3rem 0.45rem;
     background: var(--bg-color);
     color: var(--text-color);
     border: 1px solid var(--text-color);
@@ -261,8 +292,25 @@
     cursor: pointer;
 }
 
+#tbFontSelect {
+    max-width: 155px;
+    width: 155px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#tbFontSizeSelect {
+    max-width: 72px;
+    width: 72px;
+}
+
+#tbHeadingSelect {
+    max-width: 110px;
+    width: 110px;
+}
+
 .tb-fuzzy-toggle {
-    margin-left: auto;
     font-size: 0.85rem;
     display: flex;
     align-items: center;
@@ -279,16 +327,25 @@
 }
 
 /* The Paper Canvas */
-.editor-paper-wrapper {
-    background: rgba(128, 128, 128, 0.1);
-    padding: 2rem 1.5rem;
-    border: 1px solid var(--text-color);
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    min-height: 650px;
-    box-shadow: var(--box-shadow);
+.editor-stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+}
+
+.editor-paper-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    background: rgba(128, 128, 128, 0.14);
+    padding: 1.25rem;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    display: block;
+    overscroll-behavior: contain;
 }
 
 .editor-paper {
@@ -297,7 +354,8 @@
     width: 100%;
     max-width: 820px;
     min-height: 900px;
-    padding: 3.5rem 3.5rem;
+    padding: 3rem 3.5rem;
+    margin: 0 auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     border-radius: 2px;
     outline: none;
@@ -434,11 +492,14 @@ body.hide-fuzzy .docedit-fuzzy {
    Information & Progress Side Pan (The "Pan")
    -------------------------------------------------------------------------- */
 .side-pan {
-    flex: 1 1 35%;
+    flex: 0 0 330px;
+    width: 330px;
+    max-width: 360px;
+    margin-left: 1rem;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
-    min-width: 320px;
+    gap: 0.75rem;
 }
 
 .pan-card {
@@ -623,6 +684,19 @@ body.hide-fuzzy .docedit-fuzzy {
     gap: 0.5rem;
     transition: all 0.25s ease;
     border: 1px solid transparent;
+}
+
+.pan-btn-save {
+    background: #2563eb;
+    color: #ffffff;
+    border: 1px solid #1d4ed8;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.pan-btn-save:hover {
+    background: #1d4ed8;
+    border-color: #1e40af;
+    color: #ffffff;
 }
 
 .pan-btn-primary {
@@ -854,14 +928,16 @@ body.hide-fuzzy .docedit-fuzzy {
 .docedit-page-sheet {
     position: relative;
     width: 100%;
-    max-width: 820px;
+    max-width: var(--docedit-sheet-width, 820px);
+    margin: 0 auto;
     background: #ffffff;
     color: #1a1a1a;
     box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22), 0 1px 4px rgba(0, 0, 0, 0.1);
     border-radius: 6px;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: width 0.15s ease, box-shadow 0.2s ease;
     border: 1px solid rgba(128, 128, 128, 0.25);
+    box-sizing: border-box;
 }
 
 .docedit-page-sheet:hover {
@@ -897,8 +973,9 @@ body.hide-fuzzy .docedit-fuzzy {
 .page-sheet-canvas {
     position: relative;
     width: 100%;
-    background-color: #fcfbf9;
+    background-color: #ffffff;
     overflow: hidden;
+    --scale: 1.0;
 }
 
 .page-bg-img {
@@ -925,37 +1002,75 @@ body.hide-fuzzy .docedit-fuzzy {
 
 .docedit-text-block {
     position: absolute;
+    left: calc(var(--x-src, 0) * var(--scale, 1) * 1px);
+    top: calc(var(--y-src, 0) * var(--scale, 1) * 1px);
+    min-width: calc(var(--w-src, 0) * var(--scale, 1) * 1px);
+    height: calc(var(--h-src, 0) * var(--scale, 1) * 1px);
+    line-height: 1.15;
+    font-size: calc(var(--size-src, 12) * var(--scale, 1) * 1px);
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
     box-sizing: border-box;
     cursor: text;
-    line-height: 1.0;
     outline: none;
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    color: transparent;
+    border-radius: 1px;
+    color: transparent !important;
+    background: transparent !important;
+    caret-color: #2563eb;
     user-select: text;
-    white-space: pre;
+    white-space: pre-wrap;
     word-break: normal;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: outline 0.1s ease;
 }
 
-.docedit-text-block:hover {
-    background: rgba(37, 99, 235, 0.08);
-    outline: 1px dashed rgba(37, 99, 235, 0.6);
+.docedit-text-block::selection {
+    background: rgba(37, 99, 235, 0.25);
+    color: #111111;
+}
+
+.docedit-text-block:not(.is-edited):hover {
+    background: transparent !important;
+    color: transparent !important;
+    outline: 1px dashed rgba(37, 99, 235, 0.45) !important;
     outline-offset: 1px;
-    color: rgba(20, 20, 20, 0.35);
+    border-radius: 1px;
 }
 
-.docedit-text-block:focus,
-.docedit-text-block.is-focused,
-.docedit-text-block.is-edited,
-.docedit-text-block.is-selected {
+.docedit-text-block:not(.is-edited):focus,
+.docedit-text-block.is-focused:not(.is-edited),
+.docedit-text-block.is-selected:not(.is-edited) {
+    background: transparent !important;
+    color: transparent !important;
+    outline: 1.5px solid #2563eb !important;
+    outline-offset: 1px;
+    border-radius: 1px;
+    box-shadow: none !important;
+    z-index: 25;
+}
+
+.docedit-text-block.is-edited {
+    background: #ffffff !important;
+    color: var(--block-color, #111111) !important;
+    outline: none !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    z-index: 10;
+}
+
+.docedit-text-block.is-edited:hover {
+    outline: 1px dashed rgba(16, 185, 129, 0.5) !important;
+    outline-offset: 0;
+}
+
+.docedit-text-block.is-edited:focus,
+.docedit-text-block.is-edited.is-focused,
+.docedit-text-block.is-edited.is-selected {
     background: #ffffff !important;
     color: #111111 !important;
     outline: 1.5px solid #2563eb !important;
-    outline-offset: 1px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.16) !important;
+    outline-offset: 0;
+    box-shadow: none !important;
     z-index: 25;
 }
 
@@ -973,6 +1088,61 @@ body.hide-fuzzy .docedit-fuzzy {
 
 .docedit-text-block.has-fuzzy:hover {
     background: rgba(245, 158, 11, 0.12);
+}
+
+/* Read-only Non-Latin Blocks (Language Scope Hold) */
+.docedit-text-block.docedit-block-readonly {
+    outline: 1.5px dashed rgba(100, 116, 139, 0.5) !important;
+    background: rgba(241, 245, 249, 0.22) !important;
+    cursor: not-allowed !important;
+}
+
+.docedit-text-block.docedit-block-readonly:hover {
+    outline: 1.5px solid #64748b !important;
+    background: rgba(226, 232, 240, 0.35) !important;
+}
+
+.docedit-text-block.docedit-block-readonly.is-focused,
+.docedit-text-block.docedit-block-readonly.is-selected {
+    outline: 2px solid #475569 !important;
+    background: rgba(226, 232, 240, 0.45) !important;
+}
+
+.docedit-readonly-badge {
+    position: absolute;
+    top: -20px;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #334155;
+    color: #f8fafc;
+    font-size: 0.65rem;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 2px 6px;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    z-index: 35;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.pan-readonly-alert {
+    display: none;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-left: 3px solid #475569;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: #334155;
+    line-height: 1.4;
+}
+.pan-readonly-alert.show {
+    display: block !important;
 }
 
 /* Floating Block Toolbar & Move Handle */
@@ -1257,4 +1427,1556 @@ body.hide-fuzzy .docedit-fuzzy {
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
+/* ==========================================================================
+   Phase 4: Font Matching, Substitution, and Metric Shift Warning Styles
+   ========================================================================== */
+.docedit-text-block.has-font-metric-warn {
+    border-bottom: 1.5px dashed rgba(245, 158, 11, 0.7) !important;
+}
 
+.pan-badge.badge-embedded {
+    background: rgba(139, 92, 246, 0.15);
+    color: #7c3aed;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+.pan-badge.badge-exact {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.pan-font-metric-alert {
+    margin-top: 0.6rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 4px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #b45309;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    display: none;
+}
+.pan-font-metric-alert.show {
+    display: block;
+}
+
+/* ==========================================================================
+   Phase 7: Editing Experience Styles
+   (Thumbnails Sidebar, Find & Replace, Before/After Mode, Overflow Warnings, Apply to All)
+   ========================================================================== */
+
+/* 1. Page Thumbnails Sidebar */
+.docedit-thumbnails-sidebar {
+    width: 170px;
+    min-width: 170px;
+    background: rgba(30, 41, 59, 0.95);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    overflow: hidden;
+    z-index: 15;
+}
+
+.docedit-thumbnails-sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    border-right: none;
+}
+
+.thumb-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.thumb-btn-icon {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.thumb-btn-icon:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.thumb-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.8rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.thumb-item {
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+}
+
+.thumb-item:hover {
+    border-color: rgba(99, 102, 241, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.thumb-item.active {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35), 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.thumb-img-wrapper {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.thumb-img-wrapper img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+}
+
+.thumb-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding: 0 2px;
+}
+
+.thumb-page-label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.thumb-badges {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.thumb-badge {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.2;
+}
+
+.thumb-badge.badge-edited {
+    background: rgba(16, 185, 129, 0.25);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.thumb-badge.badge-fuzzy {
+    background: rgba(245, 158, 11, 0.25);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.thumb-badge.badge-overflow {
+    background: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* 2. Find & Replace Floating Widget */
+.docedit-find-replace-panel {
+    position: absolute;
+    top: 50px;
+    right: 24px;
+    width: 360px;
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    z-index: 50;
+    padding: 0.75rem 0.9rem;
+    animation: frSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes frSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fr-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fr-title {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.fr-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
+}
+
+.fr-input-wrap {
+    position: relative;
+    flex: 1;
+}
+
+.fr-input {
+    width: 100%;
+    padding: 5px 44px 5px 8px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: #f8fafc;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fr-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.fr-match-count {
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.fr-nav-btns, .fr-action-btns {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+.fr-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fr-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+.fr-btn-primary {
+    background: #4f46e5;
+    border-color: #6366f1;
+    color: #ffffff;
+}
+
+.fr-btn-primary:hover {
+    background: #4338ca;
+}
+
+.fr-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.74rem;
+    color: #94a3b8;
+    margin-top: 0.35rem;
+}
+
+.fr-option-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.fr-option-label input {
+    cursor: pointer;
+}
+
+/* Match Highlights on Canvas */
+.docedit-text-block.fr-highlight {
+    background-color: rgba(250, 204, 21, 0.25) !important;
+    outline: 1.5px solid rgba(250, 204, 21, 0.6) !important;
+}
+
+.docedit-text-block.fr-active-match {
+    background-color: rgba(245, 158, 11, 0.45) !important;
+    outline: 2px solid #f59e0b !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5) !important;
+    z-index: 25 !important;
+}
+
+/* 3. Before / After Toggle Mode */
+.docedit-before-banner {
+    background: linear-gradient(90deg, #1e293b, #334155);
+    color: #fbbf24;
+    padding: 0.45rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid rgba(251, 191, 36, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.15s ease;
+}
+
+.docedit-before-mode .page-text-overlay {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.docedit-before-mode .docedit-floating-toolbar {
+    display: none !important;
+}
+
+/* 4. Add Box Placement Mode */
+.docedit-adding-box .page-sheet-canvas {
+    cursor: crosshair !important;
+}
+
+.docedit-adding-box .docedit-text-block {
+    pointer-events: none !important;
+}
+
+/* 5. Overflow Warnings & Badges */
+.docedit-text-block.has-overflow {
+    outline: 1.5px dashed #ea580c !important;
+}
+
+.block-overflow-badge {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    background: #ea580c;
+    color: #ffffff;
+    font-size: 0.62rem;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.pan-issues-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.pan-issue-item {
+    background: rgba(234, 88, 12, 0.08);
+    border: 1px solid rgba(234, 88, 12, 0.25);
+    border-radius: 5px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.78rem;
+    transition: background-color 0.15s ease;
+}
+
+.pan-issue-item:hover {
+    background: rgba(234, 88, 12, 0.14);
+}
+
+.pan-issue-msg {
+    color: #fdba74;
+    margin-bottom: 0.35rem;
+    line-height: 1.3;
+}
+
+.pan-issue-actions {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.pan-issue-btn {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.pan-issue-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.pan-issue-btn.btn-shrink {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+}
+
+.pan-issue-btn.btn-shrink:hover {
+    background: rgba(99, 102, 241, 0.35);
+}
+
+/* 6. Apply to All Modal Styles */
+.apply-all-summary-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+}
+
+.apply-summary-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.apply-label {
+    color: #94a3b8;
+}
+
+.apply-all-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 0.9rem;
+    text-align: left;
+}
+
+.apply-options-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.apply-group-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-bottom: 0.15rem;
+}
+
+.apply-checkbox-label, .apply-radio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    color: #e2e8f0;
+    cursor: pointer;
+}
+
+.apply-preview-summary {
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 5px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    color: #c7d2fe;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+/* ==========================================================================
+   PHASE 8: Confidence Heatmap & Fuzzy OCR Review Queue
+   ========================================================================== */
+
+/* OCR word baseline: MUST NOT alter layout flow or block coordinates */
+.ocr-word {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    color: inherit;
+    box-shadow: none;
+    transition: background-color 0.15s ease, outline 0.15s ease;
+}
+
+/* Confidence Heatmap Tints (Red < 60, Amber 60-80, High >= 80) */
+.docedit-heatmap-active .ocr-word[data-conf-tier="low"] {
+    background-color: rgba(239, 68, 68, 0.28) !important;
+    outline: 1px dashed rgba(239, 68, 68, 0.6) !important;
+    border-radius: 2px;
+}
+
+.docedit-heatmap-active .ocr-word[data-conf-tier="med"] {
+    background-color: rgba(245, 158, 11, 0.22) !important;
+    outline: 1px dashed rgba(245, 158, 11, 0.5) !important;
+    border-radius: 2px;
+}
+
+.docedit-heatmap-active .ocr-word[data-conf-tier="high"] {
+    background-color: transparent !important;
+    outline: none !important;
+}
+
+/* Focused / Selected Word Highlight in Canvas */
+.ocr-word-focused {
+    outline: 2px solid #3b82f6 !important;
+    background-color: rgba(59, 130, 246, 0.35) !important;
+    border-radius: 2px;
+    animation: ocrWordPulse 1.2s infinite alternate;
+}
+
+@keyframes ocrWordPulse {
+    from { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
+    to { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.8); }
+}
+
+/* Review Queue Side Drawer */
+.docedit-review-queue-panel {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 92vw;
+    background: #1e293b;
+    color: #f1f5f9;
+    border-left: 1px solid #334155;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    z-index: 999;
+    animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.rq-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+}
+
+.rq-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #e2e8f0;
+}
+
+.rq-progress-badge {
+    font-size: 0.75rem;
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.rq-progress-bar-wrap {
+    height: 6px;
+    background: #334155;
+    width: 100%;
+    overflow: hidden;
+}
+
+.rq-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #10b981);
+    transition: width 0.25s ease;
+}
+
+.rq-shortcuts-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 5px 8px;
+    border-bottom: 1px solid #334155;
+}
+
+.rq-shortcuts-bar kbd {
+    background: #334155;
+    border: 1px solid #475569;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #f8fafc;
+}
+
+.rq-active-card {
+    padding: 1rem;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+}
+
+.rq-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+}
+
+.rq-word-index {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.rq-word-conf-badge {
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.rq-word-conf-badge.conf-low {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.rq-word-conf-badge.conf-med {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.rq-fuzzy-reasons {
+    font-size: 0.75rem;
+    color: #fb7185;
+    margin-bottom: 0.75rem;
+    font-style: italic;
+}
+
+.rq-compare-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.rq-pane-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.rq-crop-img-wrap {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 8px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#rqCropImg {
+    max-height: 65px;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+
+.rq-word-input {
+    width: 100%;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 2px solid #6366f1;
+    background: #0f172a;
+    color: #f8fafc;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rq-word-input:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+}
+
+.rq-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.rq-btn {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.rq-btn:hover {
+    filter: brightness(1.1);
+}
+
+.rq-btn:active {
+    transform: scale(0.98);
+}
+
+.rq-btn-accept {
+    background: #10b981;
+    color: white;
+}
+
+.rq-btn-edit {
+    background: #6366f1;
+    color: white;
+}
+
+.rq-btn-skip {
+    background: #334155;
+    color: #cbd5e1;
+    border: 1px solid #475569;
+}
+
+.rq-completed-state {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.rq-completed-icon {
+    font-size: 2.8rem;
+    color: #10b981;
+    margin-bottom: 0.75rem;
+}
+
+.rq-completed-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0 0 0.25rem 0;
+}
+
+.rq-completed-desc {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+.rq-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    border-bottom: 1px solid #334155;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.rq-list-remaining {
+    color: #a5b4fc;
+}
+
+.rq-words-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    max-height: calc(100vh - 430px);
+}
+
+.rq-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.84rem;
+    margin-bottom: 3px;
+    border: 1px solid transparent;
+    background: rgba(15, 23, 42, 0.4);
+    color: #cbd5e1;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.rq-item:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.rq-item.active {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: #6366f1;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.rq-item.reviewed {
+    opacity: 0.55;
+}
+
+.rq-item.reviewed .rq-item-text {
+    text-decoration: line-through;
+}
+
+.rq-item-status-icon {
+    margin-right: 6px;
+}
+
+.rq-item-status-icon.accepted {
+    color: #10b981;
+}
+
+.rq-item-status-icon.skipped {
+    color: #94a3b8;
+}
+
+.rq-item-status-icon.pending {
+    color: #f59e0b;
+}
+
+
+
+
+/* ==========================================================================
+   PHASE 9: Workspace UX Overhaul
+   App-style layout (independent scrolling), two-row toolbar, status bar,
+   collapsible side-pan cards with a pinned action footer.
+   ========================================================================== */
+
+/* --- Compact page chrome once a document is open ------------------------- */
+.docedit-container:has(.docedit-workspace.active) {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+    width: 98%;
+    max-width: 1800px;
+}
+
+/* The page title / blurb are redundant once editing: reclaim the vertical space for the canvas */
+.docedit-container:has(.docedit-workspace.active) .docedit-header {
+    display: none;
+}
+
+.docedit-container:has(.docedit-workspace.active) .docedit-notice-banner {
+    margin: 0 auto 0.6rem auto;
+    padding: 0.55rem 1rem;
+}
+
+/* --- Toolbar ------------------------------------------------------------- */
+.tb-row-secondary {
+    padding-top: 0.35rem;
+    border-top: 1px dashed rgba(128, 128, 128, 0.3);
+}
+
+/* Contextual groups in row 2: divide with a right border (hidden groups add nothing) */
+.tb-row-secondary > .tb-separator {
+    display: none !important;
+}
+
+.tb-row-secondary > .tb-group:not(:last-child) {
+    padding-right: 0.6rem;
+    border-right: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.tb-group-caption {
+    display: none;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    margin-right: 0.15rem;
+    user-select: none;
+}
+
+.tb-nudge {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    margin-left: 0.2rem;
+    padding: 0 0.15rem;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 5px;
+}
+
+.tb-btn {
+    white-space: nowrap;
+    border-radius: 5px;
+}
+
+.tb-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.tb-btn:disabled:hover {
+    border-color: transparent;
+    color: var(--text-color);
+    background: transparent;
+}
+
+.tb-btn:focus-visible,
+.tb-select:focus-visible,
+.pan-btn:focus-visible,
+.thumb-item:focus-visible {
+    outline: 2px solid var(--hover-color);
+    outline-offset: 1px;
+}
+
+.tb-btn-save {
+    padding: 0.35rem 0.85rem;
+    gap: 0.35rem;
+}
+
+.tb-btn-review {
+    border-color: rgba(245, 158, 11, 0.45);
+}
+
+.tb-select {
+    border-color: rgba(128, 128, 128, 0.55);
+    border-radius: 5px;
+    height: 30px;
+}
+
+.tb-fuzzy-toggle {
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tb-heatmap-controls {
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 4px;
+    font-size: 0.75rem;
+}
+
+.tb-heatmap-controls label {
+    opacity: 0.85;
+}
+
+.tb-heatmap-controls input[type="range"] {
+    width: 70px;
+    accent-color: #ef4444;
+    vertical-align: middle;
+}
+
+.tb-heatmap-controls span {
+    font-weight: bold;
+    min-width: 30px;
+}
+
+/* Progressive disclosure of button text based on the editor column width */
+@container editor (max-width: 980px) {
+    .tb-label {
+        display: none;
+    }
+}
+
+@container editor (max-width: 1240px) {
+    .tb-label-2 {
+        display: none;
+    }
+}
+
+@container editor (min-width: 1241px) {
+    .tb-group-caption {
+        display: inline;
+    }
+}
+
+/* --- Stage: scrolling canvas -------------------------------------------- */
+/* Layout-preserved documents: pages sit directly on the grey stage so zoom is unconstrained */
+.editor-paper.is-layout-mode {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0;
+    max-width: none;
+    width: max-content;
+    min-width: 100%;
+    min-height: 0;
+    border-radius: 0;
+}
+
+.editor-paper.is-layout-mode .docedit-pages-container {
+    width: max-content;
+    min-width: 100%;
+    padding: 0 0 1rem 0;
+}
+
+.editor-paper.is-layout-mode .docedit-page-sheet {
+    width: var(--docedit-sheet-width, 820px);
+    max-width: none;
+    flex: none;
+}
+
+/* Compare banner (class-driven; was hidden by an inline style) */
+.docedit-before-banner {
+    display: none;
+    flex: 0 0 auto;
+    cursor: pointer;
+    z-index: 30;
+}
+
+.docedit-before-banner.show {
+    display: block;
+}
+
+/* Find & Replace floats over the canvas, anchored under the toolbar (was never shown) */
+.docedit-find-replace-panel {
+    display: none;
+    top: 12px;
+    right: 28px;
+    max-width: calc(100% - 56px);
+}
+
+.docedit-find-replace-panel.show {
+    display: block;
+}
+
+.fr-header .fr-btn-icon,
+.rq-header .fr-btn-icon {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.fr-header .fr-btn-icon:hover,
+.rq-header .fr-btn-icon:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.fr-results-list {
+    max-height: 160px;
+    overflow-y: auto;
+    margin-top: 0.4rem;
+}
+
+/* --- Status bar (page nav + zoom + autosave) ----------------------------- */
+.editor-statusbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    min-height: 38px;
+    border-top: 1px solid rgba(128, 128, 128, 0.4);
+    background: var(--bg-color);
+}
+
+.editor-statusbar .tb-separator {
+    display: none !important;
+}
+
+.tb-status-gap {
+    width: 0.9rem;
+}
+
+.tb-status-right {
+    margin-left: auto;
+}
+
+/* --- Thumbnails strip ---------------------------------------------------- */
+.docedit-thumbnails-sidebar {
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    box-shadow: var(--box-shadow);
+}
+
+.docedit-thumbnails-sidebar.collapsed {
+    border-width: 0;
+    box-shadow: none;
+}
+
+.docedit-thumbnails-sidebar:not(.collapsed) + .editor-main-col {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.thumb-list {
+    position: relative;
+    overscroll-behavior: contain;
+}
+
+/* Matches the markup generated by initThumbnailsSidebar() in docedit.js */
+.thumb-preview-wrap {
+    position: relative;
+    width: 100%;
+    background: #ffffff;
+    border-radius: 3px;
+    overflow: hidden;
+    min-height: 80px;
+}
+
+.thumb-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.thumb-label {
+    text-align: center;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-top: 4px;
+}
+
+.thumb-item.active .thumb-label {
+    color: #a5b4fc;
+}
+
+.thumb-preview-wrap .thumb-badges {
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    right: 3px;
+    flex-wrap: wrap;
+}
+
+.thumb-preview-wrap .thumb-badge {
+    align-items: center;
+    gap: 3px;
+    backdrop-filter: blur(2px);
+    background-color: rgba(15, 23, 42, 0.78);
+}
+
+.thumb-sidebar-title i {
+    margin-right: 0.3rem;
+}
+
+/* --- Side pan ------------------------------------------------------------ */
+.side-pan-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0 0.25rem 0.25rem 0;
+    overscroll-behavior: contain;
+}
+
+.pan-card {
+    flex: 0 0 auto;
+    padding: 0.8rem 0.95rem;
+}
+
+/* Collapsible cards built on <details> */
+details.pan-card > summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+details.pan-card > summary::-webkit-details-marker {
+    display: none;
+}
+
+details.pan-card > summary::after {
+    content: '';
+    margin-left: auto;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-135deg) translate(-2px, -2px);
+    opacity: 0.55;
+    transition: transform 0.2s ease;
+}
+
+details.pan-card:not([open]) > summary::after {
+    transform: rotate(45deg);
+}
+
+details.pan-card > summary:hover {
+    color: var(--hover-color);
+}
+
+details.pan-card:not([open]) > summary {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.pan-card-title {
+    font-size: 0.95rem;
+    margin-bottom: 0.6rem;
+}
+
+.pan-card-issues {
+    border-left: 4px solid var(--warning-color);
+}
+
+.pan-card-issues > summary {
+    color: var(--warning-color);
+}
+
+.pan-card-hint {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.35;
+}
+
+.fuzzy-empty {
+    opacity: 0.6;
+    font-size: 0.8rem;
+    padding: 0.3rem;
+}
+
+.pan-meta-strong {
+    font-weight: 700;
+}
+
+.pan-meta-small {
+    font-size: 0.8rem;
+}
+
+.pan-btn-secondary {
+    background: transparent;
+    border-color: var(--text-color);
+    color: var(--text-color);
+}
+
+.pan-btn-secondary:hover {
+    border-color: var(--hover-color);
+    color: var(--hover-color);
+    background: rgba(128, 128, 128, 0.12);
+}
+
+.pan-btn-block {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.pan-btn {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+/* Pinned action footer: Save / Download always one click away */
+.pan-card-actions {
+    flex: 0 0 auto;
+    padding: 0.8rem 0.95rem;
+    border-top: 3px solid var(--button-color);
+}
+
+.pan-card-actions .pan-format-group {
+    margin-bottom: 0.6rem;
+}
+
+.pan-card-actions .pan-format-label {
+    margin-bottom: 0.3rem;
+    font-size: 0.82rem;
+}
+
+.pan-card-actions .pan-actions {
+    margin-top: 0;
+    gap: 0.5rem;
+}
+
+.pan-actions-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.pan-actions-row .pan-btn {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.pan-btn-primary {
+    padding: 0.7rem 1rem;
+    font-size: 0.98rem;
+}
+
+.fuzzy-review-list {
+    max-height: 150px;
+}
+
+/* Keyboard shortcut cheat-sheet */
+.pan-shortcuts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+}
+
+.pan-shortcuts li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.pan-shortcuts li > span {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.pan-shortcuts kbd {
+    background: rgba(128, 128, 128, 0.2);
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 0.72rem;
+    font-family: inherit;
+    font-weight: 700;
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+@media screen and (max-height: 760px) {
+    .pan-format-hint {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 1180px) {
+    .side-pan {
+        flex-basis: 290px;
+        width: 290px;
+    }
+
+    .docedit-thumbnails-sidebar {
+        width: 140px;
+        min-width: 140px;
+    }
+}
+
+/* Tablets / phones: stack editor above the side pan and let the page scroll normally */
+@media screen and (max-width: 900px) {
+    .docedit-workspace {
+        flex-direction: column;
+        height: auto;
+        min-height: 0;
+        gap: 1rem;
+    }
+
+    .editor-main-col {
+        height: 78vh;
+        min-height: 480px;
+        flex: none;
+    }
+
+    .docedit-thumbnails-sidebar,
+    .docedit-thumbnails-sidebar:not(.collapsed) {
+        width: 100%;
+        min-width: 0;
+        max-height: 150px;
+        flex-direction: column;
+        border-right: 1px solid rgba(128, 128, 128, 0.5);
+        border-radius: 8px;
+    }
+
+    .docedit-thumbnails-sidebar.collapsed {
+        max-height: 0;
+        border-width: 0;
+    }
+
+    .docedit-thumbnails-sidebar:not(.collapsed) + .editor-main-col {
+        border-radius: 8px;
+    }
+
+    .thumb-list {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .thumb-item {
+        flex: 0 0 90px;
+    }
+
+    .side-pan {
+        flex: none;
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+    }
+
+    .side-pan-scroll {
+        overflow: visible;
+    }
+
+    .pan-card-actions {
+        position: sticky;
+        bottom: 0.5rem;
+        z-index: 40;
+    }
+
+    .editor-paper {
+        padding: 1.5rem 1.25rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .docedit-thumbnails-sidebar,
+    details.pan-card > summary::after,
+    .thumb-item {
+        transition: none;
+    }
+}
+
+/* --- Compaction pass (laptop-friendly) ---------------------------------- */
+.editor-toolbar .tb-btn {
+    padding: 0.28rem 0.5rem;
+    font-size: 0.86rem;
+}
+
+.editor-toolbar .tb-btn-save {
+    padding: 0.3rem 0.8rem;
+}
+
+.editor-toolbar .tb-row {
+    gap: 0.25rem 0.4rem;
+}
+
+#tbFontSelect {
+    width: 140px;
+    max-width: 140px;
+}
+
+#tbFontSizeSelect {
+    width: 68px;
+    max-width: 68px;
+}
+
+#tbHeadingSelect {
+    width: 104px;
+    max-width: 104px;
+}
+
+.tb-fuzzy-toggle {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.45rem;
+}
+
+.pan-card-title {
+    font-size: 0.92rem;
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.pan-progress-box {
+    margin-top: 0;
+}
+
+.pan-progress-bar-bg {
+    height: 8px;
+    margin: 0.4rem 0 0.1rem 0;
+}
+
+@media screen and (min-width: 901px) and (max-width: 1500px) {
+    .side-pan {
+        flex-basis: 300px;
+        width: 300px;
+    }
+
+    .docedit-thumbnails-sidebar {
+        width: 132px;
+        min-width: 132px;
+    }
+
+    .docedit-thumbnails-sidebar.collapsed {
+        width: 0;
+        min-width: 0;
+    }
+}
+
+/* --- Find & Replace: keep match counter / nav buttons from colliding ----- */
+.docedit-find-replace-panel {
+    width: 390px;
+}
+
+.fr-input-wrap {
+    min-width: 0;
+}
+
+.fr-input {
+    box-sizing: border-box;
+    min-width: 0;
+    padding-right: 84px;
+}
+
+.fr-action-btns .fr-btn {
+    white-space: nowrap;
+}
+
+.fr-row > .fr-input {
+    flex: 1 1 auto;
+}
