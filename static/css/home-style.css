@@ -62,7 +62,6 @@ html.dark {
 
 html {
     scroll-behavior: smooth;
-    ;
 }
 
 /* Apply variables globally */
@@ -75,6 +74,8 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: 100dvh;
+    /* mobile browsers: ignore collapsing address bar */
     box-sizing: border-box;
 }
 
@@ -256,14 +257,16 @@ main {
     gap: 0.3rem;
 }
 
+/* Small: inline accordion inside the sidebar. Medium+: floating panel (768px block) */
 .dropdown-menu {
     display: none;
-    position: absolute;
-    /* top: 100%; */
-    left: -1.1rem;
-    background: var(--bg-color);
-    border-left: 1.3px solid var(--text-color);
-    padding: 0.5rem 1.5rem;
+    position: static;
+    box-shadow: none;
+    border-left: 1px solid var(--text-color);
+    padding: 0.5rem 0 0.5rem 1rem;
+    background: transparent;
+    margin-left: 1rem;
+    margin-top: 0.5rem;
     z-index: 999;
     transition: all 0.3s ease;
 }
@@ -358,6 +361,7 @@ main {
     font-family: Peignot;
     right: 0.5rem;
     bottom: 1.5rem;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     z-index: 199;
     cursor: pointer;
     text-shadow: var(--text-shadow);
@@ -388,7 +392,7 @@ a {
     font-size: 0.8rem;
 }
 
-/* Default: horizontal layout (desktop) */
+/* Header: small screens first (hamburger + off-canvas nav); inline nav from 768px */
 .ph-header {
     display: flex;
     position: fixed;
@@ -400,15 +404,35 @@ a {
     box-sizing: border-box;
     padding: 0.5rem;
     background-color: var(--bg-color);
-    z-index: 1000;
+    z-index: 198;
+    /* small screens; 1000 from 768px */
 }
 
+/* Small: off-canvas sidebar. Medium+ turns it into the inline top nav (see 768px block) */
 .home-nav {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    position: fixed;
+    top: 0;
+    left: -250px;
+    width: 250px;
+    height: 100vh;
+    height: 100dvh;
+    background-color: var(--bg-color);
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+    transition: left 1s ease;
+    z-index: 800;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding-top: 1rem;
+    padding-bottom: 2rem;
+    gap: 1rem;
+    overflow-y: auto;
     font-weight: bold;
-    ;
+}
+
+.home-nav.open {
+    left: 0;
 }
 
 .home-nav a {
@@ -426,21 +450,55 @@ a {
 }
 
 .nav-separator {
+    display: none;
     color: var(--text-color);
 }
 
-/* Sidebar toggle buttons (Hidden by default on desktop) */
-.menu-toggle,
-.close-menu,
+/* Sidebar toggle buttons (visible on small screens, hidden from 768px) */
+.menu-toggle {
+    font-size: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    display: block;
+    padding: 5px;
+}
+
+.close-menu {
+    font-size: 30px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    display: block;
+    align-self: flex-end;
+    padding: 0 20px 10px 0;
+    position: sticky;
+    top: 0;
+    z-index: 101;
+}
+
 .nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
     display: none;
+    z-index: 99;
+}
+
+.nav-overlay.open {
+    display: block;
 }
 
 .home-nav-label {
     /* display: inline-block; */
     padding: 0.4rem;
     color: var(--text-color);
-    margin: auto 0.5rem;
+    margin: 0.5rem;
     /* font-size: 1.1rem; */
 }
 
@@ -450,6 +508,7 @@ a {
     align-items: center;
     /* width: 80vw; */
     height: 80vh;
+    height: 80dvh;
     margin: auto;
 }
 
@@ -473,7 +532,7 @@ a {
 .welcome-desc {
     font-family: Gotu;
     flex: 1;
-    border-left: 1px solid var(--text-color);
+    border-left: none;
     padding: 1rem;
     font-size: calc(0.8rem + 0.3vw);
     overflow-y: auto;
@@ -503,7 +562,7 @@ a {
 .welcome-desc {
     font-family: Gotu, sans-serif;
     flex: 1;
-    border-left: 1px solid var(--text-color);
+    border-left: none;
     padding: 1rem;
     overflow-y: auto;
     max-height: 80vh;
@@ -520,19 +579,20 @@ a {
 
 .utility-container {
     display: flex;
+    flex-direction: column;
     gap: 2rem;
     width: 90%;
-    margin: auto;
+    margin: 60px auto auto auto;
 }
 
 .utility-form {
     flex: 1;
-    min-width: 280px;
+    min-width: 0;
 }
 
 .utility-data {
     flex: 2;
-    min-width: 320px;
+    min-width: 0;
 }
 
 .ph-table {
@@ -550,12 +610,13 @@ a {
 
 .utility-left {
     flex: 2;
-    min-width: 320px;
+    min-width: 0;
 }
 
 .utility-right {
     flex: 1;
-    min-width: 280px;
+    min-width: 0;
+    order: 1;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -601,16 +662,23 @@ a {
 .home-body {
     font-family: Gotu;
     font-size: 1rem;
-    width: 80vw;
-    margin: auto;
+    width: auto;
+    margin: 60px 20px 20px 20px;
+    /* clears the fixed header */
+    padding: 1rem;
+    box-sizing: border-box;
+    word-break: break-word;
     flex: 1;
 }
 
 .cv-body {
     font-family: Gotu;
     font-size: 1rem;
-    width: 60vw;
-    margin: auto;
+    width: 90vw;
+    margin: 60px auto auto auto;
+    padding: 1rem;
+    box-sizing: border-box;
+    word-break: break-word;
     flex: 1;
 }
 
@@ -634,11 +702,6 @@ a {
     align-items: center;
     font-size: 1rem;
     transition: background-color 0.8s, color 0.8s, box-shadow 0.8s;
-}
-
-.theme-toggle-circle:hover {
-    box-shadow: 0 0 45px 38px var(--text-color);
-    transition: background-color 0.8s ease-out, color 0.8s ease-out, box-shadow 0.8s ease-out;
 }
 
 .para-1 {
@@ -688,7 +751,7 @@ a {
     box-sizing: border-box;
     gap: 0.5rem;
     width: 100%;
-    height: 100vh;
+    height: 100%;
     padding: 0.5rem;
     /* margin-top: -2rem; */
 }
@@ -706,14 +769,14 @@ a {
 .cv-personal {
     display: flex;
     flex-direction: column;
-    /* width: 30%; */
+    width: 100%;
 }
 
 .cv-profile {
     display: flex;
     flex-direction: column;
     text-align: justify;
-    /* border-top: 1px solid var(--text-color); */
+    border-top: 1px solid var(--text-color);
     width: 100%;
     /* padding-left: 0.5rem; */
     margin-bottom: 0;
@@ -731,9 +794,10 @@ a {
 }
 
 .about-container {
-    width: 80vw;
+    width: auto;
+    /* 80vw from 768px */
     max-width: 1200px;
-    margin: 0 auto;
+    /* margin: 0 auto; applies from 768px (small screens use .home-body's margins) */
     padding: 1rem;
     /* Smaller padding for mobile edge-to-edge feel */
     display: flex;
@@ -839,10 +903,16 @@ a {
 
 .passgen-body {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     /* padding-top: 50px; */
-    width: 80vw;
-    margin: auto;
+    width: auto;
+    margin: 60px 20px 20px 20px;
+    /* clears the fixed header */
+    padding: 1rem;
+    box-sizing: border-box;
+    word-break: break-word;
     flex: 1;
     font-family: Gotu;
     font-size: 1rem;
@@ -851,35 +921,98 @@ a {
 .passgen-left {
     display: flex;
     flex-direction: column;
-    width: 50%;
+    width: 90%;
+    /* matches .passgen-right on small screens; 50% from 768px */
     height: 100%;
-    margin: auto 1rem auto 1rem;
-    align-items: end;
-    padding-right: 2rem;
+    margin: auto 1rem 1rem 1rem;
+    align-items: center;
+    padding-right: 0;
 }
 
 .passgen-right {
     display: flex;
     flex-direction: column;
-    width: 50%;
+    width: 90%;
     height: 100%;
     margin: auto 1rem auto 1rem;
-    border-left: 2px solid var(--hover-color);
-    padding-left: 2rem;
+    border-top: 2px solid var(--hover-color);
+    align-items: center;
+    justify-content: center;
+    padding-top: 1rem;
+    padding-left: 0;
 }
 
 .passgen-left-req {
     /* display: block; */
-    text-align: right;
+    text-align: center;
     margin-top: 1rem;
 }
 
-@media screen and (min-width: 766px) {
+/* ==========================================================================
+   RESPONSIVE TIERS (mobile-first) - shared by home-style.css, docedit.css, shades.css
+     Small  : base styles above, up to 767px
+     Medium : min-width 768px   (768px - 1199px)
+     Large  : min-width 1200px
+   The original 766px/765px pair is replaced by a single 768px boundary, so there
+   is no overlap or gap between the "mobile" and "desktop" rules.
+   ========================================================================== */
+
+/* Medium and up */
+@media screen and (min-width: 768px) {
 
     body {
         padding: 4rem 0 0 0;
     }
 
+    /* Header / navigation: off-canvas sidebar becomes the inline top nav */
+    .ph-header {
+        z-index: 1000;
+    }
+
+    .home-nav {
+        position: static;
+        top: auto;
+        left: auto;
+        width: auto;
+        height: auto;
+        background-color: transparent;
+        box-shadow: none;
+        transition: none;
+        z-index: auto;
+        flex-direction: row;
+        justify-content: normal;
+        align-items: center;
+        padding-top: 0;
+        padding-bottom: 0;
+        gap: 0.5rem;
+        overflow-y: visible;
+    }
+
+    .home-nav-label {
+        margin: auto 0.5rem;
+    }
+
+    .nav-separator {
+        display: revert;
+    }
+
+    .menu-toggle,
+    .close-menu,
+    .nav-overlay,
+    .nav-overlay.open {
+        display: none;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        left: -1.1rem;
+        background: var(--bg-color);
+        border-left: 1.3px solid var(--text-color);
+        padding: 0.5rem 1.5rem;
+        margin: 0;
+    }
+
+    /* Welcome / landing */
     .welcome-body {
         flex-direction: row;
         margin-left: 0;
@@ -891,6 +1024,10 @@ a {
 
     .welcome-cards {
         padding-top: 0;
+    }
+
+    .welcome-desc {
+        border-left: 1px solid var(--text-color);
     }
 
     .floating-top {
@@ -909,213 +1046,128 @@ a {
     .hero-headline {
         font-size: 3rem;
     }
-}
 
-/* Mobile View: Off-Canvas Sidebar layout */
-@media screen and (max-width: 765px) {
-
-    /* body {
-        margin: 0;
-        padding: 0;
-    } */
-
-    .ph-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 0.5rem;
-        background-color: var(--bg-color);
-        z-index: 198;
-        /* Under the overlay */
-    }
-
-    /* Off-Canvas Sidebar */
-    .home-nav {
-        position: fixed;
-        top: 0;
-        left: -250px;
-        width: 250px;
-        height: 100vh;
-        background-color: var(--bg-color);
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
-        transition: left 1s ease;
-        z-index: 800;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-start;
-        padding-top: 1rem;
-        padding-bottom: 2rem;
-        gap: 1rem;
-        overflow-y: auto;
-    }
-
-    .home-nav-label {
-        margin: 0.5rem;
-    }
-
-    .nav-separator {
-        display: none;
-    }
-
-    .home-nav.open {
-        left: 0;
-    }
-
-    /* Show toggle buttons */
-    .menu-toggle {
-        font-size: 24px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: var(--text-color);
-        display: block;
-        padding: 5px;
-    }
-
-    .close-menu {
-        font-size: 30px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: var(--text-color);
-        display: block;
-        align-self: flex-end;
-        padding: 0 20px 10px 0;
-        position: sticky;
-        top: 0;
-        z-index: 101;
-    }
-
-    /* Overlay */
-    .nav-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: none;
-        z-index: 99;
-    }
-
-    .nav-overlay.open {
-        display: block;
-    }
-
-    .dropdown-menu {
-        position: static;
-        box-shadow: none;
-        border-left: 1px solid var(--text-color);
-        padding: 0.5rem 0 0.5rem 1rem;
-        background: transparent;
-        margin-left: 1rem;
-        margin-top: 0.5rem;
-    }
-
-    /* .ph-welcome {
-        display: flex;
-        justify-content: end;
-        align-items: center;
-        flex-direction: column;
-        border-bottom: 1px solid var(--text-color);
-        padding: 2rem;
-        padding-top: 5rem;
-    } */
-
-
-    /* .welcome-body {
-        flex-direction: column;
-        margin-left: 0;
-    } */
-
-    .welcome-desc {
-        font-family: Gotu;
-        flex: 1;
-        border-left: none;
-        padding: 1rem;
-    }
-
+    /* Page bodies */
     .home-body {
-        margin: 60px 20px 20px 20px !important;
+        width: 80vw;
+        margin: auto;
+        padding: 0;
+        word-break: normal;
+    }
+
+    /* cv page: <div class="home-body about-container"> - .about-container wins on desktop */
+    .about-container {
+        width: 80vw;
+        margin: 0 auto;
         padding: 1rem;
-        box-sizing: border-box;
-        word-break: break-word;
-        width: auto;
+        box-sizing: content-box;
     }
 
     .cv-body {
-        margin-left: auto;
-        margin-right: auto;
-        margin-top: 60px;
-        padding: 1rem;
-        width: 90vw;
-        box-sizing: border-box;
-        word-break: break-word;
+        width: 80vw;
+        /* 60vw from 1200px: a 60vw column is too narrow on tablets */
+        margin: auto;
+        padding: 0;
+        word-break: normal;
     }
 
     .cv-personal {
-        width: 100%;
-    }
-
-    .cv-profile {
-        width: 100%;
-        border-top: 1px solid var(--text-color);
-        border-left: none;
-    }
-
-    .cv-detail {
-        height: 100%;
-    }
-
-    .theme-toggle-circle:hover {
-        box-shadow: none;
-    }
-
-    .utility-container {
-        flex-direction: column;
-        margin-top: 60px;
-    }
-
-    .utility-right {
-        order: 1;
-    }
-
-    .passgen-body {
-        flex-direction: column;
-        margin: 60px 20px 20px 20px !important;
-        padding: 1rem;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        word-break: break-word;
         width: auto;
     }
 
-    .passgen-right {
-        width: 90%;
-        border-left: none;
-        border-top: 2px solid var(--hover-color);
-        align-items: center;
-        justify-content: center;
-        padding-top: 1rem;
-        padding-left: 0;
+    .cv-profile {
+        border-top: none;
+    }
+
+    .cv-detail {
+        height: 100vh;
+        height: 100dvh;
+    }
+
+
+    .theme-toggle-circle:hover {
+        box-shadow: 0 0 45px 38px var(--text-color);
+        transition: background-color 0.8s ease-out, color 0.8s ease-out, box-shadow 0.8s ease-out;
+    }
+
+    /* Utility pages: side-by-side columns */
+    .utility-container {
+        flex-direction: row;
+        margin: auto;
+    }
+
+    .utility-form {
+        min-width: 280px;
+    }
+
+    .utility-data {
+        min-width: 320px;
+    }
+
+    .utility-left {
+        min-width: 320px;
+    }
+
+    .utility-right {
+        min-width: 280px;
+        order: 0;
+    }
+
+    /* Password generator: two columns */
+    .passgen-body {
+        flex-direction: row;
+        align-items: normal;
+        justify-content: normal;
+        width: 80vw;
+        margin: auto;
+        padding: 2.5rem;
+        /* same as .ph-card from 768px */
+        box-sizing: content-box;
+        word-break: normal;
     }
 
     .passgen-left {
-        margin-bottom: 1rem;
-        align-items: center;
-        padding-right: 0;
+        width: 50%;
+        margin: auto 1rem;
+        align-items: end;
+        padding-right: 2rem;
+    }
+
+    .passgen-right {
+        width: 50%;
+        border-top: none;
+        border-left: 2px solid var(--hover-color);
+        align-items: normal;
+        justify-content: normal;
+        padding-top: 0;
+        padding-left: 2rem;
     }
 
     .passgen-left-req {
-        /* display: block; */
-        text-align: center;
-        /* margin-top: 1rem; */
+        text-align: right;
+    }
+}
+
+/* Large */
+@media screen and (min-width: 1200px) {
+    .cv-body {
+        width: 60vw;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    html,
+    .welcome-desc {
+        scroll-behavior: auto;
+    }
+
+    .home-nav,
+    .ph-card,
+    .floating-card,
+    .bento-card,
+    .theme-toggle-circle {
+        transition: none;
     }
 }
 

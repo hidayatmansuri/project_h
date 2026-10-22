@@ -1,6 +1,11 @@
 /* ==========================================================================
    Shades App Styling - project-h
    Mobile-first, adhering to existing project color variables and design tokens.
+
+   Breakpoints (shared with home-style.css / docedit.css):
+     Small  : base styles, up to 767px
+     Medium : @media (min-width: 768px)   -> 768px - 1199px
+     Large  : @media (min-width: 1200px)  -> 1200px and up
    ========================================================================== */
 
 .shades-wrapper {
@@ -11,7 +16,7 @@
     color: var(--text-color);
 }
 
-@media screen and (min-width: 766px) {
+@media screen and (min-width: 768px) {
     .shades-wrapper {
         margin-top: 2rem;
     }
@@ -32,11 +37,12 @@
 
 .shades-title {
     font-family: Peignot, Gotu, sans-serif;
-    font-size: 2rem;
+    font-size: 1.6rem;
     margin: 0 0 0.5rem 0;
     color: var(--text-color);
     text-shadow: var(--text-shadow);
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
@@ -44,7 +50,7 @@
 
 .shades-title i {
     color: var(--hover-color);
-    font-size: 1.8rem;
+    font-size: 1.5rem;
 }
 
 .shades-subtitle {
@@ -89,7 +95,7 @@
 
 .shades-tab-btn {
     white-space: nowrap;
-    padding: 0.4rem 0.85rem;
+    padding: 0.55rem 0.85rem;
     border: 1px solid var(--text-color);
     border-radius: 4px;
     background: transparent;
@@ -129,7 +135,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex: 1 1 240px;
+    flex: 1 1 100%;
     position: relative;
 }
 
@@ -149,7 +155,7 @@
     background: var(--bg-color);
     color: var(--text-color);
     font-family: Gotu, monospace;
-    font-size: 0.9rem;
+    font-size: 1rem; /* 16px: stops iOS auto-zoom on focus */
     box-sizing: border-box;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
@@ -165,6 +171,8 @@
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+    width: 100%;
+    justify-content: space-between;
 }
 
 .shades-select {
@@ -174,7 +182,7 @@
     background: var(--bg-color);
     color: var(--text-color);
     font-family: Gotu, sans-serif;
-    font-size: 0.85rem;
+    font-size: 1rem;
     cursor: pointer;
 }
 
@@ -198,25 +206,11 @@
 
 .shades-grid {
     display: grid;
-    /* Mobile-first: 2 columns on small screens, expands naturally */
+    /* Small: auto-fill keeps 2 columns on phones, adds a 3rd once there is room */
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 1.5rem 1.25rem;
+    gap: 1.3rem 1rem;
     margin-top: 1.5rem;
     margin-bottom: 2.5rem;
-}
-
-@media screen and (max-width: 520px) {
-    .shades-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.3rem 1rem;
-    }
-}
-
-@media screen and (min-width: 900px) {
-    .shades-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1.8rem 1.5rem;
-    }
 }
 
 /* The card wrapper */
@@ -257,10 +251,12 @@
     margin-left: 0;
 }
 
-.shade-color-square:hover {
-    transform: translateY(-3px);
-    border-color: var(--hover-color);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+@media (hover: hover) {
+    .shade-color-square:hover {
+        transform: translateY(-3px);
+        border-color: var(--hover-color);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
 }
 
 /* Subtle ripple on click */
@@ -315,9 +311,11 @@
     box-sizing: border-box;
 }
 
-.shade-value-row:hover {
-    background-color: rgba(128, 128, 128, 0.15);
-    border-color: rgba(128, 128, 128, 0.25);
+@media (hover: hover) {
+    .shade-value-row:hover {
+        background-color: rgba(128, 128, 128, 0.15);
+        border-color: rgba(128, 128, 128, 0.25);
+    }
 }
 
 .shade-value-row:active {
@@ -326,7 +324,7 @@
 
 .shade-val-text {
     font-family: Gotu, monospace;
-    font-size: calc(0.5rem + 0.25rem);
+    font-size: 0.68rem;
     font-weight: 600;
     color: var(--text-color);
     letter-spacing: 0.2px;
@@ -336,9 +334,10 @@
     user-select: all;
 }
 
-@media screen and (max-width: 360px) {
+/* Micro-breakpoint kept from the original (360px), expressed mobile-first */
+@media screen and (min-width: 361px) {
     .shade-val-text {
-        font-size: 0.68rem;
+        font-size: calc(0.5rem + 0.25rem);
     }
 }
 
@@ -358,11 +357,13 @@
     flex-shrink: 0;
 }
 
-.shade-value-row:hover .shade-copy-btn,
-.shade-copy-btn:hover {
-    opacity: 1;
-    color: var(--hover-color);
-    transform: scale(1.15);
+@media (hover: hover) {
+    .shade-value-row:hover .shade-copy-btn,
+    .shade-copy-btn:hover {
+        opacity: 1;
+        color: var(--hover-color);
+        transform: scale(1.15);
+    }
 }
 
 /* Copied feedback state */
@@ -412,6 +413,9 @@
 .shade-toast {
     position: fixed;
     bottom: 2rem;
+    bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 2rem);
+    box-sizing: border-box;
     left: 50%;
     transform: translateX(-50%) translateY(30px);
     background: var(--text-color);
@@ -439,4 +443,64 @@
 .shade-toast i {
     color: #2ecc71;
     font-size: 1rem;
+}
+/* ==========================================================================
+   RESPONSIVE TIERS (mobile-first)
+   ========================================================================== */
+
+/* Medium: 768px - 1199px */
+@media screen and (min-width: 768px) {
+    .shades-title {
+        font-size: 2rem;
+    }
+
+    .shades-title i {
+        font-size: 1.8rem;
+    }
+
+    .shades-search-box {
+        flex: 1 1 240px;
+    }
+
+    .shades-toolbar-actions {
+        width: auto;
+        justify-content: flex-start;
+    }
+
+    .shades-grid {
+        gap: 1.5rem 1.25rem;
+    }
+}
+
+/* Large: 1200px and up (compact, mouse-oriented sizing) */
+@media screen and (min-width: 1200px) {
+    .shades-tab-btn {
+        padding: 0.4rem 0.85rem;
+    }
+
+    .shades-search-input {
+        font-size: 0.9rem;
+    }
+
+    .shades-select {
+        font-size: 0.85rem;
+    }
+
+    .shades-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.8rem 1.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shade-card {
+        animation: none;
+    }
+
+    .shade-color-square,
+    .shade-info-square,
+    .shade-toast,
+    .shades-tab-btn {
+        transition: none;
+    }
 }
