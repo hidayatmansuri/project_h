@@ -10,6 +10,7 @@ and typography to the user's choice of output format:
 - HTML: exported with clean embedded responsive CSS for tables, lines, and typography.
 - Plain text: formatted with ASCII tables, divider lines, and text structure.
 """
+import base64
 import html
 import io
 import logging
@@ -690,6 +691,137 @@ def _write_pdf_layout_preserved(
             except Exception as e:
                 logger.debug("Failed drawing underline: %s", e)
 
+    def _hex_to_rgb(hex_s: Optional[str], default=(0.0, 0.0, 0.0)) -> Tuple[float, float, float]:
+        if not hex_s:
+            return default
+        s = str(hex_s).lstrip("#").strip()
+        if len(s) == 3:
+            s = "".join(c * 2 for c in s)
+        if len(s) == 6:
+            try:
+                return (int(s[0:2], 16) / 255.0, int(s[2:4], 16) / 255.0, int(s[4:6], 16) / 255.0)
+            except Exception:
+                pass
+        return default
+
+    def _apply_acrobat_decorations(page, p_info: Dict[str, Any]):
+        """Embeds Acrobat-style annotations, highlights, drawings, shapes, and signatures."""
+        # 1. Page rotation
+        rot = int(p_info.get("rotation", 0))
+        if rot % 360 != 0:
+            try:
+                page.set_rotation((page.rotation + rot) % 360)
+            except Exception as e:
+                logger.debug("Failed setting page rotation: %s", e)
+
+        # 2. Sticky Notes / Comments
+        for annot in p_info.get("annotations", []):
+            try:
+                pt = pymupdf.Point(float(annot.get("x", 50)), float(annot.get("y", 50)))
+                text = str(annot.get("text", "")).strip()
+                if text:
+                    author = str(annot.get("author", "User"))
+                    ta = page.add_text_annot(pt, text, icon="Comment")
+                    ta.set_info(title=author)
+                    ta.update()
+            except Exception as e:
+                logger.debug("Failed adding text annot: %s", e)
+
+        # 3. Text markups (Highlights, Underlines, Strikeouts)
+        for hl in p_info.get("highlights", []):
+            try:
+                bbox = hl.get("bbox")
+                if not bbox or len(bbox) != 4:
+                    continue
+                r = pymupdf.Rect(bbox)
+                m_type = hl.get("type", "highlight")
+                rgb = _hex_to_rgb(hl.get("color", "#ffeb3b"), default=(1.0, 0.92, 0.23))
+                if m_type == "highlight":
+                    ha = page.add_highlight_annot(r)
+                    ha.set_colors(stroke=rgb)
+                    ha.update()
+                elif m_type == "underline":
+                    ua = page.add_underline_annot(r)
+                    ua.set_colors(stroke=rgb)
+                    ua.update()
+                elif m_type == "strikeout":
+                    sa = page.add_strikeout_annot(r)
+                    sa.set_colors(stroke=rgb)
+                    sa.update()
+            except Exception as e:
+                logger.debug("Failed adding markup annot: %s", e)
+
+        # 4. Drawings (Freehand Ink)
+        for dwg in p_info.get("drawings", []):
+            try:
+                pts = dwg.get("points", [])
+                if len(pts) >= 2:
+                    stroke_rgb = _hex_to_rgb(dwg.get("color", "#000000"))
+                    width = float(dwg.get("width", 2.0))
+                    opacity = float(dwg.get("opacity", 1.0))
+                    point_list = [pymupdf.Point(p[0], p[1]) for p in pts]
+                    ink = page.add_ink_annot([point_list])
+                    ink.set_colors(stroke=stroke_rgb)
+                    ink.set_border(width=width)
+                    ink.set_opacity(opacity)
+                    ink.update()
+            except Exception as e:
+                logger.debug("Failed adding ink annot: %s", e)
+
+        # 5. Shapes (Rectangle, Circle, Line, Arrow)
+        for shape in p_info.get("shapes", []):
+            try:
+                stype = shape.get("type", "rect")
+                bbox = shape.get("bbox")
+                if not bbox or len(bbox) != 4:
+                    continue
+                stroke_rgb = _hex_to_rgb(shape.get("stroke_color", "#ff0000"), default=(1.0, 0.0, 0.0))
+                fill_color = shape.get("fill_color")
+                fill_rgb = _hex_to_rgb(fill_color) if fill_color else None
+                width = float(shape.get("width", 2.0))
+                if stype == "rect":
+                    sa = page.add_rect_annot(pymupdf.Rect(bbox))
+                    sa.set_colors(stroke=stroke_rgb, fill=fill_rgb)
+                    sa.set_border(width=width)
+                    sa.update()
+                elif stype == "circle":
+                    sa = page.add_circle_annot(pymupdf.Rect(bbox))
+                    sa.set_colors(stroke=stroke_rgb, fill=fill_rgb)
+                    sa.set_border(width=width)
+                    sa.update()
+                elif stype in ("line", "arrow"):
+                    p1 = pymupdf.Point(bbox[0], bbox[1])
+                    p2 = pymupdf.Point(bbox[2], bbox[3])
+                    la = page.add_line_annot(p1, p2)
+                    la.set_colors(stroke=stroke_rgb)
+                    la.set_border(width=width)
+                    if stype == "arrow":
+                        la.set_line_ends(pymupdf.PDF_ANNOT_LE_NONE, pymupdf.PDF_ANNOT_LE_OPEN_ARROW)
+                    la.update()
+            except Exception as e:
+                logger.debug("Failed adding shape annot: %s", e)
+
+        # 6. Signatures and form stamps
+        for sig in p_info.get("signatures", []):
+            try:
+                bbox = sig.get("bbox")
+                if not bbox or len(bbox) != 4:
+                    continue
+                sig_rect = pymupdf.Rect(bbox)
+                img_data = sig.get("image_data")
+                sig_type = sig.get("type", "signature")
+                text = sig.get("text", "")
+                color_rgb = _hex_to_rgb(sig.get("color", "#000000"))
+                if img_data and img_data.startswith("data:image/"):
+                    raw_bytes = base64.b64decode(img_data.split(",", 1)[1])
+                    page.insert_image(sig_rect, stream=raw_bytes, keep_proportion=True)
+                elif sig_type in ("checkmark", "crossmark", "date"):
+                    stamp_txt = "✔" if sig_type == "checkmark" else ("✖" if sig_type == "crossmark" else text)
+                    f_size = float(sig.get("font_size", 16.0))
+                    page.insert_text(pymupdf.Point(sig_rect.x0, sig_rect.y1 - 2), stamp_txt, fontsize=f_size, color=color_rgb, fontname="helv")
+            except Exception as e:
+                logger.debug("Failed adding signature/stamp: %s", e)
+
     # Try modifying original PDF directly if available
     if original_file_path and original_file_path.is_file() and original_file_path.suffix.lower() == ".pdf":
         try:
@@ -703,29 +835,36 @@ def _write_pdf_layout_preserved(
                 p_h = page.rect.height
                 page_blocks = p_info.get("blocks", [])
 
-                # Only process truly modified blocks
+                # Process modified or newly added text blocks
                 modified_blocks = [b for b in page_blocks if is_block_truly_modified(b)]
-                if not modified_blocks:
-                    continue  # Untouched page: pixel-identical, 0 changes
+                if modified_blocks:
+                    # 1. Queue redactions for modified blocks (non-new)
+                    for b in modified_blocks:
+                        r = compute_redact_rect_for_block(b, p_w, p_h, page_blocks)
+                        if r:
+                            page.add_redact_annot(r, fill=False)
 
-                # 1. Queue redactions with fill=False for all modified blocks on this page
-                for b in modified_blocks:
-                    r = compute_redact_rect_for_block(b, p_w, p_h, page_blocks)
-                    if r:
-                        page.add_redact_annot(r, fill=False)
+                    # 2. Apply redactions preserving graphics and line art
+                    page.apply_redactions(
+                        images=pymupdf.PDF_REDACT_IMAGE_NONE,
+                        graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
+                    )
 
-                # 2. Apply redactions ONCE per page preserving line art, vector tables, and images
-                page.apply_redactions(
-                    images=pymupdf.PDF_REDACT_IMAGE_NONE,
-                    graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
-                )
+                    # 3. Insert replacement or newly added text
+                    for b in modified_blocks:
+                        if not b.get("is_deleted", False):
+                            insert_modified_block_into_page(page, b, p_w, p_h, all_blocks=page_blocks)
 
-                # 3. Insert replacement text for each modified block
-                for b in modified_blocks:
-                    if not b.get("is_deleted", False):
-                        insert_modified_block_into_page(page, b, p_w, p_h, all_blocks=page_blocks)
+                # 4. Apply Acrobat decorations (rotations, sticky notes, highlights, drawings, shapes, signatures)
+                _apply_acrobat_decorations(page, p_info)
 
-            doc.save(str(output_path), deflate=True)
+            # Handle page deletions in reverse order
+            deleted_pnos = [p_info["page_num"] - 1 for p_info in pages_data if p_info.get("is_deleted")]
+            for pno in sorted(deleted_pnos, reverse=True):
+                if 0 <= pno < len(doc):
+                    doc.delete_page(pno)
+
+            doc.save(str(output_path), deflate=True, garbage=4)
             doc.close()
             return output_path
         except Exception as e:
@@ -734,6 +873,8 @@ def _write_pdf_layout_preserved(
     # Fallback: compile page background images with edited text overlay
     doc = pymupdf.open()
     for p_info in pages_data:
+        if p_info.get("is_deleted"):
+            continue
         p_num = p_info.get("page_num", 1)
         w = p_info.get("width", 595.0)
         h = p_info.get("height", 842.0)
@@ -762,7 +903,9 @@ def _write_pdf_layout_preserved(
                 if not b.get("is_deleted", False):
                     insert_modified_block_into_page(page, b, w, h, all_blocks=fallback_blocks)
 
-    doc.save(str(output_path), deflate=True)
+        _apply_acrobat_decorations(page, p_info)
+
+    doc.save(str(output_path), deflate=True, garbage=4)
     doc.close()
     return output_path
 

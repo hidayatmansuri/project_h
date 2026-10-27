@@ -100,12 +100,11 @@ def docedit_home(request: HttpRequest) -> HttpResponse:
     fonts_data = get_categorized_font_list()
 
     context = {
-        "title": "Document Editor | project-h",
-        "languages": languages,
+        "title": "Free Online PDF Editor - Easily Edit PDFs | project-h",
         "fonts": fonts_data,
         "max_upload_mb": conf.MAX_UPLOAD_MB,
-        "allowed_extensions": allowed_exts_str,
-        "accept_mime": "image/*,.pdf,.docx,.txt,.md,.html,.htm",
+        "allowed_extensions": ".pdf",
+        "accept_mime": ".pdf,application/pdf",
     }
     return render(request, "docedit/docedit.html", context)
 
@@ -113,7 +112,7 @@ def docedit_home(request: HttpRequest) -> HttpResponse:
 @require_POST
 def upload_document(request: HttpRequest) -> JsonResponse:
     """
-    Handles document upload. Creates session and initiates extraction/OCR.
+    Handles PDF document upload. Creates session and initiates extraction.
     """
     # Enforce upload throttling per Django session
     if not check_upload_throttle(request, max_requests=conf.UPLOAD_THROTTLE_LIMIT, window_seconds=conf.UPLOAD_THROTTLE_WINDOW):
@@ -135,23 +134,16 @@ def upload_document(request: HttpRequest) -> JsonResponse:
         }, status=400)
 
     ext = Path(upload.name).suffix.lstrip(".").lower()
-    if ext not in EXTENSION_KINDS:
+    if ext != "pdf":
         return JsonResponse({
             "success": False,
-            "error": f"Unsupported file type (.{ext}). Supported types: {', '.join(sorted(EXTENSION_KINDS.keys()))}."
+            "error": f"Unsupported file type (.{ext}). Only PDF files (.pdf) are supported."
         }, status=400)
 
-    ocr_lang_raw = request.POST.get("ocr_lang", "eng").strip()
-    try:
-        ocr_lang = validate_ocr_lang(ocr_lang_raw, enabled_only=True)
-    except ValueError as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=400)
-
-    ocr_profile = request.POST.get("ocr_preprocess_profile")
-    ocr_deskew_raw = request.POST.get("ocr_deskew")
-    ocr_dewarp_raw = request.POST.get("ocr_dewarp")
-    ocr_deskew = None if ocr_deskew_raw is None else (ocr_deskew_raw.lower() in ("true", "1", "yes"))
-    ocr_dewarp = None if ocr_dewarp_raw is None else (ocr_dewarp_raw.lower() in ("true", "1", "yes"))
+    ocr_lang = "eng"
+    ocr_profile = None
+    ocr_deskew = False
+    ocr_dewarp = False
 
     file_bytes = upload.read()
 
@@ -174,7 +166,7 @@ def upload_document(request: HttpRequest) -> JsonResponse:
     return JsonResponse({
         "success": True,
         "session_id": sid,
-        "message": "File uploaded successfully. Processing started.",
+        "message": "PDF uploaded successfully. Processing started.",
     })
 
 
@@ -389,16 +381,8 @@ def save_document(request: HttpRequest, sid: str) -> JsonResponse:
         except (ValueError, TypeError):
             pass
 
-    # User choice of download format
-    export_format = body.get("export_format")
-    orig_ext = meta.get("extension", "txt").lower()
-    if not export_format or export_format == "original":
-        chosen_ext = orig_ext
-    else:
-        chosen_ext = export_format.lstrip(".").lower()
-
-    if chosen_ext not in EXTENSION_KINDS:
-        chosen_ext = orig_ext
+    # User choice of download format - PDF only
+    chosen_ext = "pdf"
 
     is_autosave = bool(body.get("is_autosave", False))
 

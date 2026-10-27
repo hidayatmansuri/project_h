@@ -1,0 +1,406 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block title %}ListImage - Pure White Background & Object Isolator | project-h{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/listimage.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="li-container">
+    <!-- Header -->
+    <header class="li-header">
+        <h1 class="li-title">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> ListImage
+        </h1>
+        <p class="li-subtitle">
+            Remove backgrounds instantly and isolate all main subjects like PhotoRoom. Centered on an exact 2000&times;2000 px pure white canvas with 10 px padding or exported as a clean transparent cutout.
+        </p>
+    </header>
+
+    <!-- Error Alert Banner -->
+    <div id="liErrorAlert" class="li-alert li-alert-danger" style="display: none;" role="alert">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="liErrorMessage">An error occurred.</span>
+    </div>
+
+    <!-- Active Job Tracking (Hidden) -->
+    <input type="hidden" id="liActiveJobId" value="{{ active_job_id }}">
+    <input type="hidden" id="liActiveJobStatus" value="{{ active_job_status }}">
+    <input type="hidden" id="liActiveBatchId" value="{{ active_batch_id }}">
+    <input type="hidden" id="liActiveBatchStatus" value="{{ active_batch_status }}">
+    <input type="hidden" id="liMaxBatchSize" value="{{ max_batch_size }}">
+
+    <!-- Mode Switcher Tabs -->
+    <div class="li-mode-tabs" role="tablist">
+        <button type="button" class="li-tab-btn active" id="liModeSingle" role="tab" aria-selected="true">
+            <i class="fa-solid fa-image"></i> Single Image
+        </button>
+        <button type="button" class="li-tab-btn" id="liModeBatch" role="tab" aria-selected="false">
+            <i class="fa-solid fa-images"></i> Batch Mode <span class="li-batch-badge">Up to {{ max_batch_size }}</span>
+        </button>
+    </div>
+
+    <!-- 1. Upload & Options Section -->
+    <form id="liUploadForm" enctype="multipart/form-data" onsubmit="return false;">
+        {% csrf_token %}
+        <input type="file" id="liFileInput" name="image" accept="image/jpeg,image/png,image/webp,image/heic,.jpg,.jpeg,.png,.webp,.heic" style="display: none;">
+
+        <div id="liUploadCard" class="li-upload-card" tabindex="0" role="button" aria-label="Upload product image">
+            <i class="fa-solid fa-cloud-arrow-up li-upload-icon"></i>
+            <h2 id="liUploadTitle" class="li-upload-title">Drop your image here or browse</h2>
+            <p id="liUploadDesc" class="li-upload-desc">
+                Supports JPG, PNG, WEBP, and HEIC up to {{ max_upload_mb }} MB (max 60 Megapixels).
+                Automatically converts color space to sRGB and corrects rotation.
+            </p>
+            <button type="button" id="liUploadBtn" class="li-upload-btn" onclick="document.getElementById('liFileInput').click();">
+                <i class="fa-solid fa-folder-open"></i> Select Image
+            </button>
+        </div>
+
+        <!-- Pre-Processing Options -->
+        <div id="liOptionsPanel" class="li-options-panel">
+            <h3 class="li-options-title">
+                <i class="fa-solid fa-sliders"></i> Processing Options
+            </h3>
+            <div class="li-options-grid">
+                <!-- AI Model -->
+                <div class="li-control-group">
+                    <label class="li-control-label" for="liModelSelect">AI Removal Model</label>
+                    <select id="liModelSelect" name="model" class="li-select">
+                        {% for key, label in available_models.items %}
+                        <option value="{{ key }}" {% if key == 'isnet-general-use' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Object Detection Toggle -->
+                <div class="li-control-group" style="justify-content: center;">
+                    <label class="li-checkbox-label">
+                        <input type="checkbox" name="keep_largest">
+                        <span><strong>Keep single largest object only</strong> (uncheck to keep all main objects)</span>
+                    </label>
+                </div>
+
+                <!-- Transparent / Reflective Items -->
+                <div class="li-control-group" style="justify-content: center;">
+                    <label class="li-checkbox-label">
+                        <input type="checkbox" name="transparent_mode">
+                        <span><strong>Transparent / reflective item mode</strong> (glass, chrome, jewelry)</span>
+                    </label>
+                </div>
+
+                <!-- Alpha Matting -->
+                <div class="li-control-group" style="justify-content: center;">
+                    <label class="li-checkbox-label">
+                        <input type="checkbox" name="alpha_matting">
+                        <span>Alpha matting (fine hair, fur, fibers)</span>
+                    </label>
+                </div>
+
+                <!-- Edge Smoothing -->
+                <div class="li-control-group" style="justify-content: center;">
+                    <label class="li-checkbox-label">
+                        <input type="checkbox" name="edge_smoothing">
+                        <span>Edge smoothing & feathering</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- 2. Processing / Progress Section -->
+    <div id="liProgressCard" class="li-progress-card" style="display: none;">
+        <i class="fa-solid fa-gear li-spinner"></i>
+        <h2 id="liProgressTitle" class="li-progress-title">Processing Your Image</h2>
+        <div id="liQueueBadge" class="li-queue-badge">Queued</div>
+        <p id="liProgressText" style="color: var(--li-muted); font-size: 0.95rem;">Preparing AI model...</p>
+        <button id="liCancelBtn" type="button" class="li-cancel-btn">
+            <i class="fa-solid fa-xmark"></i> Cancel Job
+        </button>
+    </div>
+
+    <!-- 2b. Batch Workspace Section -->
+    <div id="liBatchWorkspace" class="li-batch-workspace" style="display: none;">
+        <!-- Batch Header & Summary Controls -->
+        <div class="li-batch-header">
+            <div class="li-batch-header-main">
+                <h2 class="li-batch-title">
+                    <i class="fa-solid fa-images"></i> Batch Background Removal
+                </h2>
+                <div class="li-batch-counts" id="liBatchCounts">
+                    Initializing batch...
+                </div>
+            </div>
+
+            <div class="li-batch-header-actions">
+                <!-- Global Preview BG Switcher -->
+                <div class="li-tool-group">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--li-muted);">Preview BG:</span>
+                    <button type="button" class="li-tool-btn active" data-batch-bg="checker" title="Checkerboard (Transparent)">
+                        <i class="fa-solid fa-border-all"></i> Checker
+                    </button>
+                    <button type="button" class="li-tool-btn" data-batch-bg="white" title="Pure White Canvas">
+                        <i class="fa-solid fa-square" style="color: #ffffff; text-shadow: 0 0 1px #888;"></i> White
+                    </button>
+                    <button type="button" class="li-tool-btn" data-batch-bg="dark" title="Dark Gray">
+                        <i class="fa-solid fa-square" style="color: #4a5568;"></i> Dark
+                    </button>
+                </div>
+
+                <!-- Batch Actions -->
+                <div class="li-batch-btn-group">
+                    <button type="button" id="liBatchCancelBtn" class="li-tool-btn li-tool-danger" title="Cancel ongoing batch">
+                        <i class="fa-solid fa-xmark"></i> Cancel Batch
+                    </button>
+                    <button type="button" id="liBatchDiscardBtn" class="li-tool-btn li-tool-danger" style="display: none;" title="Discard batch and return to upload">
+                        <i class="fa-solid fa-trash-can"></i> Discard Batch
+                    </button>
+                    <button type="button" id="liBatchDownloadAllBtn" class="li-upload-btn" disabled style="padding: 0.45rem 1rem; font-size: 0.88rem;">
+                        <i class="fa-solid fa-file-zipper"></i> Download All (ZIP)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Progress Bar -->
+        <div class="li-batch-progress-wrapper" id="liBatchProgressWrapper">
+            <div class="li-batch-progress-meta">
+                <span id="liBatchProgressStatusText"><i class="fa-solid fa-gear fa-spin"></i> Processing images...</span>
+                <span id="liBatchProgressPercent" class="li-batch-percent">0%</span>
+            </div>
+            <div class="li-batch-progress-bar-bg">
+                <div id="liBatchProgressBar" class="li-batch-progress-bar" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Batch Cards Grid -->
+        <div id="liBatchGrid" class="li-batch-grid">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Batch Bottom Action Bar -->
+        <div class="li-batch-footer">
+            <button type="button" id="liBatchRestartBtn" class="li-tool-btn" style="color: var(--li-danger);">
+                <i class="fa-solid fa-rotate-left"></i> Start New Batch
+            </button>
+            <span class="li-batch-info-text">
+                All images centered on exact 2000&times;2000 px pure white canvas with 10 px padding
+            </span>
+            <button type="button" id="liBatchDownloadAllFooterBtn" class="li-upload-btn" disabled style="padding: 0.65rem 1.5rem;">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Download All as ZIP
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. Workspace / Single Image Editor Section -->
+    <div id="liWorkspace" class="li-workspace" style="display: none;">
+        <!-- Return to Batch Bar (Only visible when editing an item from a batch) -->
+        <div id="liBatchReturnBar" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.6rem 1rem; background: var(--li-card-bg); border-radius: var(--li-radius-md); border: 1px solid var(--li-card-border);">
+            <div style="font-size: 0.9rem; font-weight: 600; color: var(--li-accent);">
+                <i class="fa-solid fa-layer-group"></i> Editing Batch Item: <span id="liBatchCurrentFilename" style="color: var(--li-text); font-weight: 400;"></span>
+            </div>
+            <button type="button" id="liBackToBatchBtn" class="li-tool-btn" style="background: var(--li-surface); border-color: var(--li-accent); font-weight: 600;">
+                <i class="fa-solid fa-arrow-left"></i> Back to Batch Gallery
+            </button>
+        </div>
+        <!-- White-on-White Edge Warning -->
+        <div id="liWhiteEdgeAlert" class="li-alert li-alert-warning" style="display: none;" role="alert">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+                <strong>Notice:</strong> Object edges appear very light or close to white.
+                Switch to the <em>Checker</em> or <em>Dark</em> preview background below to inspect edge boundaries.
+            </div>
+        </div>
+
+        <!-- Multiple Objects Section (Visible when > 1 object detected) -->
+        <div id="liObjectsSection" style="display: none; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                <div style="font-size: 0.85rem; font-weight: 600;">
+                    <i class="fa-solid fa-layer-group"></i> Detected Objects (Click to Include / Exclude):
+                </div>
+                <div style="display: flex; gap: 0.4rem;">
+                    <button type="button" id="liSelectAllObjectsBtn" class="li-tool-btn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                        <i class="fa-solid fa-check-double"></i> Keep All Objects
+                    </button>
+                </div>
+            </div>
+            <div id="liObjectsContainer" class="li-objects-container"></div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="li-toolbar">
+            <!-- Background Switcher (Preview Only) -->
+            <div class="li-tool-group">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--li-muted);">Preview BG:</span>
+                <button type="button" class="li-tool-btn active" data-bg="checker" title="Checkerboard (Best for edge checking)">
+                    <i class="fa-solid fa-border-all"></i> Checker
+                </button>
+                <button type="button" class="li-tool-btn" data-bg="white" title="Pure White">
+                    <i class="fa-solid fa-square" style="color: #ffffff; text-shadow: 0 0 1px #888;"></i> White
+                </button>
+                <button type="button" class="li-tool-btn" data-bg="dark" title="Dark Gray">
+                    <i class="fa-solid fa-square" style="color: #4a5568;"></i> Dark
+                </button>
+            </div>
+
+            <!-- Overlays -->
+            <div class="li-tool-group">
+                <button type="button" id="liToggleGuide" class="li-tool-btn" title="Toggle 10 px padding guide overlay">
+                    <i class="fa-solid fa-vector-square"></i> 10 px Guide
+                </button>
+                <button type="button" id="liToggleEdge" class="li-tool-btn" title="Toggle edge outline overlay">
+                    <i class="fa-regular fa-sun"></i> Edge Outline
+                </button>
+            </div>
+
+            <!-- Transparent / Reflective Touch-up -->
+            <div class="li-tool-group">
+                <button type="button" id="liTouchupBtn" class="li-tool-btn" title="Heuristic hole-fill and edge reconstruction">
+                    <i class="fa-solid fa-wand-magic"></i> Auto Touch-Up
+                </button>
+                <button type="button" id="liTouchupUndoBtn" class="li-tool-btn" style="display: none;" title="Undo touch-up">
+                    <i class="fa-solid fa-rotate-left"></i> Undo Touch-Up
+                </button>
+            </div>
+
+            <!-- Brush Tools -->
+            <div class="li-tool-group">
+                <button type="button" id="liEraseTool" class="li-tool-btn" title="Erase brush">
+                    <i class="fa-solid fa-eraser"></i> Erase
+                </button>
+                <button type="button" id="liRestoreTool" class="li-tool-btn" title="Restore brush">
+                    <i class="fa-solid fa-paintbrush"></i> Restore
+                </button>
+                <input type="range" id="liBrushSize" min="5" max="80" value="25" title="Brush size" style="width: 70px; accent-color: var(--li-accent);">
+            </div>
+
+            <!-- Nudge & Zoom -->
+            <div class="li-tool-group">
+                <button type="button" class="li-tool-btn" data-nudge="up" title="Nudge Up"><i class="fa-solid fa-arrow-up"></i></button>
+                <button type="button" class="li-tool-btn" data-nudge="down" title="Nudge Down"><i class="fa-solid fa-arrow-down"></i></button>
+                <button type="button" class="li-tool-btn" data-nudge="left" title="Nudge Left"><i class="fa-solid fa-arrow-left"></i></button>
+                <button type="button" class="li-tool-btn" data-nudge="right" title="Nudge Right"><i class="fa-solid fa-arrow-right"></i></button>
+                <span style="font-size: 0.8rem; margin-left: 0.25rem;">Zoom:</span>
+                <input type="range" id="liZoomSlider" min="0.5" max="1.0" step="0.05" value="1.0" style="width: 70px; accent-color: var(--li-accent);">
+            </div>
+
+            <!-- Model Switcher -->
+            <div class="li-tool-group">
+                <select id="liReprocessSelect" class="li-select" style="font-size: 0.82rem; padding: 0.35rem 0.5rem;" title="Switch and re-process with model">
+                    <option value="" disabled selected>Re-run with model...</option>
+                    {% for key, label in available_models.items %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Note on heuristic auto touch-up -->
+        <p style="font-size: 0.78rem; color: var(--li-muted); margin: 0 0.5rem;">
+            <i class="fa-solid fa-info-circle"></i> Note: Auto touch-up is a heuristic to help seal glass and reflective items. Use the manual erase/restore brush for precise touch-ups.
+        </p>
+
+        <!-- Main Viewport (2000x2000 square viewport with 1:1 aspect ratio) -->
+        <div class="li-preview-container">
+            <div id="liViewport" class="li-viewport bg-checker">
+                <img id="liPreviewImg" class="li-canvas-img" alt="Cleaned and centered preview">
+                <canvas id="drawingCanvas"></canvas>
+                <!-- 10 px Padding Guide Overlay -->
+                <div id="liGuideOverlay" class="li-guide-overlay">
+                    <span class="li-guide-tag">10 px Padding Bound</span>
+                </div>
+                <!-- Edge Outline Overlay -->
+                <div id="liEdgeOverlay" class="li-edge-overlay"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="li-toolbar" style="justify-content: space-between;">
+            <button type="button" id="liRestartBtn" class="li-tool-btn" style="color: var(--li-danger);">
+                <i class="fa-solid fa-trash-can"></i> Discard & Start Over
+            </button>
+            <div style="font-size: 0.85rem; color: var(--li-muted);">
+                Exact 2000&times;2000 px &bull; 10 px padding &bull; Pure white canvas
+            </div>
+            <button type="button" id="liDownloadBtn" class="li-upload-btn" style="padding: 0.65rem 1.5rem;">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Download Result
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. Download Modal -->
+    <div id="liDownloadModal" class="li-modal-overlay">
+        <div class="li-modal">
+            <h3 class="li-modal-title">
+                <i class="fa-solid fa-download"></i> Download 2000&times;2000 Image
+            </h3>
+            <p class="li-modal-desc">
+                Select your preferred export format. Files are automatically removed from our servers immediately after download.
+            </p>
+
+            <div class="li-format-grid">
+                <div class="li-format-card selected" data-format="PNG_WHITE">
+                    <span class="li-format-name"><i class="fa-solid fa-square" style="color: #ffffff; text-shadow: 0 0 1px #888;"></i> White PNG</span>
+                    <span class="li-format-detail">2000&times;2000 &bull; Marketplace Ready</span>
+                </div>
+                <div class="li-format-card" data-format="PNG_TRANSPARENT">
+                    <span class="li-format-name"><i class="fa-solid fa-border-all"></i> Transparent</span>
+                    <span class="li-format-detail">PNG Cutout &bull; No Background</span>
+                </div>
+                <div class="li-format-card" data-format="JPEG">
+                    <span class="li-format-name"><i class="fa-solid fa-file-image"></i> White JPEG</span>
+                    <span class="li-format-detail">Quality 95 &bull; 4:4:4 sRGB</span>
+                </div>
+            </div>
+
+            <div class="li-modal-actions">
+                <button type="button" id="liModalCloseBtn" class="li-tool-btn">Cancel</button>
+                <button type="button" id="liConfirmDownloadBtn" class="li-upload-btn">
+                    <i class="fa-solid fa-download"></i> Save & Cleanup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Batch Download Modal (ZIP) -->
+    <div id="liBatchDownloadModal" class="li-modal-overlay">
+        <div class="li-modal">
+            <h3 class="li-modal-title">
+                <i class="fa-solid fa-file-zipper"></i> Download Batch Archive (ZIP)
+            </h3>
+            <p class="li-modal-desc">
+                All processed images will be compressed into a single ZIP file with preserved filenames.
+            </p>
+
+            <div class="li-format-grid">
+                <div class="li-format-card selected" data-batch-format="PNG_WHITE">
+                    <span class="li-format-name"><i class="fa-solid fa-square" style="color: #ffffff; text-shadow: 0 0 1px #888;"></i> White PNG ZIP</span>
+                    <span class="li-format-detail">2000&times;2000 &bull; Pure White Background &bull; Marketplace Ready</span>
+                </div>
+                <div class="li-format-card" data-batch-format="PNG_TRANSPARENT">
+                    <span class="li-format-name"><i class="fa-solid fa-border-all"></i> Transparent Cutout ZIP</span>
+                    <span class="li-format-detail">Lossless Cutout &bull; No Background</span>
+                </div>
+                <div class="li-format-card" data-batch-format="JPEG">
+                    <span class="li-format-name"><i class="fa-solid fa-file-image"></i> White JPEG ZIP</span>
+                    <span class="li-format-detail">Quality 95 &bull; 4:4:4 sRGB &bull; Smallest Size</span>
+                </div>
+            </div>
+
+            <div class="li-modal-actions">
+                <button type="button" id="liBatchModalCloseBtn" class="li-tool-btn">Cancel</button>
+                <button type="button" id="liConfirmBatchDownloadBtn" class="li-upload-btn">
+                    <i class="fa-solid fa-download"></i> Download ZIP
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script src="{% static 'js/listimage.js' %}"></script>
+{% endblock %}

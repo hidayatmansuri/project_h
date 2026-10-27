@@ -1,9 +1,12 @@
 {% extends "home.html" %}
 {% load static %}
 
-{% block title %}DocEdit - Document Editor & Matching Fonts | project-h{% endblock %}
+{% block title %}Free Online PDF Editor - Easily Edit PDFs | project-h{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/docedit.css' %}">
 {% endblock %}
 
@@ -12,16 +15,14 @@
     <!-- Header Section -->
     <div class="docedit-header">
         <h1 class="docedit-title">
-            <i class="fa-solid fa-file-pen"></i> DocEdit
+            <i class="fa-solid fa-file-pdf" style="color: #e50914;"></i> Online PDF Editor
         </h1>
         <p class="docedit-subtitle">
-            Scan and edit old books and diverse documents with matching typography.
-            Automatically recognizes fuzzy characters from aged pages, resolves original or nearest free matching fonts,
-            and exports in the exact same format.
+            Adobe Acrobat-grade PDF editor. Add &amp; edit text, place sticky notes, highlight text, draw freehand, insert vector shapes, add digital signatures, fill checkmarks &amp; dates, and rotate, organize, or delete PDF pages.
         </p>
     </div>
 
-    <!-- Success Notice Banner (Shows success message with note that file is not saved permanently on server) -->
+    <!-- Success Notice Banner -->
     <div id="doceditNoticeBanner" class="docedit-notice-banner" role="alert">
         <i class="fa-solid fa-circle-check"></i>
         <div>
@@ -30,201 +31,331 @@
         </div>
     </div>
 
-    <!-- Upload Card & Dropzone -->
-    <div id="doceditDropzone" class="docedit-upload-card" tabindex="0" role="button" aria-label="Upload document">
-        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-        <h2 class="upload-title">Drop your document or old book scan here</h2>
+    <!-- Upload Card & Dropzone (Sole focus on PDF) -->
+    <div id="doceditDropzone" class="docedit-upload-card" tabindex="0" role="button" aria-label="Upload PDF document">
+        <i class="fa-solid fa-file-pdf upload-icon" style="color: #e50914;"></i>
+        <h2 class="upload-title">Drop your PDF file here or browse</h2>
         <p class="upload-desc">
-            Supports scanned images (PNG, JPG, TIFF, BMP, WEBP), PDF, Word DOCX, and Text documents.
-            Maximum {{ max_upload_mb }} MB.
+            Full-featured PDF editing: edit text, add sticky notes, highlight, draw, shapes, fill &amp; sign, and organize pages.
+            Accepts <strong>.pdf</strong> files only up to {{ max_upload_mb }} MB.
         </p>
-        <button type="button" class="ph-button" style="margin: 0.5rem auto 1rem auto;">
-            <i class="fa-solid fa-folder-open" style="margin-right: 0.5rem;"></i> Select Document
+        <button type="button" id="btnSelectPdf" class="ph-button" style="margin: 0.5rem auto 1rem auto;">
+            <i class="fa-solid fa-folder-open" style="margin-right: 0.5rem;"></i> Select PDF Document
         </button>
-        <input type="file" id="doceditFileInput" accept="{{ accept_mime }}" style="display: none;">
-
-        <div class="upload-options">
-            <label class="upload-opt-label" for="doceditOcrLang">
-                <i class="fa-solid fa-language"></i> Book Language:
-                <select id="doceditOcrLang" class="upload-select">
-                    {% for lang in languages %}
-                    <option value="{{ lang.code }}">{{ lang.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label class="upload-opt-label" for="doceditPreprocessProfile">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> OCR Mode:
-                <select id="doceditPreprocessProfile" class="upload-select">
-                    <option value="raw_grayscale" selected>Raw Grayscale (Best Accuracy)</option>
-                    <option value="grayscale_contrast">Grayscale + Contrast/Denoise</option>
-                    <option value="binarized">Binarized / High Contrast</option>
-                </select>
-            </label>
-            <label class="upload-opt-label" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                <input type="checkbox" id="doceditDeskew" checked style="accent-color: var(--ph-primary, #6366f1);"> Auto-Deskew
-            </label>
-            <label class="upload-opt-label" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                <input type="checkbox" id="doceditDewarp" style="accent-color: var(--ph-primary, #6366f1);"> Dewarp (Page-curl)
-            </label>
-        </div>
     </div>
+    <input type="file" id="doceditFileInput" accept=".pdf,application/pdf" style="display: none;">
 
     <!-- Main Workspace: [Thumbnails] [Editor: toolbar / stage / status bar] [Side Pan] -->
     <div id="doceditWorkspace" class="docedit-workspace">
-        <!-- Collapsible Page Thumbnails Sidebar -->
+        <!-- Collapsible Page Thumbnails Sidebar (Organize Pages) -->
         <aside id="doceditThumbnailsSidebar" class="docedit-thumbnails-sidebar collapsed" aria-label="Page Thumbnails">
             <div class="thumb-sidebar-header">
                 <span class="thumb-sidebar-title"><i class="fa-solid fa-table-cells-large"></i> Pages (<span id="thumbPageCount">1</span>)</span>
                 <button type="button" id="thumbBtnCollapse" class="thumb-btn-icon" title="Hide thumbnails"><i class="fa-solid fa-angles-left"></i></button>
+            </div>
+            <div class="thumb-sidebar-actions-bar">
+                <button type="button" id="btnThumbRotateAllCW" class="tb-btn tb-btn-xs" title="Rotate all pages 90° Clockwise">
+                    <i class="fa-solid fa-rotate-right"></i> Rotate All
+                </button>
             </div>
             <div id="thumbList" class="thumb-list"></div>
         </aside>
 
         <!-- Editor Column -->
         <div class="editor-main-col">
-            <!-- Toolbar (two compact rows; contextual tools live on row 2) -->
-            <div class="editor-toolbar" role="toolbar" aria-label="Text Formatting">
-                <!-- Row 1: Core actions, history, text formatting, alignment -->
-                <div class="tb-row tb-row-primary">
-                    <div class="tb-group">
-                        <button type="button" id="tbBtnSave" class="tb-btn tb-btn-save" title="Save Document Changes (Ctrl+S)">
+            <!-- Adobe Acrobat-Style Modular Toolbar -->
+            <div class="editor-toolbar acrobat-toolbar" role="toolbar" aria-label="Adobe Acrobat PDF Tools">
+                <!-- Top Tabs Bar: Major Tool Categories -->
+                <div class="acrobat-tabs-bar" role="tablist">
+                    <button type="button" class="acrobat-tab-btn active" data-tab="edit" role="tab" aria-selected="true" title="Edit text and add text boxes">
+                        <i class="fa-solid fa-pen-to-square"></i> <span>Edit Text</span>
+                    </button>
+                    <button type="button" class="acrobat-tab-btn" data-tab="comment" role="tab" aria-selected="false" title="Sticky note comments">
+                        <i class="fa-regular fa-comment-dots"></i> <span>Comment</span>
+                    </button>
+                    <button type="button" class="acrobat-tab-btn" data-tab="markup" role="tab" aria-selected="false" title="Highlight, underline, strikeout">
+                        <i class="fa-solid fa-highlighter"></i> <span>Highlight</span>
+                    </button>
+                    <button type="button" class="acrobat-tab-btn" data-tab="draw" role="tab" aria-selected="false" title="Freehand pen and eraser">
+                        <i class="fa-solid fa-pencil"></i> <span>Draw</span>
+                    </button>
+                    <button type="button" class="acrobat-tab-btn" data-tab="shapes" role="tab" aria-selected="false" title="Insert shapes and lines">
+                        <i class="fa-solid fa-shapes"></i> <span>Shapes</span>
+                    </button>
+                    <button type="button" class="acrobat-tab-btn" data-tab="sign" role="tab" aria-selected="false" title="Add digital signature and stamps">
+                        <i class="fa-solid fa-signature"></i> <span>Fill &amp; Sign</span>
+                    </button>
+                    <button type="button" class="acrobat-tab-btn" data-tab="organize" role="tab" aria-selected="false" title="Rotate, reorder, and delete pages">
+                        <i class="fa-solid fa-table-cells-large"></i> <span>Organize</span>
+                    </button>
+
+                    <div class="acrobat-tab-spacer"></div>
+
+                    <!-- History and Quick Save Actions -->
+                    <div class="acrobat-tab-actions">
+                        <button type="button" id="tbBtnUndo" class="tb-btn tb-btn-icon" data-cmd="undo" title="Undo (Ctrl+Z)" disabled><i class="fa-solid fa-rotate-left"></i></button>
+                        <button type="button" id="tbBtnRedo" class="tb-btn tb-btn-icon" data-cmd="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled><i class="fa-solid fa-rotate-right"></i></button>
+                        <button type="button" id="tbBtnFindReplace" class="tb-btn tb-btn-icon" title="Find &amp; Replace (Ctrl+F)"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <button type="button" id="tbBtnBeforeAfter" class="tb-btn tb-btn-icon" title="Compare with original (Hold 'B')"><i class="fa-solid fa-code-compare"></i></button>
+                        <button type="button" id="tbBtnSave" class="tb-btn tb-btn-save" title="Save PDF Changes (Ctrl+S)">
                             <i class="fa-solid fa-floppy-disk"></i> Save
                         </button>
-                        <button type="button" id="tbBtnThumbnails" class="tb-btn" title="Toggle Page Thumbnails Sidebar">
-                            <i class="fa-solid fa-table-cells-large"></i><span class="tb-label"> Pages</span>
-                        </button>
-                    </div>
-                    <div class="tb-separator"></div>
-
-                    <div class="tb-group">
-                        <button type="button" id="tbBtnUndo" class="tb-btn" data-cmd="undo" title="Undo (Ctrl+Z)" disabled><i class="fa-solid fa-rotate-left"></i></button>
-                        <button type="button" id="tbBtnRedo" class="tb-btn" data-cmd="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled><i class="fa-solid fa-rotate-right"></i></button>
-                        <button type="button" id="tbBtnFindReplace" class="tb-btn" title="Find &amp; Replace across document (Ctrl+F)"><i class="fa-solid fa-magnifying-glass"></i><span class="tb-label"> Find</span></button>
-                        <button type="button" id="tbBtnBeforeAfter" class="tb-btn" title="Compare Original vs Edited View (Hold 'B' key)"><i class="fa-solid fa-code-compare"></i><span class="tb-label"> Compare (B)</span></button>
-                    </div>
-                    <div class="tb-separator"></div>
-
-                    <div class="tb-group">
-                        <select id="tbHeadingSelect" class="tb-select" title="Text Style">
-                            <option value="p">Paragraph</option>
-                            <option value="h1">Heading 1</option>
-                            <option value="h2">Heading 2</option>
-                            <option value="h3">Heading 3</option>
-                        </select>
-                        <button type="button" class="tb-btn" data-cmd="bold" title="Bold (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
-                        <button type="button" class="tb-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
-                        <button type="button" class="tb-btn" data-cmd="underline" title="Underline (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
-                    </div>
-                    <div class="tb-separator"></div>
-
-                    <div class="tb-group">
-                        <button type="button" class="tb-btn" data-cmd="justifyLeft" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                        <button type="button" class="tb-btn" data-cmd="justifyCenter" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                        <button type="button" class="tb-btn" data-cmd="justifyRight" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                        <button type="button" class="tb-btn" data-cmd="justifyFull" title="Justify"><i class="fa-solid fa-align-justify"></i></button>
                     </div>
                 </div>
 
-                <!-- Row 2: Font, layout boxes, inserts, OCR review -->
-                <div class="tb-row tb-row-secondary">
-                    <!-- Typography: font family / size -->
-                    <div class="tb-font-controls tb-group">
-                        <select id="tbFontSelect" class="tb-select" title="Active Typography">
-                            {% if fonts %}
-                                {% if fonts.recommended %}
-                                <optgroup label="✨ Recommended &amp; Classic Book Fonts">
-                                    {% for f in fonts.recommended %}
-                                        <option value="{{ f.name }}" {% if f.name == "EB Garamond" %}selected{% endif %}>{{ f.label }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                {% endif %}
-                                {% if fonts.project %}
-                                <optgroup label="📁 Project Fonts">
-                                    {% for f in fonts.project %}
-                                        <option value="{{ f.name }}">{{ f.name }} (Project Font)</option>
-                                    {% endfor %}
-                                </optgroup>
-                                {% endif %}
-                                {% if fonts.system %}
-                                <optgroup label="💻 System &amp; OS Fonts ({{ fonts.system|length }})">
-                                    {% for f in fonts.system %}
-                                        <option value="{{ f.name }}">{{ f.name }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                {% endif %}
-                            {% else %}
-                                <option value="EB Garamond" selected>EB Garamond (Classic Book)</option>
-                                <option value="Arial">Arial</option>
-                                <option value="Calibri">Calibri</option>
-                                <option value="Times New Roman">Times New Roman</option>
-                            {% endif %}
-                        </select>
-                        <button type="button" id="tbFontRefresh" class="tb-btn tb-btn-icon" title="Scan system/OS for new fonts">
-                            <i class="fa-solid fa-arrows-rotate"></i>
-                        </button>
-                        <button type="button" id="tbInstallFontBtn" class="tb-btn" title="Install a new font to the system and DocEdit">
-                            <i class="fa-solid fa-plus"></i><span class="tb-label"> Font</span>
-                        </button>
-                        <select id="tbFontSizeSelect" class="tb-select" title="Font Size">
-                            <option value="9">9 pt</option>
-                            <option value="10">10 pt</option>
-                            <option value="11">11 pt</option>
-                            <option value="12" selected>12 pt</option>
-                            <option value="14">14 pt</option>
-                            <option value="16">16 pt</option>
-                            <option value="18">18 pt</option>
-                            <option value="22">22 pt</option>
-                        </select>
-                    </div>
-
-                    <!-- Layout Box Controls (shown for layout-preserved documents) -->
-                    <div class="tb-separator" id="tbLayoutAlignSep" style="display: none;"></div>
-                    <div id="tbLayoutAlignGroup" class="tb-layout-align-group tb-group" style="display: none;">
-                        <span class="tb-group-caption">Box</span>
-                        <button type="button" id="tbBtnAddBox" class="tb-btn" title="Add Text Box (Click on page to place)"><i class="fa-solid fa-square-plus"></i> Add Box</button>
-                        <button type="button" id="tbBtnDeleteBox" class="tb-btn" title="Delete Selected Box (Del)" style="display: none;"><i class="fa-solid fa-trash-can"></i> Delete</button>
-                        <button type="button" id="tbBtnApplyAll" class="tb-btn" title="Apply font/size/color to all matching blocks" style="display: none;"><i class="fa-solid fa-wand-magic-sparkles"></i> Apply to All</button>
-                        <button type="button" id="tbAlignBlockLeft" class="tb-btn" title="Align Box with Nearest Document Text (Alt+L)"><i class="fa-solid fa-align-left"></i><span class="tb-label-2"> Snap Left</span></button>
-                        <span class="tb-nudge" aria-label="Nudge selected box">
-                            <button type="button" id="tbNudgeLeft" class="tb-btn tb-btn-icon" title="Nudge Box Left (Alt+Left)"><i class="fa-solid fa-arrow-left"></i></button>
-                            <button type="button" id="tbNudgeUp" class="tb-btn tb-btn-icon" title="Nudge Box Up (Alt+Up)"><i class="fa-solid fa-arrow-up"></i></button>
-                            <button type="button" id="tbNudgeDown" class="tb-btn tb-btn-icon" title="Nudge Box Down (Alt+Down)"><i class="fa-solid fa-arrow-down"></i></button>
-                            <button type="button" id="tbNudgeRight" class="tb-btn tb-btn-icon" title="Nudge Box Right (Alt+Right)"><i class="fa-solid fa-arrow-right"></i></button>
-                        </span>
-                    </div>
-
-                    <!-- Table & Line -->
-                    <div class="tb-separator"></div>
-                    <div class="tb-group">
-                        <span class="tb-group-caption">Insert</span>
-                        <button type="button" id="tbInsertTable" class="tb-btn" title="Insert 3x3 Table"><i class="fa-solid fa-table"></i><span class="tb-label-2"> Table</span></button>
-                        <button type="button" id="tbAddRow" class="tb-btn" title="Add Row to Current Table"><i class="fa-solid fa-plus"></i><span class="tb-label-2"> Row</span></button>
-                        <button type="button" id="tbInsertLine" class="tb-btn" title="Insert Divider Line"><i class="fa-solid fa-minus"></i><span class="tb-label-2"> Line</span></button>
-                    </div>
-
-                    <!-- OCR Review & Heatmap -->
-                    <div class="tb-separator"></div>
-                    <div class="tb-group">
-                        <span class="tb-group-caption">OCR</span>
-                        <button type="button" id="tbBtnHeatmap" class="tb-btn" title="Toggle Confidence Heatmap (Tints words by OCR confidence)"><i class="fa-solid fa-fire-flame-curved"></i><span class="tb-label-2"> Heatmap</span></button>
-                        <div id="tbHeatmapControls" class="tb-heatmap-controls" style="display: none;">
-                            <label for="tbHeatmapSlider">Threshold</label>
-                            <input type="range" id="tbHeatmapSlider" min="40" max="95" value="70" step="1" title="Heatmap threshold slider">
-                            <span id="tbHeatmapValue">70%</span>
+                <!-- Secondary Contextual Ribbon -->
+                <div class="acrobat-subribbon">
+                    <!-- Ribbon: Edit Text -->
+                    <div id="ribbonEdit" class="ribbon-panel active">
+                        <div class="tb-group">
+                            <button type="button" id="btnToolSelect" class="tb-btn active" title="Select &amp; Edit Text">
+                                <i class="fa-solid fa-arrow-pointer"></i><span class="tb-label"> Select</span>
+                            </button>
+                            <button type="button" id="tbBtnAddBox" class="tb-btn" title="Add New Text Box (Click on page)">
+                                <i class="fa-solid fa-square-plus"></i><span class="tb-label"> Add Text</span>
+                            </button>
+                            <button type="button" id="tbBtnDeleteBox" class="tb-btn tb-btn-danger" title="Delete Selected Box (Del)" style="display: none;">
+                                <i class="fa-solid fa-trash-can"></i> Delete
+                            </button>
                         </div>
-                        <button type="button" id="tbBtnReviewQueue" class="tb-btn tb-btn-review" title="Open Fuzzy OCR Review Queue (J/K/Enter/S)"><i class="fa-solid fa-list-check"></i> Review (<span id="tbReviewQueueCount">0</span>)</button>
-                        <div id="tbFuzzyToggle" class="tb-fuzzy-toggle" title="Toggle highlight for fuzzy OCR characters">
-                            <i class="fa-solid fa-highlighter"></i> Fuzzy: ON
+                        <div class="tb-separator"></div>
+
+                        <div class="tb-group">
+                            <select id="tbFontSelect" class="tb-select" title="Font Family">
+                                {% if fonts %}
+                                    {% if fonts.recommended %}
+                                    <optgroup label="✨ Popular Fonts">
+                                        {% for f in fonts.recommended %}
+                                            <option value="{{ f.name }}" {% if f.name == "EB Garamond" %}selected{% endif %}>{{ f.label }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+                                    {% if fonts.system %}
+                                    <optgroup label="💻 System Fonts ({{ fonts.system|length }})">
+                                        {% for f in fonts.system %}
+                                            <option value="{{ f.name }}">{{ f.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+                                {% else %}
+                                    <option value="Arial" selected>Arial</option>
+                                    <option value="Calibri">Calibri</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="EB Garamond">EB Garamond</option>
+                                {% endif %}
+                            </select>
+                            <select id="tbFontSizeSelect" class="tb-select" title="Font Size">
+                                <option value="8">8 pt</option>
+                                <option value="9">9 pt</option>
+                                <option value="10">10 pt</option>
+                                <option value="11">11 pt</option>
+                                <option value="12" selected>12 pt</option>
+                                <option value="14">14 pt</option>
+                                <option value="16">16 pt</option>
+                                <option value="18">18 pt</option>
+                                <option value="22">22 pt</option>
+                                <option value="28">28 pt</option>
+                                <option value="36">36 pt</option>
+                            </select>
+                            <button type="button" class="tb-btn" data-cmd="bold" title="Bold (Ctrl+B)"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" class="tb-btn" data-cmd="italic" title="Italic (Ctrl+I)"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" class="tb-btn" data-cmd="underline" title="Underline (Ctrl+U)"><i class="fa-solid fa-underline"></i></button>
+                            <input type="color" id="tbTextColorPicker" class="tb-color-input" value="#000000" title="Text Color">
+                        </div>
+                        <div class="tb-separator"></div>
+
+                        <div class="tb-group">
+                            <button type="button" class="tb-btn" data-cmd="justifyLeft" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                            <button type="button" class="tb-btn" data-cmd="justifyCenter" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                            <button type="button" class="tb-btn" data-cmd="justifyRight" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                        </div>
+                        <div class="tb-separator"></div>
+
+                        <div class="tb-group">
+                            <button type="button" id="tbAlignBlockLeft" class="tb-btn" title="Snap Box to text column"><i class="fa-solid fa-magnet"></i><span class="tb-label"> Snap</span></button>
+                            <button type="button" id="tbBtnApplyAll" class="tb-btn" title="Apply typography to all text" style="display: none;"><i class="fa-solid fa-wand-magic-sparkles"></i> Apply All</button>
+                        </div>
+                    </div>
+
+                    <!-- Ribbon: Comment -->
+                    <div id="ribbonComment" class="ribbon-panel">
+                        <div class="tb-group">
+                            <button type="button" id="btnToolComment" class="tb-btn" title="Click on page to place a sticky note">
+                                <i class="fa-regular fa-comment-dots"></i><span class="tb-label"> Add Sticky Note</span>
+                            </button>
+                            <label class="ribbon-label" for="commentAuthorInput">
+                                Author:
+                                <input type="text" id="commentAuthorInput" class="tb-input-sm" value="Reviewer" placeholder="Your name">
+                            </label>
+                        </div>
+                        <div class="tb-separator"></div>
+                        <div class="tb-group">
+                            <span class="ribbon-label">Note Color:</span>
+                            <div class="color-swatches" id="commentColorSwatches">
+                                <button type="button" class="color-swatch-dot active" data-color="#ffd54f" style="background: #ffd54f;" title="Yellow"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#a5d6a7" style="background: #a5d6a7;" title="Green"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#90caf9" style="background: #90caf9;" title="Blue"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#f48fb1" style="background: #f48fb1;" title="Pink"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ribbon: Markup & Highlight -->
+                    <div id="ribbonMarkup" class="ribbon-panel">
+                        <div class="tb-group">
+                            <button type="button" id="btnToolHighlight" class="tb-btn" title="Highlight Text (drag over area)">
+                                <i class="fa-solid fa-highlighter"></i><span class="tb-label"> Highlight</span>
+                            </button>
+                            <button type="button" id="btnToolUnderline" class="tb-btn" title="Underline Text">
+                                <i class="fa-solid fa-underline"></i><span class="tb-label"> Underline</span>
+                            </button>
+                            <button type="button" id="btnToolStrikeout" class="tb-btn" title="Strikethrough Text">
+                                <i class="fa-solid fa-strikethrough"></i><span class="tb-label"> Strikethrough</span>
+                            </button>
+                        </div>
+                        <div class="tb-separator"></div>
+                        <div class="tb-group">
+                            <span class="ribbon-label">Highlight Color:</span>
+                            <div class="color-swatches" id="markupColorSwatches">
+                                <button type="button" class="color-swatch-dot active" data-color="#fff176" style="background: #fff176;" title="Yellow"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#a5d6a7" style="background: #a5d6a7;" title="Green"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#90caf9" style="background: #90caf9;" title="Blue"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#f48fb1" style="background: #f48fb1;" title="Pink"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#ce93d8" style="background: #ce93d8;" title="Purple"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ribbon: Draw -->
+                    <div id="ribbonDraw" class="ribbon-panel">
+                        <div class="tb-group">
+                            <button type="button" id="btnToolPen" class="tb-btn" title="Freehand Drawing Pen">
+                                <i class="fa-solid fa-pencil"></i><span class="tb-label"> Pen</span>
+                            </button>
+                            <button type="button" id="btnToolEraser" class="tb-btn" title="Erase Drawn Strokes">
+                                <i class="fa-solid fa-eraser"></i><span class="tb-label"> Eraser</span>
+                            </button>
+                        </div>
+                        <div class="tb-separator"></div>
+                        <div class="tb-group">
+                            <label class="ribbon-label" for="drawStrokeWidth">Thickness:</label>
+                            <select id="drawStrokeWidth" class="tb-select-sm">
+                                <option value="1">1 pt (Thin)</option>
+                                <option value="2" selected>2 pt (Normal)</option>
+                                <option value="4">4 pt (Thick)</option>
+                                <option value="7">7 pt (Marker)</option>
+                            </select>
+                        </div>
+                        <div class="tb-separator"></div>
+                        <div class="tb-group">
+                            <span class="ribbon-label">Pen Color:</span>
+                            <div class="color-swatches" id="drawColorSwatches">
+                                <button type="button" class="color-swatch-dot active" data-color="#000000" style="background: #000000;" title="Black"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#d32f2f" style="background: #d32f2f;" title="Red"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#1976d2" style="background: #1976d2;" title="Blue"></button>
+                                <button type="button" class="color-swatch-dot" data-color="#388e3c" style="background: #388e3c;" title="Green"></button>
+                            </div>
+                            <input type="color" id="drawCustomColor" class="tb-color-input" value="#000000" title="Custom Draw Color">
+                        </div>
+                        <div class="tb-separator"></div>
+                        <button type="button" id="btnClearPageDrawings" class="tb-btn tb-btn-xs" title="Clear drawings on active page">
+                            <i class="fa-solid fa-trash-can"></i> Clear Drawings
+                        </button>
+                    </div>
+
+                    <!-- Ribbon: Shapes -->
+                    <div id="ribbonShapes" class="ribbon-panel">
+                        <div class="tb-group">
+                            <button type="button" id="btnToolRect" class="tb-btn" title="Rectangle Shape">
+                                <i class="fa-regular fa-square"></i><span class="tb-label"> Rectangle</span>
+                            </button>
+                            <button type="button" id="btnToolCircle" class="tb-btn" title="Circle / Ellipse Shape">
+                                <i class="fa-regular fa-circle"></i><span class="tb-label"> Circle</span>
+                            </button>
+                            <button type="button" id="btnToolLine" class="tb-btn" title="Line">
+                                <i class="fa-solid fa-minus"></i><span class="tb-label"> Line</span>
+                            </button>
+                            <button type="button" id="btnToolArrow" class="tb-btn" title="Arrow">
+                                <i class="fa-solid fa-arrow-right"></i><span class="tb-label"> Arrow</span>
+                            </button>
+                        </div>
+                        <div class="tb-separator"></div>
+                        <div class="tb-group">
+                            <label class="ribbon-label" for="shapeStrokeColor">Border:</label>
+                            <input type="color" id="shapeStrokeColor" class="tb-color-input" value="#d32f2f" title="Border Color">
+                            <label class="ribbon-label" for="shapeFillColor">Fill:</label>
+                            <select id="shapeFillColor" class="tb-select-sm">
+                                <option value="transparent" selected>Transparent</option>
+                                <option value="#ffffff">White</option>
+                                <option value="#fff9c4">Light Yellow</option>
+                                <option value="#e1f5fe">Light Blue</option>
+                                <option value="#e8f5e9">Light Green</option>
+                            </select>
+                            <label class="ribbon-label" for="shapeBorderWidth">Width:</label>
+                            <select id="shapeBorderWidth" class="tb-select-sm">
+                                <option value="1">1 pt</option>
+                                <option value="2" selected>2 pt</option>
+                                <option value="4">4 pt</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Ribbon: Fill & Sign -->
+                    <div id="ribbonSign" class="ribbon-panel">
+                        <div class="tb-group">
+                            <button type="button" id="btnAddSignature" class="tb-btn tb-btn-primary" title="Create or select a signature">
+                                <i class="fa-solid fa-signature"></i><span class="tb-label"> Add Signature</span>
+                            </button>
+                            <button type="button" id="btnStampSavedSig" class="tb-btn" title="Stamp last signature" style="display: none;">
+                                <i class="fa-solid fa-stamp"></i><span class="tb-label"> Stamp Signature</span>
+                            </button>
+                        </div>
+                        <div class="tb-separator"></div>
+                        <div class="tb-group">
+                            <span class="ribbon-label">Form Stamps:</span>
+                            <button type="button" id="btnToolCheckmark" class="tb-btn" title="Stamp checkmark ✔ onto checkboxes">
+                                <i class="fa-solid fa-check"></i><span class="tb-label"> Checkmark</span>
+                            </button>
+                            <button type="button" id="btnToolCrossmark" class="tb-btn" title="Stamp crossmark ✖">
+                                <i class="fa-solid fa-xmark"></i><span class="tb-label"> Crossmark</span>
+                            </button>
+                            <button type="button" id="btnToolDateStamp" class="tb-btn" title="Stamp current date">
+                                <i class="fa-regular fa-calendar-days"></i><span class="tb-label"> Date Stamp</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ribbon: Organize Pages -->
+                    <div id="ribbonOrganize" class="ribbon-panel">
+                        <div class="tb-group">
+                            <button type="button" id="tbBtnThumbnails" class="tb-btn" title="Toggle Pages Sidebar">
+                                <i class="fa-solid fa-table-cells-large"></i><span class="tb-label"> Thumbnails</span>
+                            </button>
+                            <button type="button" id="btnRotateCurrentCW" class="tb-btn" title="Rotate Current Page 90° Clockwise">
+                                <i class="fa-solid fa-rotate-right"></i><span class="tb-label"> Rotate CW</span>
+                            </button>
+                            <button type="button" id="btnRotateCurrentCCW" class="tb-btn" title="Rotate Current Page 90° Counter-Clockwise">
+                                <i class="fa-solid fa-rotate-left"></i><span class="tb-label"> Rotate CCW</span>
+                            </button>
+                            <button type="button" id="btnDeleteCurrentPage" class="tb-btn tb-btn-danger" title="Delete Current Page from PDF">
+                                <i class="fa-solid fa-trash-can"></i><span class="tb-label"> Delete Page</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Editor Stage: scrolls independently so toolbar and side pan stay in reach -->
+            <!-- Editor Stage: scroll container for PDF pages -->
             <div class="editor-stage">
-                <!-- Floating Compare Banner (Shown when holding 'B' key or in before-mode) -->
+                <!-- Floating Compare Banner (Shown when holding 'B' key) -->
                 <div id="doceditBeforeBanner" class="docedit-before-banner">
-                    <i class="fa-solid fa-eye"></i> ORIGINAL DOCUMENT VIEW &mdash; Showing unedited background (Release <strong>B</strong> or click to return)
+                    <i class="fa-solid fa-eye"></i> ORIGINAL PDF VIEW &mdash; Showing unedited background (Release <strong>B</strong> or click to return)
+                </div>
+
+                <!-- Active Tool Hint Bar -->
+                <div id="doceditActiveToolHint" class="docedit-active-tool-hint" style="display: none;">
+                    <span id="activeToolHintText"><i class="fa-solid fa-info-circle"></i> Click anywhere on the page to place</span>
+                    <button type="button" id="btnCancelActiveTool" class="btn-cancel-hint" title="Exit tool (Esc)"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
                 <!-- Find & Replace Floating Widget -->
@@ -236,7 +367,7 @@
                     <div class="fr-body">
                         <div class="fr-row">
                             <div class="fr-input-wrap">
-                                <input type="text" id="frSearchInput" class="fr-input" placeholder="Find in document..." autocomplete="off">
+                                <input type="text" id="frSearchInput" class="fr-input" placeholder="Find in PDF..." autocomplete="off">
                                 <span id="frMatchCount" class="fr-match-count">0 of 0</span>
                             </div>
                             <div class="fr-nav-btns">
@@ -266,7 +397,7 @@
                     </div>
                 </div>
 
-                <!-- Paper Editor Canvas (the scroll container for pages) -->
+                <!-- Paper Editor Canvas (scroll container for pages) -->
                 <div class="editor-paper-wrapper">
                     <div id="doceditPaper" class="editor-paper" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true">
                         <p></p>
@@ -274,7 +405,7 @@
                 </div>
             </div>
 
-            <!-- Status bar: page navigation, zoom and autosave always visible under the canvas -->
+            <!-- Status bar: page navigation, zoom and autosave -->
             <div class="editor-statusbar">
                 <div class="tb-separator" id="tbPageSep" style="display: none;"></div>
                 <div id="tbPageNavGroup" class="tb-page-nav-group tb-group" style="display: none;">
@@ -296,96 +427,42 @@
             </div>
         </div>
 
-        <!-- Side Pan: scrolling info cards + a pinned action footer so Save/Download are always visible -->
-        <aside class="side-pan" aria-label="Document Progress and Information">
+        <!-- Side Pan: PDF details, annotations list, and download button -->
+        <aside class="side-pan" aria-label="PDF Details and Export">
             <div class="side-pan-scroll">
                 <!-- Progress Card -->
                 <details class="pan-card" open>
                     <summary class="pan-card-title">
-                        <i class="fa-solid fa-bars-progress"></i> Document Progress
+                        <i class="fa-solid fa-bars-progress"></i> Document Status
                     </summary>
                     <div class="pan-progress-box">
                         <div class="pan-progress-status">
-                            <span id="panProgressText">Initializing...</span>
-                            <span id="panProgressPercent">0%</span>
+                            <span id="panProgressText">Ready</span>
+                            <span id="panProgressPercent">100%</span>
                         </div>
                         <div class="pan-progress-bar-bg">
-                            <div id="panProgressBar" class="pan-progress-bar-fill"></div>
+                            <div id="panProgressBar" class="pan-progress-bar-fill" style="width: 100%;"></div>
                         </div>
                     </div>
                 </details>
 
-                <!-- Fuzzy Characters & Spelling Review Card -->
-                <details class="pan-card" open>
+                <!-- PDF Annotations & Comments Card -->
+                <details class="pan-card" open id="panAnnotationsCard">
                     <summary class="pan-card-title">
-                        <i class="fa-solid fa-spell-check"></i> Fuzzy Characters (<span id="panFuzzyCount">0</span>)
+                        <i class="fa-regular fa-comment-dots"></i> Annotations (<span id="panAnnotCount">0</span>)
                     </summary>
                     <p class="pan-card-hint">
-                        Low-confidence words from the scan. Click a word to jump to it:
+                        Sticky notes and comments added to this PDF:
                     </p>
-                    <div id="panFuzzyList" class="fuzzy-review-list">
-                        <div class="fuzzy-empty">No suspicious fuzzy characters detected.</div>
+                    <div id="panAnnotList" class="pan-annot-list">
+                        <div class="fuzzy-empty">No comments yet. Switch to Comment tab to add notes.</div>
                     </div>
-                    <button type="button" id="panBtnOpenReviewQueue" class="pan-btn pan-btn-secondary pan-btn-block">
-                        <i class="fa-solid fa-list-check"></i> Open Review Queue
-                    </button>
                 </details>
 
-                <!-- Layout & Overflow Issues Card -->
-                <details id="panIssuesCard" class="pan-card pan-card-issues" open style="display: none;">
-                    <summary class="pan-card-title">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Layout &amp; Overflow (<span id="panIssuesCount">0</span>)
-                    </summary>
-                    <p class="pan-card-hint">
-                        Edited text boxes exceeding original bounds or colliding:
-                    </p>
-                    <div id="panIssuesList" class="pan-issues-list"></div>
-                </details>
-
-                <!-- Typography & Matching Font Card -->
+                <!-- Document Details Card -->
                 <details class="pan-card" open>
                     <summary class="pan-card-title">
-                        <i class="fa-solid fa-font"></i> Typography & Font
-                    </summary>
-                    <div class="pan-meta-list">
-                        <div class="pan-meta-row">
-                            <span class="pan-meta-label">Active Font:</span>
-                            <span id="panFontName" class="pan-meta-val pan-meta-strong">EB Garamond</span>
-                        </div>
-                        <div class="pan-meta-row">
-                            <span class="pan-meta-label">Font Size:</span>
-                            <span id="panFontSize" class="pan-meta-val">12.0 pt</span>
-                        </div>
-                        <div class="pan-meta-row">
-                            <span class="pan-meta-label">Status:</span>
-                            <span id="panFontBadge" class="pan-badge badge-system">System Font</span>
-                        </div>
-                        <div id="panFontResRow" class="pan-meta-row" style="display: none;">
-                            <span class="pan-meta-label">Mapping:</span>
-                            <span id="panFontMatchVal" class="pan-meta-val pan-meta-small">-</span>
-                        </div>
-                    </div>
-
-                    <!-- Alternative Font Explanation (Visible when original is commercial/unavailable) -->
-                    <div id="panAltBox" class="pan-alt-font-box">
-                        <div id="panAltText"></div>
-                    </div>
-
-                    <!-- Font Metric Warning (Visible when substituted font shifts line width by >5%) -->
-                    <div id="panFontMetricAlert" class="pan-font-metric-alert">
-                        <i class="fa-solid fa-triangle-exclamation"></i> <span id="panFontMetricText"></span>
-                    </div>
-
-                    <!-- Read-Only Non-Latin Script Notice -->
-                    <div id="panReadonlyAlert" class="pan-readonly-alert" style="display: none;">
-                        <i class="fa-solid fa-lock"></i> <span id="panReadonlyText">Non-Latin script text is currently read-only to preserve document fidelity. PyMuPDF insert_text does not shape Arabic/Indic scripts or handle RTL.</span>
-                    </div>
-                </details>
-
-                <!-- Document Metadata Card (collapsed by default: rarely needed while editing) -->
-                <details class="pan-card">
-                    <summary class="pan-card-title">
-                        <i class="fa-solid fa-circle-info"></i> Document Details
+                        <i class="fa-solid fa-circle-info"></i> PDF Details
                     </summary>
                     <div class="pan-meta-list">
                         <div class="pan-meta-row">
@@ -393,8 +470,8 @@
                             <span id="panFilename" class="pan-meta-val">-</span>
                         </div>
                         <div class="pan-meta-row">
-                            <span class="pan-meta-label">Extension:</span>
-                            <span id="panExtension" class="pan-badge badge-ext">-</span>
+                            <span class="pan-meta-label">Format:</span>
+                            <span id="panExtension" class="pan-badge badge-ext">PDF</span>
                         </div>
                         <div class="pan-meta-row">
                             <span class="pan-meta-label">File Size:</span>
@@ -405,182 +482,181 @@
                             <span id="panPages" class="pan-meta-val">1</span>
                         </div>
                         <div class="pan-meta-row">
-                            <span class="pan-meta-label">Words:</span>
-                            <span id="panWords" class="pan-meta-val">0</span>
+                            <span class="pan-meta-label">Words / Chars:</span>
+                            <span class="pan-meta-val"><span id="panWords">0</span> / <span id="panChars">0</span></span>
                         </div>
                         <div class="pan-meta-row">
-                            <span class="pan-meta-label">Characters:</span>
-                            <span id="panChars" class="pan-meta-val">0</span>
+                            <span class="pan-meta-label">Primary Font:</span>
+                            <span class="pan-meta-val"><span id="panFontName">EB Garamond</span> (<span id="panFontSize">12 pt</span>)</span>
                         </div>
                         <div class="pan-meta-row">
                             <span class="pan-meta-label">Auto-save:</span>
                             <span id="panAutoSaveStatus" class="pan-badge pan-badge-autosave" style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3);">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> All changes saved
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Saved
                             </span>
+                        </div>
+                        <div id="panAltBox" class="pan-alt-box" style="display: none;">
+                            <span id="panFontBadge" class="pan-badge"></span>
+                            <span id="panAltText"></span>
+                        </div>
+                        <div style="display: none;">
+                            <span id="panFuzzyCount">0</span>
+                            <div id="panFuzzyList"></div>
                         </div>
                     </div>
                 </details>
 
-                <!-- Keyboard Shortcuts (collapsed by default) -->
+                <!-- Keyboard Shortcuts -->
                 <details class="pan-card">
                     <summary class="pan-card-title">
-                        <i class="fa-regular fa-keyboard"></i> Keyboard Shortcuts
+                        <i class="fa-regular fa-keyboard"></i> Shortcuts
                     </summary>
                     <ul class="pan-shortcuts">
-                        <li><span><kbd>Ctrl</kbd>+<kbd>S</kbd></span> Save changes</li>
+                        <li><span><kbd>Ctrl</kbd>+<kbd>S</kbd></span> Save PDF</li>
                         <li><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></span> Undo / Redo</li>
                         <li><span><kbd>Ctrl</kbd>+<kbd>F</kbd></span> Find &amp; Replace</li>
                         <li><span>Hold <kbd>B</kbd></span> Compare with original</li>
-                        <li><span><kbd>Alt</kbd>+<kbd>Arrows</kbd></span> Nudge selected box</li>
-                        <li><span><kbd>Alt</kbd>+<kbd>L</kbd></span> Snap box to nearest text</li>
-                        <li><span><kbd>Alt</kbd>+Drag</span> Move selected box</li>
-                        <li><span><kbd>Ctrl</kbd>+Wheel</span> Zoom page</li>
-                        <li><span><kbd>J</kbd>/<kbd>K</kbd> <kbd>Enter</kbd> <kbd>S</kbd></span> Review queue</li>
+                        <li><span><kbd>Del</kbd></span> Delete selected element</li>
+                        <li><span><kbd>Esc</kbd></span> Cancel active tool</li>
                     </ul>
                 </details>
             </div>
 
-            <!-- Pinned footer: format + Save / Download / Cancel (always visible) -->
+            <!-- Pinned Action Footer (Download PDF) -->
             <div class="pan-card pan-card-actions">
                 <div class="pan-format-group">
                     <label for="panDownloadFormat" class="pan-format-label">
-                        <i class="fa-solid fa-file-arrow-down"></i> Download Format
+                        <i class="fa-solid fa-file-pdf"></i> Export Format
                     </label>
-                    <select id="panDownloadFormat" class="pan-select-format" title="Select output document format">
-                        <option value="original" id="panOptOriginal">Original Upload Format</option>
-                        <option value="pdf" selected>PDF Document (.pdf) - Preserves Layout &amp; Print</option>
-                        <option value="searchable_pdf">Searchable PDF (.pdf) - Scanned Page + Hidden Text Layer</option>
-                        <option value="docx">Word Document (.docx) - Fully Editable Office</option>
-                        <option value="png">PNG Image (.png) - High Resolution</option>
-                        <option value="jpg">JPEG Image (.jpg)</option>
-                        <option value="txt">Plain Text (.txt)</option>
-                        <option value="md">Markdown (.md)</option>
-                        <option value="html">Web Page (.html)</option>
+                    <select id="panDownloadFormat" class="pan-select-format" title="PDF format">
+                        <option value="pdf" selected>PDF Document (.pdf) - Adobe Acrobat Compatible</option>
                     </select>
                     <p class="pan-format-hint">
-                        Formatting, tables, lines, borders and matching fonts are preserved.
+                        All edits, sticky notes, highlights, drawings, shapes, and signatures will be embedded directly into the PDF.
                     </p>
                 </div>
 
                 <div class="pan-actions">
                     <button type="button" id="panBtnDownload" class="pan-btn pan-btn-primary">
-                        <i class="fa-solid fa-file-arrow-down"></i> Save & Download
+                        <i class="fa-solid fa-file-arrow-down"></i> Save &amp; Download PDF
                     </button>
                     <div class="pan-actions-row">
-                        <button type="button" id="panBtnSave" class="pan-btn pan-btn-save" title="Save Document Changes (Ctrl+S)">
+                        <button type="button" id="panBtnSave" class="pan-btn pan-btn-save" title="Save changes (Ctrl+S)">
                             <i class="fa-solid fa-floppy-disk"></i> Save
                         </button>
-                        <button type="button" id="panBtnCancel" class="pan-btn pan-btn-cancel" title="Discard and close this document">
-                            <i class="fa-solid fa-xmark"></i> Cancel
+                        <button type="button" id="panBtnCancel" class="pan-btn pan-btn-cancel" title="Discard and close PDF">
+                            <i class="fa-solid fa-xmark"></i> Close
                         </button>
                     </div>
                 </div>
             </div>
-        </aside>
-
-        <!-- Fuzzy OCR Review Queue Drawer -->
-        <aside id="doceditReviewQueuePanel" class="docedit-review-queue-panel" style="display: none;" role="region" aria-label="Fuzzy OCR Review Queue">
-            <div class="rq-header">
-                <div class="rq-header-left">
-                    <span class="rq-title"><i class="fa-solid fa-list-check"></i> OCR Review Queue</span>
-                    <span id="rqProgressBadge" class="rq-progress-badge">0 of 0 reviewed</span>
-                </div>
-                <button type="button" id="rqBtnClose" class="fr-btn-icon" title="Close Review Queue (Esc)"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-
-            <div class="rq-progress-bar-wrap">
-                <div id="rqProgressBarFill" class="rq-progress-bar-fill" style="width: 0%;"></div>
-            </div>
-
-            <!-- Keyboard shortcuts bar -->
-            <div class="rq-shortcuts-bar">
-                <span><kbd>J</kbd>/<kbd>K</kbd> or <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> Nav</span>
-                <span><kbd>Enter</kbd> Accept</span>
-                <span><kbd>E</kbd> Edit</span>
-                <span><kbd>S</kbd> Skip</span>
-            </div>
-
-            <!-- Active Item Card -->
-            <div id="rqActiveCard" class="rq-active-card">
-                <div class="rq-card-top">
-                    <span id="rqWordIndex" class="rq-word-index">Word 0 of 0</span>
-                    <span id="rqWordConfidence" class="rq-word-conf-badge conf-low">55%</span>
-                </div>
-                <div id="rqFuzzyReasons" class="rq-fuzzy-reasons">Low confidence word</div>
-
-                <!-- Side-by-side comparison: original image crop vs editable text -->
-                <div class="rq-compare-box">
-                    <div class="rq-crop-pane">
-                        <span class="rq-pane-label"><i class="fa-solid fa-image"></i> Original Scan Crop:</span>
-                        <div class="rq-crop-img-wrap">
-                            <img id="rqCropImg" src="" alt="Original word crop" />
-                            <div id="rqCropFallback" class="rq-crop-fallback" style="display: none;">Crop unavailable</div>
-                        </div>
-                    </div>
-                    <div class="rq-edit-pane">
-                        <span class="rq-pane-label"><i class="fa-solid fa-pen"></i> OCR Text (Editable):</span>
-                        <input type="text" id="rqWordInput" class="rq-word-input" autocomplete="off" spellcheck="false" />
-                    </div>
-                </div>
-
-                <!-- Action buttons for one-click review -->
-                <div class="rq-actions">
-                    <button type="button" id="rqBtnAccept" class="rq-btn rq-btn-accept" title="Accept word (Enter)">
-                        <i class="fa-solid fa-check"></i> Accept (Enter)
-                    </button>
-                    <button type="button" id="rqBtnEdit" class="rq-btn rq-btn-edit" title="Focus edit field (E)">
-                        <i class="fa-solid fa-pen-to-square"></i> Edit (E)
-                    </button>
-                    <button type="button" id="rqBtnSkip" class="rq-btn rq-btn-skip" title="Skip to next word (S)">
-                        <i class="fa-solid fa-forward"></i> Skip (S)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Completion State -->
-            <div id="rqCompletedState" class="rq-completed-state" style="display: none;">
-                <div class="rq-completed-icon"><i class="fa-solid fa-circle-check"></i></div>
-                <h4 class="rq-completed-title">Review Complete!</h4>
-                <p class="rq-completed-desc">All flagged fuzzy words have been reviewed.</p>
-                <button type="button" id="rqBtnRestart" class="rq-btn rq-btn-edit" style="margin-top: 0.5rem;">
-                    <i class="fa-solid fa-rotate-left"></i> Review Again
-                </button>
-            </div>
-
-            <!-- Queue list for quick selection -->
-            <div class="rq-list-header">
-                <span>Flagged Words List</span>
-                <span id="rqListRemaining" class="rq-list-remaining">0 remaining</span>
-            </div>
-            <div id="rqWordsList" class="rq-words-list"></div>
         </aside>
     </div>
 </div>
 
-<!-- Save & Download Confirmation Modal -->
+<!-- Mobile Bottom Floating Dock -->
+<nav class="acrobat-mobile-dock" aria-label="Mobile PDF Tools">
+    <button type="button" class="mob-dock-btn active" data-tab="edit" title="Edit Text"><i class="fa-solid fa-pen-to-square"></i><span>Edit</span></button>
+    <button type="button" class="mob-dock-btn" data-tab="comment" title="Add Note"><i class="fa-regular fa-comment-dots"></i><span>Note</span></button>
+    <button type="button" class="mob-dock-btn" data-tab="markup" title="Highlight"><i class="fa-solid fa-highlighter"></i><span>Highlight</span></button>
+    <button type="button" class="mob-dock-btn" data-tab="draw" title="Draw"><i class="fa-solid fa-pencil"></i><span>Draw</span></button>
+    <button type="button" class="mob-dock-btn" data-tab="shapes" title="Shapes"><i class="fa-solid fa-shapes"></i><span>Shapes</span></button>
+    <button type="button" class="mob-dock-btn" data-tab="sign" title="Sign"><i class="fa-solid fa-signature"></i><span>Sign</span></button>
+    <button type="button" class="mob-dock-btn" data-tab="organize" title="Pages"><i class="fa-solid fa-table-cells-large"></i><span>Pages</span></button>
+</nav>
+
+<!-- Digital Signature Modal (Draw & Type Cursive) -->
+<div id="doceditSignatureModal" class="docedit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalSigTitle">
+    <div class="docedit-modal signature-modal">
+        <div class="sig-modal-header">
+            <h2 id="modalSigTitle" class="modal-title"><i class="fa-solid fa-signature" style="color: #e50914;"></i> Add Digital Signature</h2>
+            <button type="button" id="modalBtnCloseSig" class="fr-btn-icon" title="Close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="sig-tabs">
+            <button type="button" id="sigTabDraw" class="sig-tab-btn active"><i class="fa-solid fa-pencil"></i> Draw Signature</button>
+            <button type="button" id="sigTabType" class="sig-tab-btn"><i class="fa-solid fa-keyboard"></i> Type Signature</button>
+        </div>
+
+        <!-- Panel 1: Draw Pad -->
+        <div id="sigPanelDraw" class="sig-panel active">
+            <div class="sig-canvas-wrap">
+                <canvas id="sigCanvas" width="480" height="170"></canvas>
+                <div class="sig-baseline-guide">Sign above this line</div>
+            </div>
+            <div class="sig-pad-controls">
+                <button type="button" id="btnSigClear" class="tb-btn"><i class="fa-solid fa-trash-can"></i> Clear Pad</button>
+                <div class="sig-color-swatches">
+                    <span class="ribbon-label">Ink:</span>
+                    <button type="button" class="color-swatch-dot active sig-ink-dot" data-color="#000000" style="background: #000;" title="Black"></button>
+                    <button type="button" class="color-swatch-dot sig-ink-dot" data-color="#0d47a1" style="background: #0d47a1;" title="Navy Blue"></button>
+                    <button type="button" class="color-swatch-dot sig-ink-dot" data-color="#42243c" style="background: #42243c;" title="Theme Plum"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Type Cursive Pad -->
+        <div id="sigPanelType" class="sig-panel">
+            <label class="sig-type-label" for="sigTypeInput">Type your name:</label>
+            <input type="text" id="sigTypeInput" class="sig-type-input" placeholder="e.g. Johnathan Smith" autocomplete="off" />
+            <div class="sig-type-preview-box">
+                <div id="sigTypePreview" class="sig-type-preview font-caveat">Johnathan Smith</div>
+            </div>
+            <div class="sig-type-font-choices">
+                <label><input type="radio" name="sigTypeFont" value="caveat" checked /> Caveat (Natural)</label>
+                <label><input type="radio" name="sigTypeFont" value="dancing" /> Dancing Script (Formal)</label>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" id="btnCancelSig" class="modal-btn modal-btn-secondary">Cancel</button>
+            <button type="button" id="btnApplySig" class="modal-btn modal-btn-primary">
+                <i class="fa-solid fa-check"></i> Insert into PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Note Popover / Comment Editor -->
+<div id="doceditCommentPopover" class="docedit-comment-popover" style="display: none;">
+    <div class="comment-popover-header">
+        <span class="comment-popover-title"><i class="fa-regular fa-comment-dots"></i> Sticky Note</span>
+        <button type="button" id="commentBtnClose" class="fr-btn-icon" title="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="comment-popover-body">
+        <input type="text" id="commentAuthorField" class="comment-input-author" placeholder="Author name" value="Reviewer" />
+        <textarea id="commentTextField" class="comment-input-text" rows="3" placeholder="Add a comment..."></textarea>
+        <div class="comment-color-bar">
+            <span>Color:</span>
+            <div class="color-swatches" id="popoverColorSwatches">
+                <button type="button" class="color-swatch-dot active" data-color="#ffd54f" style="background: #ffd54f;" title="Yellow"></button>
+                <button type="button" class="color-swatch-dot" data-color="#a5d6a7" style="background: #a5d6a7;" title="Green"></button>
+                <button type="button" class="color-swatch-dot" data-color="#90caf9" style="background: #90caf9;" title="Blue"></button>
+                <button type="button" class="color-swatch-dot" data-color="#f48fb1" style="background: #f48fb1;" title="Pink"></button>
+            </div>
+        </div>
+    </div>
+    <div class="comment-popover-footer">
+        <button type="button" id="commentBtnDelete" class="tb-btn tb-btn-danger" title="Delete note"><i class="fa-solid fa-trash-can"></i></button>
+        <button type="button" id="commentBtnSave" class="modal-btn modal-btn-primary modal-btn-sm"><i class="fa-solid fa-check"></i> Post</button>
+    </div>
+</div>
+
+<!-- Save & Download Confirmation Modal (PDF Only) -->
 <div id="doceditConfirmModal" class="docedit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
     <div class="docedit-modal">
-        <i class="fa-solid fa-floppy-disk modal-icon"></i>
-        <h2 id="modalConfirmTitle" class="modal-title">Ready to Save & Download?</h2>
+        <i class="fa-solid fa-file-pdf modal-icon" style="color: #e50914;"></i>
+        <h2 id="modalConfirmTitle" class="modal-title">Ready to Save &amp; Download PDF?</h2>
         <p class="modal-desc">
-            Are you happy with your edited document? Your document will be compiled preserving
-            all formatting, tables, lines, and matching typography into your chosen format.
+            Your edits, sticky notes, highlights, drawings, shapes, and digital signatures will be embedded directly into the PDF.
         </p>
 
-        <!-- Format Selection Inside Modal -->
         <div class="modal-format-choice-box">
             <label for="modalDownloadFormat" class="modal-format-label">
-                <i class="fa-solid fa-file-export"></i> Confirm Download Format:
+                <i class="fa-solid fa-file-pdf"></i> Format:
             </label>
-            <select id="modalDownloadFormat" class="modal-select-format" title="Choose output format">
-                <option value="original" id="modalOptOriginal">Original Upload Format</option>
+            <select id="modalDownloadFormat" class="modal-select-format" title="PDF format">
                 <option value="pdf" selected>PDF Document (.pdf)</option>
-                <option value="docx">Word Document (.docx)</option>
-                <option value="png">PNG Image (.png)</option>
-                <option value="jpg">JPEG Image (.jpg)</option>
-                <option value="txt">Plain Text (.txt)</option>
-                <option value="md">Markdown (.md)</option>
-                <option value="html">Web Page (.html)</option>
             </select>
         </div>
 
@@ -589,129 +665,7 @@
                 <i class="fa-solid fa-pen"></i> Keep Editing
             </button>
             <button type="button" id="modalBtnConfirm" class="modal-btn modal-btn-primary">
-                <i class="fa-solid fa-check"></i> Confirm & Download
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Install New Font to System Modal -->
-<div id="doceditInstallFontModal" class="docedit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalInstallFontTitle">
-    <div class="docedit-modal">
-        <i class="fa-solid fa-font modal-icon"></i>
-        <h2 id="modalInstallFontTitle" class="modal-title">Install Font to System</h2>
-        <p class="modal-desc">
-            Install a font directly into your operating system and DocEdit. Any installed font is registered in your system and immediately added to active typography.
-        </p>
-
-        <!-- Install Tabs -->
-        <div class="font-install-tabs">
-            <button type="button" id="tabBtnFontFile" class="font-tab-btn active">
-                <i class="fa-solid fa-file-arrow-up"></i> Upload Font File (.ttf / .otf)
-            </button>
-            <button type="button" id="tabBtnFontOnline" class="font-tab-btn">
-                <i class="fa-solid fa-cloud-arrow-down"></i> Google Fonts Search
-            </button>
-        </div>
-
-        <!-- Tab 1: File Upload -->
-        <div id="tabContentFontFile" class="font-tab-content active">
-            <div id="fontFileDropzone" class="font-file-dropzone">
-                <i class="fa-solid fa-cloud-arrow-up font-drop-icon"></i>
-                <div class="font-drop-text">Drag & drop a <strong>.ttf</strong> or <strong>.otf</strong> font file here</div>
-                <div class="font-drop-sub">or click to browse from your computer</div>
-                <input type="file" id="fontFileInput" accept=".ttf,.otf" style="display: none;">
-                <div id="selectedFontFileName" class="selected-font-file-name" style="display: none;"></div>
-            </div>
-        </div>
-
-        <!-- Tab 2: Online Font Search & Install -->
-        <div id="tabContentFontOnline" class="font-tab-content">
-            <label for="fontSearchInput" class="font-input-label">Enter Font Family Name:</label>
-            <input type="text" id="fontSearchInput" class="font-text-input" placeholder="e.g. Cinzel, Merriweather, Poppins, Inter..." list="googleFontsDatalist">
-            <datalist id="googleFontsDatalist">
-                <option value="Merriweather">
-                <option value="Cinzel">
-                <option value="Poppins">
-                <option value="Inter">
-                <option value="Lora">
-                <option value="Cardo">
-                <option value="Alegreya">
-                <option value="Cormorant Garamond">
-                <option value="Source Serif 4">
-                <option value="Playfair Display">
-            </datalist>
-        </div>
-
-        <div id="fontInstallStatus" class="font-install-status" style="display: none;"></div>
-
-        <div class="modal-actions">
-            <button type="button" id="modalBtnCloseFontInstall" class="modal-btn modal-btn-secondary">
-                Cancel
-            </button>
-            <button type="button" id="modalBtnSubmitFontInstall" class="modal-btn modal-btn-primary">
-                <i class="fa-solid fa-download"></i> Install to System
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Apply to All Modal -->
-<div id="doceditApplyAllModal" class="docedit-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalApplyAllTitle">
-    <div class="docedit-modal">
-        <i class="fa-solid fa-wand-magic-sparkles modal-icon"></i>
-        <h2 id="modalApplyAllTitle" class="modal-title">Apply Style to All Matching Blocks</h2>
-        <p class="modal-desc">
-            Update all text blocks matching the active block's style across the document in one atomic action (fully undoable).
-        </p>
-
-        <div class="apply-all-summary-card">
-            <div class="apply-summary-row">
-                <span class="apply-label">Active Font:</span>
-                <strong id="applySourceFont">-</strong>
-            </div>
-            <div class="apply-summary-row">
-                <span class="apply-label">Font Size:</span>
-                <span id="applySourceSize">-</span>
-            </div>
-            <div class="apply-summary-row">
-                <span class="apply-label">Text Color:</span>
-                <span id="applySourceColor">-</span>
-            </div>
-        </div>
-
-        <div class="apply-all-options">
-            <div class="apply-options-group">
-                <span class="apply-group-title">Attributes to apply:</span>
-                <label class="apply-checkbox-label">
-                    <input type="checkbox" id="applyOptFont" checked> Font Family
-                </label>
-                <label class="apply-checkbox-label">
-                    <input type="checkbox" id="applyOptSize" checked> Font Size
-                </label>
-                <label class="apply-checkbox-label">
-                    <input type="checkbox" id="applyOptColor"> Text Color
-                </label>
-            </div>
-            <div class="apply-options-group">
-                <span class="apply-group-title">Scope:</span>
-                <label class="apply-radio-label">
-                    <input type="radio" name="applyScope" value="all" checked> All pages in document
-                </label>
-                <label class="apply-radio-label">
-                    <input type="radio" name="applyScope" value="page"> Current page only
-                </label>
-            </div>
-        </div>
-
-        <div id="applyPreviewSummary" class="apply-preview-summary">
-            Will update <strong id="applyMatchCount">0</strong> text blocks.
-        </div>
-
-        <div class="modal-actions">
-            <button type="button" id="modalBtnCloseApplyAll" class="modal-btn modal-btn-secondary">Cancel</button>
-            <button type="button" id="modalBtnConfirmApplyAll" class="modal-btn modal-btn-primary">
-                <i class="fa-solid fa-check"></i> Apply Changes
+                <i class="fa-solid fa-check"></i> Confirm &amp; Download PDF
             </button>
         </div>
     </div>

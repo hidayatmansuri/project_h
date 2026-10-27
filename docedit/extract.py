@@ -795,6 +795,7 @@ def _extract_from_pdf(
                 pt_y = round(ly * (p_height / pix.height), 2)
                 pt_w = round(lw * (p_width / pix.width), 2)
                 pt_h = round(lh * (p_height / pix.height), 2)
+                bbox_calc = [pt_x, pt_y, round(pt_x + pt_w, 2), round(pt_y + pt_h, 2)]
 
                 b_id = f"p{page_num}_b{b_idx}"
                 ocr_font_res = resolve_font_with_fallback(

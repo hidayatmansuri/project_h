@@ -162,44 +162,25 @@ class DocEditConf:
     @property
     def DOCEDIT_ENABLED_LANGUAGES(self) -> List[str]:
         """
-        Enabled OCR languages for editing and recognition.
-        Currently supports English and other Latin-script text only (default: ["eng"]).
-        Non-Latin languages (Hindi, Gujarati, Arabic, Urdu) are on hold pending
-        full complex-script shaping and RTL support. See MULTILINGUAL_RE_ENABLING_CHECKLIST.md.
+        Enabled languages for PDF text recognition.
+        Sole focus is on standard PDF text editing (English / Latin).
         """
-        val = getattr(settings, "DOCEDIT_ENABLED_LANGUAGES", None)
-        if val is not None:
-            return list(val)
-        return list(_get("ENABLED_LANGUAGES", ["eng"]))
+        return ["eng"]
 
     @property
     def ALL_OCR_LANGUAGES(self) -> dict:
-        """
-        Master catalog of supported OCR languages.
-        Code paths are preserved for Hindi, Gujarati, Arabic, and Urdu.
-        """
-        return _get("ALL_OCR_LANGUAGES", {
-            "eng": "English",
-            "hin": "Hindi",
-            "guj": "Gujarati",
-            "ara": "Arabic",
-            "urd": "Urdu",
-        })
+        """Supported languages catalog."""
+        return {"eng": "English"}
 
     @property
     def OCR_LANGUAGES(self) -> dict:
-        """
-        Active OCR languages, gated behind DOCEDIT_ENABLED_LANGUAGES.
-        Keeps non-enabled languages hidden in the UI while preserving their code paths.
-        """
-        enabled = set(self.DOCEDIT_ENABLED_LANGUAGES)
-        all_langs = self.ALL_OCR_LANGUAGES
-        return {k: v for k, v in all_langs.items() if k in enabled}
+        """Active languages."""
+        return {"eng": "English"}
 
     # ------------------------------------------------------------------ fonts
     @property
     def ALLOW_DOWNLOADS(self) -> bool:
-        """Allow downloading free fonts / OCR language packs from the internet."""
+        """Allow downloading free fonts from Google Fonts."""
         return bool(_get("ALLOW_DOWNLOADS", True))
 
     @property
@@ -228,34 +209,17 @@ class DocEditConf:
 
 conf = DocEditConf()
 
-# Upload extensions -> document kind
+# Upload extensions -> document kind (Sole focus on PDF editing)
 EXTENSION_KINDS = {
-    "png": "image", "jpg": "image", "jpeg": "image", "tif": "image", "tiff": "image",
-    "bmp": "image", "webp": "image",
     "pdf": "pdf",
-    "searchable_pdf": "searchable_pdf",
-    "docx": "docx",
-    "txt": "text", "md": "markdown", "markdown": "markdown",
-    "html": "html", "htm": "html",
 }
 
 MIME_TYPES = {
-    "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "tif": "image/tiff",
-    "tiff": "image/tiff", "bmp": "image/bmp", "webp": "image/webp",
     "pdf": "application/pdf",
-    "searchable_pdf": "application/pdf",
-    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "txt": "text/plain", "md": "text/markdown", "markdown": "text/markdown",
-    "html": "text/html", "htm": "text/html",
 }
 
 KIND_LABELS = {
-    "image": "Scanned image",
     "pdf": "PDF document",
-    "searchable_pdf": "Searchable PDF (scanned)",
-    "docx": "Word document",
-    "text": "Plain text",
-    "markdown": "Markdown",
-    "html": "Web page (HTML)",
 }
+
 

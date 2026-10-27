@@ -944,7 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setAutoSaveStatus('saving');
             try {
                 syncBlocksFromDom();
-                const fontName = tbFontSelect ? tbFontSelect.value : (panFontName.textContent || 'EB Garamond');
+                const fontName = (tbFontSelect && tbFontSelect.value) ? tbFontSelect.value : (panFontName ? panFontName.textContent : 'EB Garamond');
                 const fontSize = tbFontSizeSelect ? parseFloat(tbFontSizeSelect.value) : 12;
                 const chosenFormat = (panDownloadFormat ? panDownloadFormat.value : 'pdf') || 'pdf';
 
@@ -1029,7 +1029,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // --------------------------------------------------------------------------
     if (dropzone && fileInput) {
         dropzone.addEventListener('click', (e) => {
+            if (e.target === fileInput) return;
+            if (e.target.closest('#btnSelectPdf')) return;
             if (e.target !== ocrLangSelect && !e.target.closest('#doceditOcrLang')) {
+                fileInput.click();
+            }
+        });
+
+        const btnSelectPdf = document.getElementById('btnSelectPdf');
+        if (btnSelectPdf) {
+            btnSelectPdf.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        fileInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        dropzone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 fileInput.click();
             }
         });
@@ -1060,48 +1081,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleFileUpload(file) {
         hideNotice();
+        const uploadExt = (file.name.split('.').pop() || '').toLowerCase();
+        if (uploadExt !== 'pdf') {
+            alert('Please upload a valid PDF (.pdf) file. This editor solely focuses on PDF documents.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('document', file);
-        if (ocrLangSelect) {
-            formData.append('ocr_lang', ocrLangSelect.value);
-        }
-        const preprocessSelect = document.getElementById('doceditPreprocessProfile');
-        if (preprocessSelect) {
-            formData.append('ocr_preprocess_profile', preprocessSelect.value);
-        }
-        const deskewCheck = document.getElementById('doceditDeskew');
-        if (deskewCheck) {
-            formData.append('ocr_deskew', deskewCheck.checked ? 'true' : 'false');
-        }
-        const dewarpCheck = document.getElementById('doceditDewarp');
-        if (dewarpCheck) {
-            formData.append('ocr_dewarp', dewarpCheck.checked ? 'true' : 'false');
-        }
 
         // Show workspace & progress immediately
-        dropzone.style.display = 'none';
-        workspace.classList.add('active');
-        panProgressBar.style.width = '10%';
-        panProgressPercent.textContent = '10%';
-        panProgressText.textContent = 'Uploading document...';
-        panFilename.textContent = file.name;
-        const uploadExt = file.name.split('.').pop().toLowerCase();
-        panExtension.textContent = '.' + uploadExt;
-        panFilesize.textContent = formatBytes(file.size);
+        if (dropzone) dropzone.style.display = 'none';
+        if (workspace) workspace.classList.add('active');
+        if (panProgressBar) panProgressBar.style.width = '10%';
+        if (panProgressPercent) panProgressPercent.textContent = '10%';
+        if (panProgressText) panProgressText.textContent = 'Uploading PDF...';
+        if (panFilename) panFilename.textContent = file.name;
+        if (panExtension) panExtension.textContent = '.PDF';
+        if (panFilesize) panFilesize.textContent = formatBytes(file.size);
 
-        // Update format options with original extension
-        if (panOptOriginal) panOptOriginal.textContent = `Original Format (.${uploadExt})`;
-        if (modalOptOriginal) modalOptOriginal.textContent = `Original Upload Format (.${uploadExt})`;
-
-        // Default format selection based on uploaded document type
-        if (['docx', 'pdf', 'txt', 'md', 'html'].includes(uploadExt)) {
-            if (panDownloadFormat) panDownloadFormat.value = uploadExt;
-            if (modalDownloadFormat) modalDownloadFormat.value = uploadExt;
-        } else if (['png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp'].includes(uploadExt)) {
-            // For scanned images, default to PDF or PNG
-            if (panDownloadFormat) panDownloadFormat.value = 'pdf';
-            if (modalDownloadFormat) modalDownloadFormat.value = 'pdf';
-        }
+        if (panDownloadFormat) panDownloadFormat.value = 'pdf';
+        if (modalDownloadFormat) modalDownloadFormat.value = 'pdf';
 
         try {
             const resp = await fetch('/docedit/api/upload/', {
@@ -1161,34 +1161,34 @@ document.addEventListener('DOMContentLoaded', () => {
             docVersion = data.version;
         }
         const progress = data.progress || 0;
-        panProgressBar.style.width = `${progress}%`;
-        panProgressPercent.textContent = `${progress}%`;
-        panProgressText.textContent = data.progress_message || 'Processing...';
+        if (panProgressBar) panProgressBar.style.width = `${progress}%`;
+        if (panProgressPercent) panProgressPercent.textContent = `${progress}%`;
+        if (panProgressText) panProgressText.textContent = data.progress_message || 'Processing...';
 
-        if (data.original_filename) panFilename.textContent = data.original_filename;
-        if (data.extension) {
+        if (data.original_filename && panFilename) panFilename.textContent = data.original_filename;
+        if (data.extension && panExtension) {
             const extLower = data.extension.toLowerCase();
             panExtension.textContent = '.' + extLower.toUpperCase();
             if (panOptOriginal) panOptOriginal.textContent = `Original Format (.${extLower})`;
             if (modalOptOriginal) modalOptOriginal.textContent = `Original Upload Format (.${extLower})`;
         }
-        if (data.file_size) panFilesize.textContent = formatBytes(data.file_size);
+        if (data.file_size && panFilesize) panFilesize.textContent = formatBytes(data.file_size);
 
         const stats = data.stats || {};
-        panPages.textContent = stats.page_count || 1;
-        panWords.textContent = stats.word_count || 0;
-        panChars.textContent = stats.char_count || 0;
+        if (panPages) panPages.textContent = stats.page_count || 1;
+        if (panWords) panWords.textContent = stats.word_count || 0;
+        if (panChars) panChars.textContent = stats.char_count || 0;
 
         const font = data.font_info || {};
         if (font.name) {
-            panFontName.textContent = font.name;
+            if (panFontName) panFontName.textContent = font.name;
             if (tbFontSelect) {
                 ensureFontInSelect(font.name);
                 tbFontSelect.value = font.name;
             }
         }
         if (font.size_pt) {
-            panFontSize.textContent = `${font.size_pt} pt`;
+            if (panFontSize) panFontSize.textContent = `${font.size_pt} pt`;
             if (tbFontSizeSelect) {
                 ensureFontSizeInSelect(font.size_pt);
                 tbFontSizeSelect.value = String(font.size_pt);
@@ -1196,42 +1196,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Font Status Badge
-        if (font.is_alternative) {
-            panFontBadge.className = 'pan-badge badge-alternative';
-            panFontBadge.textContent = 'Nearest Free Match';
-            panAltBox.classList.add('show');
-            panAltText.innerHTML = `Original font: <strong>${escapeHtml(font.alternative_to || 'Unknown')}</strong>.<br>` +
-                                   `Nearest match: <strong>${escapeHtml(font.name || '')}</strong> (${escapeHtml(font.nearest_match_reason || 'Free equivalent')}).`;
-        } else if (font.is_downloaded) {
-            panFontBadge.className = 'pan-badge badge-downloaded';
-            panFontBadge.textContent = 'Downloaded & Installed';
-            panAltBox.classList.remove('show');
-        } else if (font.is_system) {
-            panFontBadge.className = 'pan-badge badge-system';
-            panFontBadge.textContent = 'System Font';
-            panAltBox.classList.remove('show');
+        if (panFontBadge) {
+            if (font.is_alternative) {
+                panFontBadge.className = 'pan-badge badge-alternative';
+                panFontBadge.textContent = 'Nearest Free Match';
+                if (panAltBox) panAltBox.classList.add('show');
+                if (panAltText) panAltText.innerHTML = `Original font: <strong>${escapeHtml(font.alternative_to || 'Unknown')}</strong>.<br>` +
+                                       `Nearest match: <strong>${escapeHtml(font.name || '')}</strong> (${escapeHtml(font.nearest_match_reason || 'Free equivalent')}).`;
+            } else if (font.is_downloaded) {
+                panFontBadge.className = 'pan-badge badge-downloaded';
+                panFontBadge.textContent = 'Downloaded & Installed';
+                if (panAltBox) panAltBox.classList.remove('show');
+            } else if (font.is_system) {
+                panFontBadge.className = 'pan-badge badge-system';
+                panFontBadge.textContent = 'System Font';
+                if (panAltBox) panAltBox.classList.remove('show');
+            }
         }
 
         // Fuzzy Words Review List
-        const fuzzyList = (data.fuzzy_words || []).filter(w => !w.is_readonly && isLatinScript(w.text));
-        reviewWordsList = fuzzyList.slice();
-        panFuzzyCount.textContent = fuzzyList.length;
-        if (tbReviewQueueCount) tbReviewQueueCount.textContent = fuzzyList.length;
-        panFuzzyList.innerHTML = '';
-        if (fuzzyList.length > 0) {
-            fuzzyList.slice(0, 25).forEach((fw, idx) => {
-                const item = document.createElement('div');
-                item.className = 'fuzzy-review-item';
-                item.innerHTML = `<span>"${escapeHtml(fw.text)}"</span> <span class="fuzzy-conf-tag">${fw.conf}% conf</span>`;
-                item.title = 'Click to open review queue at this word';
-                item.addEventListener('click', () => {
-                    openReviewQueue();
-                    selectReviewWord(idx);
-                });
-                panFuzzyList.appendChild(item);
-            });
-        } else {
-            panFuzzyList.innerHTML = '<div style="opacity:0.6; font-size:0.8rem; padding:0.3rem;">No suspicious fuzzy characters detected.</div>';
+        if (panFuzzyCount) {
+            const fuzzyList = (data.fuzzy_words || []).filter(w => !w.is_readonly && isLatinScript(w.text));
+            reviewWordsList = fuzzyList.slice();
+            panFuzzyCount.textContent = fuzzyList.length;
+            if (tbReviewQueueCount) tbReviewQueueCount.textContent = fuzzyList.length;
+            if (panFuzzyList) {
+                panFuzzyList.innerHTML = '';
+                if (fuzzyList.length > 0) {
+                    fuzzyList.slice(0, 25).forEach((fw, idx) => {
+                        const item = document.createElement('div');
+                        item.className = 'fuzzy-review-item';
+                        item.innerHTML = `<span>"${escapeHtml(fw.text)}"</span> <span class="fuzzy-conf-tag">${fw.conf}% conf</span>`;
+                        item.title = 'Click to open review queue at this word';
+                        item.addEventListener('click', () => {
+                            openReviewQueue();
+                            selectReviewWord(idx);
+                        });
+                        panFuzzyList.appendChild(item);
+                    });
+                } else {
+                    panFuzzyList.innerHTML = '<div style="opacity:0.6; font-size:0.8rem; padding:0.3rem;">No suspicious fuzzy characters detected.</div>';
+                }
+            }
         }
     }
 
@@ -1300,8 +1306,17 @@ document.addEventListener('DOMContentLoaded', () => {
         pagesContainer.className = 'docedit-pages-container';
 
         pages.forEach(p => {
+            // Ensure decoration collections exist on page model
+            p.annotations = p.annotations || [];
+            p.highlights = p.highlights || [];
+            p.drawings = p.drawings || [];
+            p.shapes = p.shapes || [];
+            p.signatures = p.signatures || [];
+            p.rotation = p.rotation || 0;
+            p.is_deleted = p.is_deleted || false;
+
             const sheet = document.createElement('div');
-            sheet.className = 'docedit-page-sheet';
+            sheet.className = `docedit-page-sheet${p.is_deleted ? ' is-deleted' : ''}`;
             sheet.id = `doceditPage_${p.page_num}`;
             sheet.setAttribute('data-page', p.page_num);
 
@@ -1309,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             header.className = 'page-sheet-header';
             header.innerHTML = `
                 <div class="page-sheet-badge">
-                    <i class="fa-solid fa-file-invoice"></i> Page ${p.page_num} of ${pages.length}
+                    <i class="fa-solid fa-file-pdf"></i> Page ${p.page_num} of ${pages.length}
                 </div>
                 <div class="page-sheet-dims">${Math.round(p.width)} × ${Math.round(p.height)} pt</div>
             `;
@@ -1318,6 +1333,9 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.className = 'page-sheet-canvas';
             canvas.style.aspectRatio = `${p.width} / ${p.height}`;
             canvas.style.setProperty('--page-width', String(p.width || 595.0));
+            if (p.rotation) {
+                canvas.style.transform = `rotate(${p.rotation}deg)`;
+            }
 
             const updateCanvasScale = () => {
                 const w = canvas.clientWidth || (sheet ? sheet.clientWidth : 708);
@@ -1350,19 +1368,10 @@ document.addEventListener('DOMContentLoaded', () => {
             overlay.className = 'page-text-overlay';
 
             // Alignment guides for magnetic snapping
-            // Alignment guides for magnetic snapping
             const guideV = document.createElement('div');
             guideV.className = 'docedit-align-guide-v';
             const guideH = document.createElement('div');
             guideH.className = 'docedit-align-guide-h';
-
-            // Phase 7: Canvas click for Add Box
-            canvas.addEventListener('click', (e) => {
-                if (isAddingBoxMode) {
-                    e.stopPropagation();
-                    handleAddBoxClick(e, p, canvas);
-                }
-            });
 
             p.blocks.forEach(b => {
                 const blockDiv = createBlockElement(b, p, fontName, fontSize);
@@ -1373,6 +1382,10 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.appendChild(overlay);
             canvas.appendChild(guideV);
             canvas.appendChild(guideH);
+
+            // Adobe Acrobat interactive overlay & drawing canvas
+            initAcrobatPageDecorations(canvas, p);
+
             sheet.appendChild(header);
             sheet.appendChild(canvas);
             pagesContainer.appendChild(sheet);
@@ -1381,6 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editorPaper.appendChild(pagesContainer);
         setupPageScrollObserver();
         initThumbnailsSidebar(pages);
+        updateAnnotationsSidePan();
         updateIssuesPanel();
         setTimeout(() => {
             zoomFitWidth();
@@ -3018,28 +3032,70 @@ document.addEventListener('DOMContentLoaded', () => {
         // Multi-page documents get the page strip open by default for quick navigation.
         if (pages.length > 1) toggleThumbnailsSidebar(true);
 
-        pages.forEach(p => {
+        pages.forEach((p, idx) => {
             const item = document.createElement('div');
-            item.className = `thumb-item${p.page_num === currentPageIndex ? ' active' : ''}`;
+            item.className = `thumb-item${p.page_num === currentPageIndex ? ' active' : ''}${p.is_deleted ? ' is-deleted' : ''}`;
             item.setAttribute('data-page', String(p.page_num));
 
             const hasEdits = p.blocks && p.blocks.some(b => b.is_modified || b.is_new || b.is_deleted);
-            const hasFuzzy = p.blocks && p.blocks.some(b => b.has_fuzzy);
+            const rotStyle = p.rotation ? `transform: rotate(${p.rotation}deg);` : '';
 
             item.innerHTML = `
                 <div class="thumb-preview-wrap">
-                    <img class="thumb-img" src="${p.image_url}" alt="Thumbnail Page ${p.page_num}" loading="lazy" />
+                    <img class="thumb-img" src="${p.image_url}" alt="Thumbnail Page ${p.page_num}" loading="lazy" style="${rotStyle}" />
                     <div class="thumb-badges">
                         <span class="thumb-badge badge-edited" style="display: ${hasEdits ? 'inline-flex' : 'none'};" title="Has user edits"><i class="fa-solid fa-pen"></i> Edited</span>
-                        <span class="thumb-badge badge-fuzzy" style="display: ${hasFuzzy ? 'inline-flex' : 'none'};" title="Has low-confidence OCR text"><i class="fa-solid fa-triangle-exclamation"></i> Low Conf</span>
                     </div>
                 </div>
                 <div class="thumb-label">Page ${p.page_num}</div>
+                <div class="thumb-card-tools">
+                    <button type="button" class="thumb-tool-btn btn-thumb-rot-ccw" title="Rotate 90° CCW"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button type="button" class="thumb-tool-btn btn-thumb-rot-cw" title="Rotate 90° CW"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button type="button" class="thumb-tool-btn btn-thumb-move-up" title="Move page up"><i class="fa-solid fa-arrow-up"></i></button>
+                    <button type="button" class="thumb-tool-btn btn-thumb-move-down" title="Move page down"><i class="fa-solid fa-arrow-down"></i></button>
+                    <button type="button" class="thumb-tool-btn btn-thumb-delete" title="Delete page"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
             `;
 
-            item.addEventListener('click', () => {
+            item.querySelector('.thumb-preview-wrap').addEventListener('click', () => {
                 goToPage(p.page_num);
             });
+
+            const btnCcw = item.querySelector('.btn-thumb-rot-ccw');
+            if (btnCcw) {
+                btnCcw.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    rotatePage(p, -90);
+                });
+            }
+            const btnCw = item.querySelector('.btn-thumb-rot-cw');
+            if (btnCw) {
+                btnCw.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    rotatePage(p, 90);
+                });
+            }
+            const btnUp = item.querySelector('.btn-thumb-move-up');
+            if (btnUp) {
+                btnUp.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    movePage(p, -1);
+                });
+            }
+            const btnDown = item.querySelector('.btn-thumb-move-down');
+            if (btnDown) {
+                btnDown.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    movePage(p, 1);
+                });
+            }
+            const btnDel = item.querySelector('.btn-thumb-delete');
+            if (btnDel) {
+                btnDel.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleDeletePage(p);
+                });
+            }
 
             thumbList.appendChild(item);
         });
@@ -3438,7 +3494,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ensureFontInSelect(resData.name);
                         tbFontSelect.value = resData.name;
                         editorPaper.style.fontFamily = `"${resData.name}", serif`;
-                        panFontName.textContent = resData.name;
+                        if (panFontName) panFontName.textContent = resData.name;
                         showNotice('Font Installed', resData.message || `Font '${resData.name}' installed to system successfully.`);
                         hideInstallFontModal();
 
@@ -3501,7 +3557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ensureFontInSelect(resData.name);
                         tbFontSelect.value = resData.name;
                         editorPaper.style.fontFamily = `"${resData.name}", serif`;
-                        panFontName.textContent = resData.name;
+                        if (panFontName) panFontName.textContent = resData.name;
                         showNotice('Font Installed', resData.message || `Font '${resData.name}' installed to system successfully.`);
                         hideInstallFontModal();
 
@@ -3540,7 +3596,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isSerif = /times|serif|garamond|georgia|baskerville|caslon|cambria|book|palatino/i.test(newFont);
             const fallbackGeneric = isSerif ? 'serif' : 'sans-serif';
             editorPaper.style.fontFamily = `"${newFont}", ${fallbackGeneric}`;
-            panFontName.textContent = newFont;
+            if (panFontName) panFontName.textContent = newFont;
 
             // In layout_preserved mode: if a specific block is active, update only that block
             if (currentMode === 'layout_preserved') {
@@ -3588,7 +3644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newSize = tbFontSizeSelect.value;
             const newSizeNum = parseFloat(newSize);
             editorPaper.style.fontSize = `${newSize}pt`;
-            panFontSize.textContent = `${newSize} pt`;
+            if (panFontSize) panFontSize.textContent = `${newSize} pt`;
 
             // In layout_preserved mode: if a specific block is active, update only that block
             if (currentMode === 'layout_preserved') {
@@ -3787,7 +3843,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const htmlContent = editorPaper.innerHTML;
-            const fontName = tbFontSelect ? tbFontSelect.value : (panFontName.textContent || 'EB Garamond');
+            const fontName = (tbFontSelect && tbFontSelect.value) ? tbFontSelect.value : (panFontName ? panFontName.textContent : 'EB Garamond');
             const fontSize = tbFontSizeSelect ? tbFontSizeSelect.value : 12;
             const chosenFormat = (panDownloadFormat ? panDownloadFormat.value : 'pdf') || 'pdf';
 
@@ -3901,7 +3957,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const htmlContent = editorPaper.innerHTML;
-            const fontName = tbFontSelect ? tbFontSelect.value : (panFontName.textContent || 'EB Garamond');
+            const fontName = (tbFontSelect && tbFontSelect.value) ? tbFontSelect.value : (panFontName ? panFontName.textContent : 'EB Garamond');
             const fontSize = tbFontSizeSelect ? tbFontSizeSelect.value : 12;
             const chosenFormat = (panDownloadFormat ? panDownloadFormat.value : 'pdf') || 'pdf';
 
@@ -4547,6 +4603,1124 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ==========================================================================
+    // Adobe Acrobat Online PDF Editor Engine & Interactive Overlays
+    // ==========================================================================
+    let activeAcrobatTool = 'select';
+    let activeCommentColor = '#ffd54f';
+    let activeMarkupColor = '#fff176';
+    let activeMarkupType = 'highlight';
+    let activePenColor = '#000000';
+    let activePenWidth = 2;
+    let activeShapeType = 'rect';
+    let activeShapeStroke = '#d32f2f';
+    let activeShapeFill = 'transparent';
+    let activeShapeWidth = 2;
+    let lastSignatureDataUrl = null;
+    let activePopoverAnnot = null;
+    let activePopoverPage = null;
+
+    function initAcrobatToolbar() {
+        // Desktop Tabs
+        document.querySelectorAll('.acrobat-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchAcrobatTab(btn.getAttribute('data-tab'));
+            });
+        });
+
+        // Mobile Dock Buttons
+        document.querySelectorAll('.mob-dock-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchAcrobatTab(btn.getAttribute('data-tab'));
+            });
+        });
+
+        // Tool Hint Cancel
+        const btnCancelTool = document.getElementById('btnCancelActiveTool');
+        if (btnCancelTool) {
+            btnCancelTool.addEventListener('click', () => {
+                setAcrobatTool('select');
+            });
+        }
+
+        // Subribbon: Edit Text
+        const btnSelect = document.getElementById('btnToolSelect');
+        if (btnSelect) {
+            btnSelect.addEventListener('click', () => setAcrobatTool('select'));
+        }
+        const btnAddBox = document.getElementById('tbBtnAddBox');
+        if (btnAddBox) {
+            btnAddBox.addEventListener('click', () => setAcrobatTool('add-box'));
+        }
+        const textColorPicker = document.getElementById('tbTextColorPicker');
+        if (textColorPicker) {
+            textColorPicker.addEventListener('input', (e) => {
+                const color = e.target.value;
+                if (activeBlockEl && activeBlockData) {
+                    activeBlockEl.style.color = color;
+                    activeBlockData.color = color;
+                    activeBlockData.color_rgb = hexToRgbTuple(color);
+                    activeBlockData.is_modified = true;
+                    activeBlockEl.classList.add('is-edited');
+                    triggerAutoSave(600);
+                } else {
+                    document.execCommand('foreColor', false, color);
+                }
+            });
+        }
+
+        // Subribbon: Comments
+        const btnComment = document.getElementById('btnToolComment');
+        if (btnComment) {
+            btnComment.addEventListener('click', () => setAcrobatTool('comment'));
+        }
+        document.querySelectorAll('#commentColorSwatches .color-swatch-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('#commentColorSwatches .color-swatch-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                activeCommentColor = dot.getAttribute('data-color') || '#ffd54f';
+            });
+        });
+
+        // Subribbon: Markups
+        const btnHl = document.getElementById('btnToolHighlight');
+        if (btnHl) {
+            btnHl.addEventListener('click', () => {
+                activeMarkupType = 'highlight';
+                setAcrobatTool('highlight');
+            });
+        }
+        const btnUl = document.getElementById('btnToolUnderline');
+        if (btnUl) {
+            btnUl.addEventListener('click', () => {
+                activeMarkupType = 'underline';
+                setAcrobatTool('underline');
+            });
+        }
+        const btnSo = document.getElementById('btnToolStrikeout');
+        if (btnSo) {
+            btnSo.addEventListener('click', () => {
+                activeMarkupType = 'strikeout';
+                setAcrobatTool('strikeout');
+            });
+        }
+        document.querySelectorAll('#markupColorSwatches .color-swatch-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('#markupColorSwatches .color-swatch-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                activeMarkupColor = dot.getAttribute('data-color') || '#fff176';
+            });
+        });
+
+        // Subribbon: Draw
+        const btnPen = document.getElementById('btnToolPen');
+        if (btnPen) {
+            btnPen.addEventListener('click', () => setAcrobatTool('pen'));
+        }
+        const btnEraser = document.getElementById('btnToolEraser');
+        if (btnEraser) {
+            btnEraser.addEventListener('click', () => setAcrobatTool('eraser'));
+        }
+        const strokeWidthSel = document.getElementById('drawStrokeWidth');
+        if (strokeWidthSel) {
+            strokeWidthSel.addEventListener('change', (e) => {
+                activePenWidth = parseFloat(e.target.value) || 2;
+            });
+        }
+        document.querySelectorAll('#drawColorSwatches .color-swatch-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('#drawColorSwatches .color-swatch-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                activePenColor = dot.getAttribute('data-color') || '#000000';
+                const customInput = document.getElementById('drawCustomColor');
+                if (customInput) customInput.value = activePenColor;
+            });
+        });
+        const drawCustom = document.getElementById('drawCustomColor');
+        if (drawCustom) {
+            drawCustom.addEventListener('input', (e) => {
+                activePenColor = e.target.value;
+            });
+        }
+        const btnClearDrawings = document.getElementById('btnClearPageDrawings');
+        if (btnClearDrawings) {
+            btnClearDrawings.addEventListener('click', () => {
+                if (!currentPagesData || currentPagesData.length === 0) return;
+                const p = currentPagesData[currentPageIndex - 1];
+                if (p && confirm(`Clear all freehand drawings on page ${p.page_num}?`)) {
+                    p.drawings = [];
+                    const sheet = document.getElementById(`doceditPage_${p.page_num}`);
+                    const canvas = sheet ? sheet.querySelector('.page-drawing-canvas') : null;
+                    if (canvas && canvas._redraw) canvas._redraw();
+                    triggerAutoSave(600);
+                }
+            });
+        }
+
+        // Subribbon: Shapes
+        const btnRect = document.getElementById('btnToolRect');
+        if (btnRect) btnRect.addEventListener('click', () => { activeShapeType = 'rect'; setAcrobatTool('shape-rect'); });
+        const btnCircle = document.getElementById('btnToolCircle');
+        if (btnCircle) btnCircle.addEventListener('click', () => { activeShapeType = 'circle'; setAcrobatTool('shape-circle'); });
+        const btnLine = document.getElementById('btnToolLine');
+        if (btnLine) btnLine.addEventListener('click', () => { activeShapeType = 'line'; setAcrobatTool('shape-line'); });
+        const btnArrow = document.getElementById('btnToolArrow');
+        if (btnArrow) btnArrow.addEventListener('click', () => { activeShapeType = 'arrow'; setAcrobatTool('shape-arrow'); });
+
+        const shapeStroke = document.getElementById('shapeStrokeColor');
+        if (shapeStroke) shapeStroke.addEventListener('input', (e) => { activeShapeStroke = e.target.value; });
+        const shapeFill = document.getElementById('shapeFillColor');
+        if (shapeFill) shapeFill.addEventListener('change', (e) => { activeShapeFill = e.target.value; });
+        const shapeWidth = document.getElementById('shapeBorderWidth');
+        if (shapeWidth) shapeWidth.addEventListener('change', (e) => { activeShapeWidth = parseFloat(e.target.value) || 2; });
+
+        // Subribbon: Fill & Sign
+        const btnAddSig = document.getElementById('btnAddSignature');
+        if (btnAddSig) btnAddSig.addEventListener('click', () => openSignatureModal());
+        const btnStampSaved = document.getElementById('btnStampSavedSig');
+        if (btnStampSaved) btnStampSaved.addEventListener('click', () => setAcrobatTool('stamp-sig'));
+        const btnCheck = document.getElementById('btnToolCheckmark');
+        if (btnCheck) btnCheck.addEventListener('click', () => setAcrobatTool('stamp-check'));
+        const btnCross = document.getElementById('btnToolCrossmark');
+        if (btnCross) btnCross.addEventListener('click', () => setAcrobatTool('stamp-cross'));
+        const btnDate = document.getElementById('btnToolDateStamp');
+        if (btnDate) btnDate.addEventListener('click', () => setAcrobatTool('stamp-date'));
+
+        // Subribbon: Organize
+        const btnRotCW = document.getElementById('btnRotateCurrentCW');
+        if (btnRotCW) {
+            btnRotCW.addEventListener('click', () => {
+                if (currentPagesData && currentPagesData[currentPageIndex - 1]) {
+                    rotatePage(currentPagesData[currentPageIndex - 1], 90);
+                }
+            });
+        }
+        const btnRotCCW = document.getElementById('btnRotateCurrentCCW');
+        if (btnRotCCW) {
+            btnRotCCW.addEventListener('click', () => {
+                if (currentPagesData && currentPagesData[currentPageIndex - 1]) {
+                    rotatePage(currentPagesData[currentPageIndex - 1], -90);
+                }
+            });
+        }
+        const btnDelPage = document.getElementById('btnDeleteCurrentPage');
+        if (btnDelPage) {
+            btnDelPage.addEventListener('click', () => {
+                if (currentPagesData && currentPagesData[currentPageIndex - 1]) {
+                    toggleDeletePage(currentPagesData[currentPageIndex - 1]);
+                }
+            });
+        }
+        const btnRotAll = document.getElementById('btnThumbRotateAllCW');
+        if (btnRotAll) {
+            btnRotAll.addEventListener('click', () => {
+                rotateAllPages(90);
+            });
+        }
+
+        // Popovers & Modals
+        initSignatureModal();
+        initCommentPopover();
+    }
+
+    function hexToRgbTuple(hex) {
+        if (!hex) return [0, 0, 0];
+        let s = hex.replace('#', '').trim();
+        if (s.length === 3) s = s.split('').map(c => c + c).join('');
+        if (s.length === 6) {
+            return [
+                parseInt(s.substring(0, 2), 16) / 255,
+                parseInt(s.substring(2, 4), 16) / 255,
+                parseInt(s.substring(4, 6), 16) / 255
+            ];
+        }
+        return [0, 0, 0];
+    }
+
+    function switchAcrobatTab(tabName) {
+        document.querySelectorAll('.acrobat-tab-btn').forEach(btn => {
+            const isMatch = btn.getAttribute('data-tab') === tabName;
+            btn.classList.toggle('active', isMatch);
+            btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+        });
+        document.querySelectorAll('.mob-dock-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+        });
+        document.querySelectorAll('.ribbon-panel').forEach(panel => {
+            panel.classList.remove('active');
+        });
+        const ribbonId = 'ribbon' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
+        const activeRibbon = document.getElementById(ribbonId);
+        if (activeRibbon) {
+            activeRibbon.classList.add('active');
+        }
+
+        if (tabName === 'edit') {
+            setAcrobatTool('select');
+        } else if (tabName === 'comment') {
+            setAcrobatTool('comment');
+        } else if (tabName === 'markup') {
+            setAcrobatTool('highlight');
+        } else if (tabName === 'draw') {
+            setAcrobatTool('pen');
+        } else if (tabName === 'shapes') {
+            setAcrobatTool('shape-rect');
+        } else if (tabName === 'sign') {
+            if (lastSignatureDataUrl) {
+                setAcrobatTool('stamp-sig');
+            } else {
+                openSignatureModal();
+            }
+        } else if (tabName === 'organize') {
+            setAcrobatTool('select');
+            if (doceditThumbnailsSidebar && doceditThumbnailsSidebar.classList.contains('collapsed')) {
+                toggleThumbnailsSidebar(true);
+            }
+        }
+    }
+
+    function setAcrobatTool(toolName) {
+        activeAcrobatTool = toolName;
+        isAddingBoxMode = (toolName === 'add-box');
+
+        const canvases = document.querySelectorAll('.page-sheet-canvas');
+        canvases.forEach(c => {
+            c.classList.remove('mode-draw', 'mode-erase', 'mode-comment', 'mode-shape', 'mode-stamp');
+            if (toolName === 'pen') c.classList.add('mode-draw');
+            else if (toolName === 'eraser') c.classList.add('mode-erase');
+            else if (toolName === 'comment') c.classList.add('mode-comment');
+            else if (toolName.startsWith('shape-')) c.classList.add('mode-shape');
+            else if (toolName.startsWith('stamp-')) c.classList.add('mode-stamp');
+        });
+
+        const hintBar = document.getElementById('doceditActiveToolHint');
+        const hintText = document.getElementById('activeToolHintText');
+        if (hintBar && hintText) {
+            if (toolName === 'select') {
+                hintBar.style.display = 'none';
+            } else {
+                hintBar.style.display = 'flex';
+                const hints = {
+                    'add-box': '<i class="fa-solid fa-pen-to-square"></i> Click anywhere on the PDF page to place a new Text Box',
+                    'comment': '<i class="fa-regular fa-comment-dots"></i> Click anywhere on the PDF page to place a Sticky Note comment',
+                    'highlight': '<i class="fa-solid fa-highlighter"></i> Click on text or area to highlight',
+                    'underline': '<i class="fa-solid fa-underline"></i> Click on text to underline',
+                    'strikeout': '<i class="fa-solid fa-strikethrough"></i> Click on text to strikethrough',
+                    'pen': '<i class="fa-solid fa-pencil"></i> Freehand Drawing active &mdash; click and drag on the page',
+                    'eraser': '<i class="fa-solid fa-eraser"></i> Eraser active &mdash; click or drag over drawings to erase strokes',
+                    'shape-rect': '<i class="fa-regular fa-square"></i> Click on the page to insert a Rectangle',
+                    'shape-circle': '<i class="fa-regular fa-circle"></i> Click on the page to insert a Circle',
+                    'shape-line': '<i class="fa-solid fa-minus"></i> Click on the page to insert a Line',
+                    'shape-arrow': '<i class="fa-solid fa-arrow-right"></i> Click on the page to insert an Arrow',
+                    'stamp-sig': '<i class="fa-solid fa-signature"></i> Click anywhere to place your Digital Signature',
+                    'stamp-check': '<i class="fa-solid fa-check"></i> Click anywhere to stamp a checkmark ✔',
+                    'stamp-cross': '<i class="fa-solid fa-xmark"></i> Click anywhere to stamp a crossmark ✖',
+                    'stamp-date': '<i class="fa-regular fa-calendar-days"></i> Click anywhere to stamp the current date',
+                };
+                hintText.innerHTML = hints[toolName] || '<i class="fa-solid fa-info-circle"></i> Active tool. Click on page or press Esc to cancel.';
+            }
+        }
+    }
+
+    function initAcrobatPageDecorations(canvas, p) {
+        // 1. Drawing Canvas overlay
+        const drawingCanvas = document.createElement('canvas');
+        drawingCanvas.className = 'page-drawing-canvas';
+        drawingCanvas.width = Math.round(p.width);
+        drawingCanvas.height = Math.round(p.height);
+        setupDrawingCanvas(drawingCanvas, p);
+        canvas.appendChild(drawingCanvas);
+
+        // 2. Decorations DOM overlay
+        const decorOverlay = document.createElement('div');
+        decorOverlay.className = 'page-decorations-overlay';
+        decorOverlay.id = `pageDecor_${p.page_num}`;
+        renderPageDecorations(decorOverlay, p, canvas);
+        canvas.appendChild(decorOverlay);
+
+        // 3. Canvas click interaction
+        canvas.addEventListener('click', (e) => {
+            if (e.target.closest('.pdf-comment-pin') || e.target.closest('.pdf-sig-element') || e.target.closest('.pdf-shape-overlay') || e.target.closest('.pdf-stamp-element') || e.target.closest('.docedit-text-block')) {
+                return;
+            }
+            handleCanvasClickForActiveTool(e, p, canvas, decorOverlay);
+        });
+    }
+
+    function setupDrawingCanvas(drawingCanvas, p) {
+        const ctx = drawingCanvas.getContext('2d');
+        function redraw() {
+            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            (p.drawings || []).forEach(dwg => {
+                if (!dwg.points || dwg.points.length < 2) return;
+                ctx.beginPath();
+                ctx.strokeStyle = dwg.color || '#000000';
+                ctx.lineWidth = dwg.width || 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = dwg.opacity || 1.0;
+                ctx.moveTo(dwg.points[0][0], dwg.points[0][1]);
+                for (let i = 1; i < dwg.points.length; i++) {
+                    ctx.lineTo(dwg.points[i][0], dwg.points[i][1]);
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+        redraw();
+        drawingCanvas._redraw = redraw;
+
+        let isDrawing = false;
+        let currentStroke = [];
+
+        function getPtCoords(e) {
+            const rect = drawingCanvas.getBoundingClientRect();
+            const scale = parseFloat(drawingCanvas.parentElement.style.getPropertyValue('--scale')) || 1.0;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return [
+                (clientX - rect.left) / scale,
+                (clientY - rect.top) / scale
+            ];
+        }
+
+        function onPointerDown(e) {
+            if (activeAcrobatTool !== 'pen' && activeAcrobatTool !== 'eraser') return;
+            e.preventDefault();
+            const pt = getPtCoords(e);
+            if (activeAcrobatTool === 'pen') {
+                isDrawing = true;
+                currentStroke = [pt];
+                ctx.beginPath();
+                ctx.strokeStyle = activePenColor;
+                ctx.lineWidth = activePenWidth;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.moveTo(pt[0], pt[1]);
+            } else if (activeAcrobatTool === 'eraser') {
+                eraseAtPoint(pt);
+            }
+        }
+
+        function onPointerMove(e) {
+            if (activeAcrobatTool === 'pen' && isDrawing) {
+                e.preventDefault();
+                const pt = getPtCoords(e);
+                currentStroke.push(pt);
+                ctx.lineTo(pt[0], pt[1]);
+                ctx.stroke();
+            } else if (activeAcrobatTool === 'eraser' && (e.buttons === 1 || e.touches)) {
+                e.preventDefault();
+                const pt = getPtCoords(e);
+                eraseAtPoint(pt);
+            }
+        }
+
+        function onPointerUp() {
+            if (activeAcrobatTool === 'pen' && isDrawing) {
+                isDrawing = false;
+                if (currentStroke.length >= 2) {
+                    p.drawings.push({
+                        points: currentStroke,
+                        color: activePenColor,
+                        width: activePenWidth,
+                        opacity: 1.0
+                    });
+                    triggerAutoSave(600);
+                }
+                currentStroke = [];
+            }
+        }
+
+        function eraseAtPoint(pt) {
+            if (!p.drawings || p.drawings.length === 0) return;
+            const threshold = 14;
+            let removedAny = false;
+            p.drawings = p.drawings.filter(dwg => {
+                const close = (dwg.points || []).some(pCoord => {
+                    const dx = pCoord[0] - pt[0];
+                    const dy = pCoord[1] - pt[1];
+                    return (dx * dx + dy * dy) <= (threshold * threshold);
+                });
+                if (close) removedAny = true;
+                return !close;
+            });
+            if (removedAny) {
+                redraw();
+                triggerAutoSave(600);
+            }
+        }
+
+        drawingCanvas.addEventListener('pointerdown', onPointerDown);
+        drawingCanvas.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+    }
+
+    function renderPageDecorations(container, p, canvas) {
+        container.innerHTML = '';
+
+        // 1. Sticky Note Pins
+        (p.annotations || []).forEach(annot => {
+            const pin = document.createElement('div');
+            pin.className = 'pdf-comment-pin';
+            pin.style.left = annot.x + 'px';
+            pin.style.top = annot.y + 'px';
+            pin.style.background = annot.color || '#ffd54f';
+            pin.title = `${annot.author || 'Comment'}: ${annot.text || '(empty)'}`;
+            pin.innerHTML = '<i class="fa-regular fa-comment-dots"></i>';
+
+            pin.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openCommentPopover(pin, annot, p);
+            });
+            container.appendChild(pin);
+        });
+
+        // 2. Text Markups (Highlight / Underline / Strikeout)
+        (p.highlights || []).forEach((hl, hIdx) => {
+            const bbox = hl.bbox || [20, 20, 120, 36];
+            const el = document.createElement('div');
+            el.className = `pdf-markup-overlay type-${hl.type || 'highlight'}`;
+            el.style.left = bbox[0] + 'px';
+            el.style.top = bbox[1] + 'px';
+            el.style.width = Math.max(10, bbox[2] - bbox[0]) + 'px';
+            el.style.height = Math.max(4, bbox[3] - bbox[1]) + 'px';
+            el.style.borderColor = hl.color || '#fff176';
+            if (hl.type === 'highlight') {
+                el.style.background = hl.color || '#fff176';
+            }
+            el.title = `Click to delete ${hl.type}`;
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm(`Remove this ${hl.type}?`)) {
+                    p.highlights.splice(hIdx, 1);
+                    renderPageDecorations(container, p, canvas);
+                    triggerAutoSave(600);
+                }
+            });
+            container.appendChild(el);
+        });
+
+        // 3. Vector Shapes
+        (p.shapes || []).forEach((shape, sIdx) => {
+            const bbox = shape.bbox || [50, 50, 170, 130];
+            const el = document.createElement('div');
+            el.className = `pdf-shape-overlay type-${shape.type || 'rect'}`;
+            el.style.left = bbox[0] + 'px';
+            el.style.top = bbox[1] + 'px';
+            el.style.width = Math.max(12, bbox[2] - bbox[0]) + 'px';
+            el.style.height = Math.max(4, bbox[3] - bbox[1]) + 'px';
+            el.style.borderColor = shape.stroke_color || '#d32f2f';
+            el.style.borderWidth = (shape.width || 2) + 'px';
+            el.style.color = shape.stroke_color || '#d32f2f';
+            if (shape.fill_color && shape.fill_color !== 'transparent') {
+                el.style.backgroundColor = shape.fill_color;
+            }
+
+            const delBtn = document.createElement('div');
+            delBtn.className = 'shape-handle-del';
+            delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            delBtn.title = 'Delete shape';
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                p.shapes.splice(sIdx, 1);
+                renderPageDecorations(container, p, canvas);
+                triggerAutoSave(600);
+            });
+            el.appendChild(delBtn);
+
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'shape-handle shape-handle-se';
+            el.appendChild(resizeHandle);
+
+            setupDraggableAndResizable(el, bbox, (newBbox) => {
+                shape.bbox = newBbox;
+                triggerAutoSave(600);
+            });
+
+            container.appendChild(el);
+        });
+
+        // 4. Signatures & Form Stamps
+        (p.signatures || []).forEach((sig, sigIdx) => {
+            const bbox = sig.bbox || [50, 50, 190, 100];
+            const isImageSig = Boolean(sig.image_data);
+            const el = document.createElement('div');
+            el.className = isImageSig ? 'pdf-sig-element' : 'pdf-stamp-element';
+            el.style.left = bbox[0] + 'px';
+            el.style.top = bbox[1] + 'px';
+            el.style.width = Math.max(16, bbox[2] - bbox[0]) + 'px';
+            el.style.height = Math.max(16, bbox[3] - bbox[1]) + 'px';
+            if (sig.color) el.style.color = sig.color;
+
+            if (isImageSig) {
+                const img = document.createElement('img');
+                img.src = sig.image_data;
+                img.alt = 'Signature';
+                el.appendChild(img);
+            } else if (sig.type === 'checkmark') {
+                el.textContent = '✔';
+                el.style.fontSize = (sig.font_size || 18) + 'pt';
+                el.style.color = '#000000';
+            } else if (sig.type === 'crossmark') {
+                el.textContent = '✖';
+                el.style.fontSize = (sig.font_size || 18) + 'pt';
+                el.style.color = '#d32f2f';
+            } else if (sig.type === 'date') {
+                el.textContent = sig.text || (new Date()).toISOString().slice(0, 10);
+                el.style.fontSize = (sig.font_size || 12) + 'pt';
+            }
+
+            const delBtn = document.createElement('div');
+            delBtn.className = isImageSig ? 'pdf-sig-del' : 'pdf-stamp-del';
+            delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            delBtn.title = 'Delete';
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                p.signatures.splice(sigIdx, 1);
+                renderPageDecorations(container, p, canvas);
+                triggerAutoSave(600);
+            });
+            el.appendChild(delBtn);
+
+            if (isImageSig) {
+                const resizer = document.createElement('div');
+                resizer.className = 'pdf-sig-resize';
+                el.appendChild(resizer);
+            }
+
+            setupDraggableAndResizable(el, bbox, (newBbox) => {
+                sig.bbox = newBbox;
+                triggerAutoSave(600);
+            });
+
+            container.appendChild(el);
+        });
+    }
+
+    function setupDraggableAndResizable(el, bbox, onUpdateBbox) {
+        let isDragging = false;
+        let isResizing = false;
+        let startClientX = 0;
+        let startClientY = 0;
+        let origLeft = bbox[0];
+        let origTop = bbox[1];
+        let origW = bbox[2] - bbox[0];
+        let origH = bbox[3] - bbox[1];
+
+        const scale = () => parseFloat(el.closest('.page-sheet-canvas')?.style.getPropertyValue('--scale')) || 1.0;
+
+        el.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.shape-handle-del') || e.target.closest('.pdf-sig-del') || e.target.closest('.pdf-stamp-del')) return;
+            if (e.target.classList.contains('shape-handle-se') || e.target.classList.contains('pdf-sig-resize')) {
+                isResizing = true;
+            } else {
+                isDragging = true;
+            }
+            startClientX = e.clientX;
+            startClientY = e.clientY;
+            origLeft = bbox[0];
+            origTop = bbox[1];
+            origW = bbox[2] - bbox[0];
+            origH = bbox[3] - bbox[1];
+            e.stopPropagation();
+            el.classList.add('selected');
+
+            function onPointerMove(mv) {
+                const s = scale();
+                const dx = (mv.clientX - startClientX) / s;
+                const dy = (mv.clientY - startClientY) / s;
+                if (isDragging) {
+                    const newL = Math.max(0, origLeft + dx);
+                    const newT = Math.max(0, origTop + dy);
+                    el.style.left = newL + 'px';
+                    el.style.top = newT + 'px';
+                    bbox[0] = Math.round(newL);
+                    bbox[1] = Math.round(newT);
+                    bbox[2] = Math.round(newL + origW);
+                    bbox[3] = Math.round(newT + origH);
+                } else if (isResizing) {
+                    const newW = Math.max(20, origW + dx);
+                    const newH = Math.max(14, origH + dy);
+                    el.style.width = newW + 'px';
+                    el.style.height = newH + 'px';
+                    bbox[2] = Math.round(bbox[0] + newW);
+                    bbox[3] = Math.round(bbox[1] + newH);
+                }
+            }
+
+            function onPointerUp() {
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+                if (isDragging || isResizing) {
+                    isDragging = false;
+                    isResizing = false;
+                    if (onUpdateBbox) onUpdateBbox(bbox);
+                }
+            }
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        });
+    }
+
+    function handleCanvasClickForActiveTool(e, p, canvas, decorOverlay) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = parseFloat(canvas.style.getPropertyValue('--scale')) || 1.0;
+        const x = Math.round((e.clientX - rect.left) / scale);
+        const y = Math.round((e.clientY - rect.top) / scale);
+
+        if (activeAcrobatTool === 'comment') {
+            e.stopPropagation();
+            const author = (document.getElementById('commentAuthorInput')?.value || 'Reviewer').trim();
+            const newAnnot = {
+                id: 'annot_' + Date.now(),
+                x: x,
+                y: y,
+                author: author || 'Reviewer',
+                text: '',
+                color: activeCommentColor,
+                date: new Date().toISOString()
+            };
+            p.annotations.push(newAnnot);
+            renderPageDecorations(decorOverlay, p, canvas);
+            updateAnnotationsSidePan();
+            const pinEl = decorOverlay.querySelector(`.pdf-comment-pin[style*="${x}px"]`);
+            openCommentPopover(pinEl || canvas, newAnnot, p);
+            triggerAutoSave(600);
+        } else if (activeAcrobatTool === 'add-box') {
+            e.stopPropagation();
+            handleAddBoxClick(e, p, canvas);
+            setAcrobatTool('select');
+        } else if (activeAcrobatTool === 'stamp-check') {
+            e.stopPropagation();
+            p.signatures.push({
+                id: 'chk_' + Date.now(),
+                type: 'checkmark',
+                bbox: [x - 8, y - 14, x + 16, y + 6],
+                color: '#000000',
+                font_size: 18
+            });
+            renderPageDecorations(decorOverlay, p, canvas);
+            triggerAutoSave(600);
+        } else if (activeAcrobatTool === 'stamp-cross') {
+            e.stopPropagation();
+            p.signatures.push({
+                id: 'crs_' + Date.now(),
+                type: 'crossmark',
+                bbox: [x - 8, y - 14, x + 16, y + 6],
+                color: '#d32f2f',
+                font_size: 18
+            });
+            renderPageDecorations(decorOverlay, p, canvas);
+            triggerAutoSave(600);
+        } else if (activeAcrobatTool === 'stamp-date') {
+            e.stopPropagation();
+            p.signatures.push({
+                id: 'dt_' + Date.now(),
+                type: 'date',
+                text: (new Date()).toISOString().slice(0, 10),
+                bbox: [x - 4, y - 12, x + 74, y + 6],
+                color: '#000000',
+                font_size: 12
+            });
+            renderPageDecorations(decorOverlay, p, canvas);
+            triggerAutoSave(600);
+        } else if (activeAcrobatTool === 'stamp-sig') {
+            e.stopPropagation();
+            if (lastSignatureDataUrl) {
+                p.signatures.push({
+                    id: 'sig_' + Date.now(),
+                    type: 'signature',
+                    image_data: lastSignatureDataUrl,
+                    bbox: [x - 70, y - 25, x + 70, y + 25]
+                });
+                renderPageDecorations(decorOverlay, p, canvas);
+                triggerAutoSave(600);
+            } else {
+                openSignatureModal();
+            }
+        } else if (activeAcrobatTool.startsWith('shape-')) {
+            e.stopPropagation();
+            const sType = activeAcrobatTool.replace('shape-', '');
+            let bbox = [x - 60, y - 40, x + 60, y + 40];
+            if (sType === 'line' || sType === 'arrow') {
+                bbox = [x - 60, y, x + 60, y];
+            }
+            p.shapes.push({
+                id: 'shape_' + Date.now(),
+                type: sType,
+                bbox: bbox,
+                stroke_color: activeShapeStroke,
+                fill_color: activeShapeFill === 'transparent' ? null : activeShapeFill,
+                width: activeShapeWidth
+            });
+            renderPageDecorations(decorOverlay, p, canvas);
+            triggerAutoSave(600);
+        } else if (['highlight', 'underline', 'strikeout'].includes(activeAcrobatTool)) {
+            e.stopPropagation();
+            p.highlights.push({
+                id: 'hl_' + Date.now(),
+                type: activeAcrobatTool,
+                bbox: [x - 50, y - 8, x + 50, y + 10],
+                color: activeMarkupColor
+            });
+            renderPageDecorations(decorOverlay, p, canvas);
+            triggerAutoSave(600);
+        }
+    }
+
+    function openCommentPopover(anchorEl, annot, p) {
+        const popover = document.getElementById('doceditCommentPopover');
+        if (!popover) return;
+        activePopoverAnnot = annot;
+        activePopoverPage = p;
+
+        const authorField = document.getElementById('commentAuthorField');
+        const textField = document.getElementById('commentTextField');
+        if (authorField) authorField.value = annot.author || 'Reviewer';
+        if (textField) {
+            textField.value = annot.text || '';
+            setTimeout(() => textField.focus(), 60);
+        }
+
+        const rect = anchorEl.getBoundingClientRect();
+        popover.style.display = 'block';
+        popover.style.left = Math.min(window.innerWidth - 310, Math.max(10, rect.right + 12)) + 'px';
+        popover.style.top = Math.min(window.innerHeight - 260, Math.max(10, rect.top - 10)) + 'px';
+    }
+
+    function closeCommentPopover() {
+        const popover = document.getElementById('doceditCommentPopover');
+        if (popover) popover.style.display = 'none';
+        activePopoverAnnot = null;
+        activePopoverPage = null;
+    }
+
+    function initCommentPopover() {
+        const popover = document.getElementById('doceditCommentPopover');
+        if (!popover) return;
+
+        const btnClose = document.getElementById('commentBtnClose');
+        if (btnClose) btnClose.addEventListener('click', () => closeCommentPopover());
+
+        const btnSave = document.getElementById('commentBtnSave');
+        if (btnSave) {
+            btnSave.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!activePopoverAnnot || !activePopoverPage) return;
+                const authorField = document.getElementById('commentAuthorField');
+                const textField = document.getElementById('commentTextField');
+                activePopoverAnnot.author = authorField ? authorField.value.trim() || 'Reviewer' : 'Reviewer';
+                activePopoverAnnot.text = textField ? textField.value.trim() : '';
+
+                const activeDot = document.querySelector('#popoverColorSwatches .color-swatch-dot.active');
+                if (activeDot) {
+                    activePopoverAnnot.color = activeDot.getAttribute('data-color') || '#ffd54f';
+                }
+
+                const decorOverlay = document.getElementById(`pageDecor_${activePopoverPage.page_num}`);
+                const canvas = document.querySelector(`#doceditPage_${activePopoverPage.page_num} .page-sheet-canvas`);
+                if (decorOverlay && canvas) {
+                    renderPageDecorations(decorOverlay, activePopoverPage, canvas);
+                }
+                updateAnnotationsSidePan();
+                closeCommentPopover();
+                triggerAutoSave(600);
+            });
+        }
+
+        const btnDel = document.getElementById('commentBtnDelete');
+        if (btnDel) {
+            btnDel.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!activePopoverAnnot || !activePopoverPage) return;
+                const idx = (activePopoverPage.annotations || []).findIndex(a => a.id === activePopoverAnnot.id);
+                if (idx !== -1) {
+                    activePopoverPage.annotations.splice(idx, 1);
+                    const decorOverlay = document.getElementById(`pageDecor_${activePopoverPage.page_num}`);
+                    const canvas = document.querySelector(`#doceditPage_${activePopoverPage.page_num} .page-sheet-canvas`);
+                    if (decorOverlay && canvas) {
+                        renderPageDecorations(decorOverlay, activePopoverPage, canvas);
+                    }
+                    updateAnnotationsSidePan();
+                    triggerAutoSave(600);
+                }
+                closeCommentPopover();
+            });
+        }
+
+        document.querySelectorAll('#popoverColorSwatches .color-swatch-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('#popoverColorSwatches .color-swatch-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+            });
+        });
+    }
+
+    function updateAnnotationsSidePan() {
+        const list = document.getElementById('panAnnotList');
+        const countSpan = document.getElementById('panAnnotCount');
+        if (!list) return;
+        let totalCount = 0;
+        let html = '';
+        (currentPagesData || []).forEach(p => {
+            (p.annotations || []).forEach(annot => {
+                totalCount++;
+                html += `
+                    <div class="pan-annot-item" data-page="${p.page_num}" data-annot-id="${annot.id}" style="border-left-color: ${annot.color || '#ffd54f'}">
+                        <i class="fa-regular fa-comment-dots pan-annot-icon" style="color: ${annot.color || '#ffd54f'}"></i>
+                        <div class="pan-annot-body">
+                            <span class="pan-annot-author">${escapeHtml(annot.author || 'User')} &bull; Page ${p.page_num}</span>
+                            <div class="pan-annot-text">${escapeHtml(annot.text || '(No message)')}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+
+        if (countSpan) countSpan.textContent = String(totalCount);
+        if (totalCount === 0) {
+            list.innerHTML = '<div class="fuzzy-empty">No comments yet. Switch to Comment tab to add notes.</div>';
+        } else {
+            list.innerHTML = html;
+            list.querySelectorAll('.pan-annot-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const pNum = parseInt(item.getAttribute('data-page'), 10);
+                    goToPage(pNum);
+                });
+            });
+        }
+    }
+
+    function openSignatureModal() {
+        const modal = document.getElementById('doceditSignatureModal');
+        if (!modal) return;
+        modal.classList.add('show');
+        initSignatureCanvas();
+    }
+
+    function closeSignatureModal() {
+        const modal = document.getElementById('doceditSignatureModal');
+        if (modal) modal.classList.remove('show');
+    }
+
+    let sigCanvasInited = false;
+    function initSignatureCanvas() {
+        const canvas = document.getElementById('sigCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#000000';
+
+        if (sigCanvasInited) return;
+        sigCanvasInited = true;
+
+        let drawing = false;
+        function getCoords(e) {
+            const r = canvas.getBoundingClientRect();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            return [cx - r.left, cy - r.top];
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            drawing = true;
+            const [x, y] = getCoords(e);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drawing) return;
+            e.preventDefault();
+            const [x, y] = getCoords(e);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        });
+
+        window.addEventListener('pointerup', () => {
+            drawing = false;
+        });
+
+        const btnClear = document.getElementById('btnSigClear');
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+        }
+
+        document.querySelectorAll('.sig-ink-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('.sig-ink-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                ctx.strokeStyle = dot.getAttribute('data-color') || '#000000';
+            });
+        });
+    }
+
+    function initSignatureModal() {
+        const modal = document.getElementById('doceditSignatureModal');
+        if (!modal) return;
+
+        const btnClose = document.getElementById('modalBtnCloseSig');
+        if (btnClose) btnClose.addEventListener('click', () => closeSignatureModal());
+        const btnCancel = document.getElementById('btnCancelSig');
+        if (btnCancel) btnCancel.addEventListener('click', () => closeSignatureModal());
+
+        const tabDraw = document.getElementById('sigTabDraw');
+        const tabType = document.getElementById('sigTabType');
+        const panelDraw = document.getElementById('sigPanelDraw');
+        const panelType = document.getElementById('sigPanelType');
+
+        if (tabDraw && tabType && panelDraw && panelType) {
+            tabDraw.addEventListener('click', () => {
+                tabDraw.classList.add('active');
+                tabType.classList.remove('active');
+                panelDraw.classList.add('active');
+                panelType.classList.remove('active');
+            });
+            tabType.addEventListener('click', () => {
+                tabType.classList.add('active');
+                tabDraw.classList.remove('active');
+                panelType.classList.add('active');
+                panelDraw.classList.remove('active');
+                const inp = document.getElementById('sigTypeInput');
+                if (inp) inp.focus();
+            });
+        }
+
+        const typeInput = document.getElementById('sigTypeInput');
+        const typePreview = document.getElementById('sigTypePreview');
+        if (typeInput && typePreview) {
+            typeInput.addEventListener('input', (e) => {
+                typePreview.textContent = e.target.value || 'Your Signature';
+            });
+        }
+
+        document.querySelectorAll('input[name="sigTypeFont"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (typePreview) {
+                    typePreview.className = radio.value === 'dancing' ? 'sig-type-preview font-dancing' : 'sig-type-preview font-caveat';
+                }
+            });
+        });
+
+        const btnApply = document.getElementById('btnApplySig');
+        if (btnApply) {
+            btnApply.addEventListener('click', () => {
+                let dataUrl = '';
+                const isTypeActive = tabType && tabType.classList.contains('active');
+                if (isTypeActive) {
+                    const text = (typeInput?.value || 'Signature').trim();
+                    const fontVal = document.querySelector('input[name="sigTypeFont"]:checked')?.value || 'caveat';
+                    dataUrl = renderTypedSignatureToPng(text, fontVal === 'dancing' ? 'font-dancing' : 'font-caveat');
+                } else {
+                    const canvas = document.getElementById('sigCanvas');
+                    dataUrl = canvas ? canvas.toDataURL('image/png') : '';
+                }
+
+                if (!dataUrl) {
+                    alert('Please draw or type your signature first.');
+                    return;
+                }
+
+                lastSignatureDataUrl = dataUrl;
+                closeSignatureModal();
+
+                const btnSaved = document.getElementById('btnStampSavedSig');
+                if (btnSaved) btnSaved.style.display = 'inline-flex';
+
+                // Automatically stamp on active page center
+                if (currentPagesData && currentPagesData.length >= currentPageIndex) {
+                    const p = currentPagesData[currentPageIndex - 1];
+                    const activeSheet = document.getElementById(`doceditPage_${p.page_num}`);
+                    const decorOverlay = document.getElementById(`pageDecor_${p.page_num}`);
+                    const canvas = activeSheet ? activeSheet.querySelector('.page-sheet-canvas') : null;
+                    const midX = Math.round(p.width / 2);
+                    const midY = Math.round(p.height / 2);
+                    p.signatures.push({
+                        id: 'sig_' + Date.now(),
+                        type: 'signature',
+                        image_data: dataUrl,
+                        bbox: [midX - 70, midY - 25, midX + 70, midY + 25]
+                    });
+                    if (decorOverlay && canvas) {
+                        renderPageDecorations(decorOverlay, p, canvas);
+                    }
+                    triggerAutoSave(600);
+                }
+
+                setAcrobatTool('select');
+            });
+        }
+    }
+
+    function renderTypedSignatureToPng(text, fontClass) {
+        const c = document.createElement('canvas');
+        c.width = 460;
+        c.height = 140;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height);
+        const fontFam = fontClass === 'font-dancing' ? "'Dancing Script', cursive, sans-serif" : "'Caveat', cursive, sans-serif";
+        ctx.font = `60px ${fontFam}`;
+        ctx.fillStyle = '#000000';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, c.width / 2, c.height / 2);
+        return c.toDataURL('image/png');
+    }
+
+    function rotatePage(p, deltaAngle) {
+        p.rotation = ((p.rotation || 0) + deltaAngle + 360) % 360;
+        const sheetCanvas = document.querySelector(`#doceditPage_${p.page_num} .page-sheet-canvas`);
+        if (sheetCanvas) {
+            sheetCanvas.style.transform = p.rotation ? `rotate(${p.rotation}deg)` : '';
+        }
+        const thumbImg = thumbList ? thumbList.querySelector(`.thumb-item[data-page="${p.page_num}"] .thumb-img`) : null;
+        if (thumbImg) {
+            thumbImg.style.transform = p.rotation ? `rotate(${p.rotation}deg)` : '';
+        }
+        triggerAutoSave(600);
+    }
+
+    function toggleDeletePage(p) {
+        p.is_deleted = !p.is_deleted;
+        const sheet = document.getElementById(`doceditPage_${p.page_num}`);
+        if (sheet) {
+            sheet.classList.toggle('is-deleted', Boolean(p.is_deleted));
+        }
+        const thumbItem = thumbList ? thumbList.querySelector(`.thumb-item[data-page="${p.page_num}"]`) : null;
+        if (thumbItem) {
+            thumbItem.classList.toggle('is-deleted', Boolean(p.is_deleted));
+        }
+        triggerAutoSave(600);
+    }
+
+    function movePage(p, direction) {
+        const idx = currentPagesData.findIndex(item => item.page_num === p.page_num);
+        if (idx === -1) return;
+        const targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= currentPagesData.length) return;
+        const temp = currentPagesData[idx];
+        currentPagesData[idx] = currentPagesData[targetIdx];
+        currentPagesData[targetIdx] = temp;
+        renderLayoutPreservedPages(currentPagesData, tbFontSelect.value, tbFontSizeSelect.value);
+        triggerAutoSave(600);
+    }
+
+    function rotateAllPages(deltaAngle) {
+        (currentPagesData || []).forEach(p => {
+            rotatePage(p, deltaAngle);
+        });
+    }
+
+    // Call initAcrobatToolbar immediately
+    initAcrobatToolbar();
+
     // Global keyboard shortcuts (Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y, Ctrl+F, Delete, B hold, Escape, and Review Queue J/K/Enter/E/S)
     window.addEventListener('keydown', (e) => {
         // Review Queue Keyboard Navigation (Next/Prev: J/K or arrows, Accept: Enter, Edit: E, Skip: S)
@@ -4636,6 +5810,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Escape: dismiss panels and modes
         if (e.key === 'Escape') {
+            if (activeAcrobatTool !== 'select') setAcrobatTool('select');
+            closeCommentPopover();
+            closeSignatureModal();
             if (isAddingBoxMode) cancelAddingBoxMode();
             if (doceditFindReplacePanel && doceditFindReplacePanel.classList.contains('show')) closeFindReplacePanel();
             if (doceditApplyAllModal && doceditApplyAllModal.classList.contains('show')) closeApplyAllModal();

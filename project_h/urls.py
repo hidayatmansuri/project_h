@@ -9,4 +9,5 @@ urlpatterns = [
     path('',include('utilitytracker.urls')),
     path('',include('shades.urls')),
     path('',include('docedit.urls')),
+    path('listimage/', include('listimage.urls', namespace='listimage')),
 ]

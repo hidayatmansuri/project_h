@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'utilitytracker',
     'shades',
     'docedit',
+    'listimage',
 ]
 
 MIDDLEWARE = [
@@ -159,3 +160,10 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ListImage configuration
+LISTIMAGE_BACKEND = os.getenv('LISTIMAGE_BACKEND', 'thread')  # 'thread' or 'celery'
+LISTIMAGE_MAX_CONCURRENT_JOBS = int(os.getenv('LISTIMAGE_MAX_CONCURRENT_JOBS', '2'))
+LISTIMAGE_MAX_QUEUE = int(os.getenv('LISTIMAGE_MAX_QUEUE', '10'))
+LISTIMAGE_MAX_AGE_MINUTES = int(os.getenv('LISTIMAGE_MAX_AGE_MINUTES', '60'))
+LISTIMAGE_WORKSPACE_DIR = BASE_DIR / 'listimage' / 'workspace'

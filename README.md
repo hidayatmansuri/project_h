@@ -14,6 +14,7 @@ The project is divided into several dedicated applications:
 *   **⚡ Utility Tracker (`utilitytracker`):** A comprehensive dashboard to track electricity and gas meter readings, log top-ups, and visualize usage data over time with interactive charts.
 *   **🎨 Colour Shades (`shades`):** An interactive colour palette explorer from #000000 to #FFFFFF with instant copy micro-interactions.
 *   **📝 Document Editor (`docedit`):** A document editor for old scanned books and diverse documents. Features OCR with fuzzy character detection, automated font matching (system fonts, free Google Font downloads, and nearest match alternatives), Windows system font installation, live split-pane editing, and same-extension file exports.
+*   **🪄 ListImage Object Isolator (`listimage`):** Upload product images, automatically remove backgrounds using neural networks (`isnet-general-use`, `birefnet-general`, `u2netp`), center subjects with exact 10 px padding on a pure white 2000x2000 canvas, apply non-destructive amendments (erase/restore brush, tolerance magic wand, object selection, auto touch-up for transparent/reflective items), and download high-quality PNG or JPEG with immediate server cleanup. See [deploy/listimage.md](deploy/listimage.md) for full production and Gunicorn/nginx tuning.
 
 ## 🚀 Technologies Used
 

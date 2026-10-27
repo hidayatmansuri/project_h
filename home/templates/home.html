@@ -63,6 +63,11 @@
                     <span>DocEdit</span></a>
             </div>
             <div class="nav-separator">|</div>
+            <div class="home-nav-label">
+                <a class="nav-link ph-hover" href="{% url 'listimage:index' %}"><i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>ListImage</span></a>
+            </div>
+            <div class="nav-separator">|</div>
             <div class="home-nav-label dropdown">
                 <a class="nav-link ph-hover dropdown-toggle" href="#"><i class="fa-solid fa-repeat"></i>
                     <span>Converter</span></a>
@@ -121,6 +126,12 @@
                         Match &<br>Fonts
                     </div>
                     <span>Doc<span class="floating-lable">Edit</span></span>
+                </a>
+                <a href="{% url 'listimage:index' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        Pure 2k<br>White
+                    </div>
+                    <span>List<span class="floating-lable">Image</span></span>
                 </a>
             </div>
             <!-- <div class="ph-welcome-subs welcome-desc">
