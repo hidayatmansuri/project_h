@@ -1,0 +1,806 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Recipes{% endblock %}
+
+{% block recipe_content %}
+
+<!-- <div id="top-page"></div> -->
+
+<!-- 1. HERO & INTERACTIVE SEARCH DISCOVERY BANNER -->
+<section class="landing-hero-card" aria-label="Welcome and Search Banner">
+    <div class="hero-badge-pill">
+        <i class="fas fa-sparkles"></i> project-h Cookbook
+    </div>
+    <h1 class="landing-hero-title">Finger Licking Yummy Recipes for Every Kitchen</h1>
+    <p class="landing-hero-sub">
+        Explore chef-tested recipes, vibrant global cuisines, and quick family-friendly meals. Filter by ingredients,
+        preview cooking methods, or manage recipes directly below.
+    </p>
+
+    <!-- Interactive Live Search & Surprise Generator -->
+    <div class="landing-search-bar-wrap">
+        <div class="search-input-box">
+            <i class="fas fa-search search-icon" aria-hidden="true"></i>
+            <input type="text" id="recipe-search-input" class="search-input"
+                placeholder="Search recipes, ingredients (e.g. curry, tofu), cuisines, or categories..."
+                aria-label="Search recipes, ingredients, cuisines, or categories" autocomplete="off">
+            <button type="button" id="search-clear-btn" class="search-clear-btn" aria-label="Clear search input">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <button type="button" id="btn-surprise-recipe" class="btn-surprise"
+            title="Can't decide what to cook? Pick a random recipe!">
+            <i class="fas fa-dice"></i>
+            <span>Surprise Me!</span>
+        </button>
+    </div>
+
+    <!-- Live Search Feedback Indicator -->
+    <div id="search-feedback" class="search-results-feedback" aria-live="polite"></div>
+
+    <!-- KPI Summary Counter Chips -->
+    <div class="stat-chips-grid">
+        <a href="#all-recipes-section" class="stat-chip" title="Jump to All Recipes">
+            <i class="fas fa-utensils stat-chip-icon"></i>
+            <span class="stat-chip-num">{{ total_recipes }}</span>
+            <span class="stat-chip-lbl">Total Recipes</span>
+        </a>
+        <a href="#categories-section" class="stat-chip" title="Jump to Categories">
+            <i class="fas fa-layer-group stat-chip-icon"></i>
+            <span class="stat-chip-num">{{ category_total }}</span>
+            <span class="stat-chip-lbl">Categories</span>
+        </a>
+        <a href="#cooktime-section" class="stat-chip" title="Jump to Cooking Times">
+            <i class="fas fa-bolt stat-chip-icon"></i>
+            <span class="stat-chip-num">{{ quick_count }}</span>
+            <span class="stat-chip-lbl">Quick (&lt;30m)</span>
+        </a>
+        <a href="#cuisines-section" class="stat-chip" title="Jump to World Cuisines">
+            <i class="fas fa-globe-americas stat-chip-icon"></i>
+            <span class="stat-chip-num">{{ cuisine_total }}</span>
+            <span class="stat-chip-lbl">World Cuisines</span>
+        </a>
+        {% if user.is_staff %}
+        <a href="#admin-section" class="stat-chip stat-chip-admin" title="Jump to Embedded Admin">
+            <i class="fas fa-user-shield stat-chip-icon" style="color: #00D2D3;"></i>
+            <span class="stat-chip-num"><i class="fas fa-sliders-h"></i></span>
+            <span class="stat-chip-lbl">Admin Panel</span>
+        </a>
+        {% else %}
+        <a href="#admin-section" class="stat-chip stat-chip-admin" title="Admin Login">
+            <i class="fas fa-lock stat-chip-icon"></i>
+            <span class="stat-chip-num"><i class="fas fa-key"></i></span>
+            <span class="stat-chip-lbl">Admin Area</span>
+        </a>
+        {% endif %}
+    </div>
+</section>
+
+<!-- 2. QUICK FILTER NAVIGATION TABS -->
+<section class="recipe-filter-bar mb-4" aria-label="Recipe Filters">
+    <div class="filter-pills-nav" role="tablist" aria-label="Recipe Filters">
+        <button type="button" class="filter-pill-btn active" data-filter="all" role="tab" aria-selected="true">
+            <i class="fas fa-th"></i> All Recipes
+        </button>
+        <button type="button" class="filter-pill-btn" data-filter="u30" role="tab" aria-selected="false">
+            <i class="fas fa-bolt"></i> Ready in &lt; 30 mins
+        </button>
+        <button type="button" class="filter-pill-btn" data-filter="o30" role="tab" aria-selected="false">
+            <i class="fas fa-hourglass-half"></i> Over 30 mins
+        </button>
+        <button type="button" class="filter-pill-btn" data-filter="veg" role="tab" aria-selected="false">
+            <i class="fas fa-leaf"></i> Vegetarian &amp; Healthy
+        </button>
+        <button type="button" class="filter-pill-btn" data-filter="meat" role="tab" aria-selected="false">
+            <i class="fas fa-drumstick-bite"></i> Poultry &amp; Meat
+        </button>
+        <button type="button" class="filter-pill-btn" data-filter="global" role="tab" aria-selected="false">
+            <i class="fas fa-globe-americas"></i> Global Cuisines
+        </button>
+    </div>
+
+    <!-- Quick Navigation Accordions for Categories & Cuisines -->
+    <div class="row mt-3">
+        <div class="col-12 col-md-6 mb-2">
+            <ul class="collapsible">
+                <li>
+                    <div class="collapsible-header">
+                        <h5 class="link-cat m-0">
+                            <i class="fas fa-layer-group mr-2"></i> Browse by <span
+                                class="admin-category-thumb">Category</span>
+                        </h5>
+                    </div>
+                    <div class="collapsible-body">
+                        <div class="row">
+                            {% for category in categories %}
+                            <div class="col-6 col-sm-4 mb-2">
+                                <a href="#cat-{{ category.slug }}" class="quick-nav-pill">
+                                    <i class="fas {{ category.icon }}"></i> {{ category.name }}
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div class="col-12 col-md-6 mb-2">
+            <ul class="collapsible">
+                <li>
+                    <div class="collapsible-header">
+                        <h5 class="link-cat m-0">
+                            <i class="fas fa-globe-americas mr-2"></i> Browse by
+                            <span class="admin-cuisine-thumb">
+                                Cuisine
+                            </span>
+                        </h5>
+                    </div>
+                    <div class="collapsible-body">
+                        <div class="row">
+                            {% for cuisine in cuisines %}
+                            <div class="col-6 col-sm-4 mb-2">
+                                <a href="#cus-{{ cuisine.slug }}" class="quick-nav-pill">
+                                    <i class="fas {{ cuisine.icon }}"></i> {{ cuisine.label }}
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- 3. ALL RECIPES DIRECTORY -->
+<section id="all-recipes-section" aria-label="Cookbook Recipes Directory">
+    <h2 class="dashhead">
+        <i class="fas fa-book-open"></i> Recipes Directory
+    </h2>
+    <p class="dash-subtitle">
+        Click any recipe card to open the interactive ingredients checklist and cooking methods popup.
+    </p>
+
+    {% include "_recipe_grid.html" with recipes=recipes section_id="directory" empty_message="No recipes available." %}
+</section>
+
+<!-- 4. RECIPES BY CATEGORY -->
+<section id="categories-section" class="mt-5" aria-label="Recipes by Category">
+    <h2 class="dashhead">
+        <i class="fas fa-layer-group"></i> Recipes in Every Category
+    </h2>
+    <p class="dash-subtitle">
+        Explore dishes organised by dietary choices and main ingredients.
+    </p>
+
+    {% for category in categories %}
+    <div id="cat-{{ category.slug }}" class="category-group-block mt-4">
+        <h5 class="recipe_head">
+            <i class="fas {{ category.icon }}"></i> {{ category.name }} Recipes
+            <span class="badge badge-secondary ml-2" style="font-size: 0.75rem; vertical-align: middle;">{{
+                category.recipes.count }}</span>
+        </h5>
+        {% include "_recipe_grid.html" with recipes=category.recipes.all section_id="cat-"|add:category.slug
+        empty_message=category.name|add:" recipes will be available soon" %}
+    </div>
+    {% endfor %}
+</section>
+
+<!-- 5. READY IN MINUTES (TIME COLLECTIONS) -->
+<section id="cooktime-section" class="mt-5" aria-label="Cooking Time Collections">
+    <h2 class="dashhead">
+        <i class="fas fa-stopwatch"></i> Ready in Minutes
+    </h2>
+    <p class="dash-subtitle">
+        Fast weeknight meals or slow-simmered weekend feasts.
+    </p>
+
+    <div class="row">
+        <div class="col-md-6 col-sm-12 category-card-col">
+            <a href="{% url 'recipes:quick' %}" title="Browse Quick Recipes Under 30 Mins">
+                <div class="row card-u30 collapsible collapsible-dash">
+                    <div class="col-8">
+                        <h2 class="cat_head">
+                            <i class="fas fa-bolt card-icon"></i> &lt; 30 mins
+                        </h2>
+                        <span class="cat-tagline">Fast &amp; easy meals for busy weeknights</span>
+                    </div>
+                    <div class="col-4 cat-right-wrapper justify-content-end">
+                        <span class="cat-value">{{ quick_count }}</span>
+                        <i class="fas fa-arrow-right cat-arrow"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-sm-12 category-card-col">
+            <a href="{% url 'recipes:slow' %}" title="Browse Recipes Over 30 Mins">
+                <div class="row card-o30 collapsible collapsible-dash">
+                    <div class="col-8">
+                        <h2 class="cat_head">
+                            <i class="fas fa-hourglass-half card-icon"></i> &gt; 30 mins
+                        </h2>
+                        <span class="cat-tagline">Slow-simmered roasts &amp; rich dishes</span>
+                    </div>
+                    <div class="col-4 cat-right-wrapper justify-content-end">
+                        <span class="cat-value">{{ slow_count }}</span>
+                        <i class="fas fa-arrow-right cat-arrow"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- 6. RECIPES BY CUISINE -->
+<section id="cuisines-section" class="mt-5" aria-label="Recipes by Cuisine">
+    <h2 class="dashhead">
+        <i class="fas fa-globe-americas"></i> Recipes in Every Cuisine
+    </h2>
+    <p class="dash-subtitle">
+        Taste flavours from around the world across {{ cuisine_total }} authentic culinary traditions.
+    </p>
+
+    {% for cuisine in cuisines %}
+    <div id="cus-{{ cuisine.slug }}" class="cuisine-group-block mt-4">
+        <h5 class="recipe_head">
+            <i class="fas {{ cuisine.icon }}"></i> {{ cuisine.name }}
+            <span class="badge badge-secondary ml-2" style="font-size: 0.75rem; vertical-align: middle;">{{
+                cuisine.recipes.count }}</span>
+        </h5>
+        {% include "_recipe_grid.html" with recipes=cuisine.recipes.all section_id="cus-"|add:cuisine.slug
+        empty_message=cuisine.name|add:" recipes will be available soon" %}
+    </div>
+    {% endfor %}
+</section>
+
+<!-- 7. EMBEDDED ADMIN MANAGEMENT SECTION (CRUD FOR ALL OPTIONS) -->
+<section id="admin-section" class="recipes-admin-section mt-5 pt-4"
+    style="border-top: 2px dashed rgba(128, 128, 128, 0.3);" aria-label="Embedded Admin Control Center">
+    <div class="admin-header-bar">
+        <div class="admin-header-info">
+            <h2 class="admin-page-title m-0">
+                <i class="material-icons">admin_panel_settings</i> Recipes Admin &amp; Management
+            </h2>
+            {% if user.is_staff %}
+            <span class="admin-user-badge">
+                <i class="fas fa-user-shield"></i> Logged in as: <strong>{{ user.get_username }}</strong> (Editor)
+            </span>
+            {% else %}
+            <span class="admin-user-badge">
+                <i class="fas fa-lock"></i> Staff Authentication Required for CRUD Actions
+            </span>
+            {% endif %}
+        </div>
+        {% if user.is_authenticated %}
+        <form action="{% url 'recipes:logout' %}" method="POST" style="margin: 0;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'recipes:index' %}">
+            <button type="submit" class="btn btn-outline-danger admin-logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Log Out
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if user.is_staff %}
+    <!-- STAFF CRUD CONTROLS -->
+    <!-- Form to add new RECIPE -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="collapsible">
+                <li>
+                    <div class="collapsible-header recipe_thumb">
+                        <i class="material-icons">note_add</i> Add a new Recipe
+                    </div>
+                    <div class="collapsible-body">
+                        <form action="{% url 'recipes:recipe_create' %}" method="POST" enctype="multipart/form-data"
+                            class="col s12">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+
+                            <h5>Recipe Name:</h5>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">outdoor_grill</i>
+                                <input id="recipe_name" name="name" type="text" class="validate" maxlength="200"
+                                    required>
+                                <label for="recipe_name">Recipe Name</label>
+                            </div>
+
+                            <h5>Choose a Category:</h5>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">photo_filter</i>
+                                <select id="recipe_type" name="category">
+                                    <option value="" selected>Recipe Type</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <h5>Recipe Image:</h5>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">photo_filter</i>
+                                <select id="recipe_image" name="image">
+                                    <option value="" selected>Choose from Existing Image Library</option>
+                                    {% for image in images %}
+                                    <option value="{{ image.pk }}">{{ image }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col s12 admin-upload-box mb-3">
+                                <label for="recipe_image_file">
+                                    <i class="material-icons"
+                                        style="vertical-align: middle; font-size: 18px;">cloud_upload</i>
+                                    Or Upload a New Image from Your Device
+                                </label>
+                                <input type="file" id="recipe_image_file" name="image_file"
+                                    accept="image/png, image/jpeg, image/gif, image/webp"
+                                    style="display: block; margin-top: 8px;">
+                                <small>Supported: JPG, PNG, GIF, WebP (max 16 MB). If uploaded, it will be saved to
+                                    gallery and assigned to this recipe.</small>
+                            </div>
+
+                            <h5>Choose a Cuisine:</h5>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">photo_filter</i>
+                                <select id="recipe_cuisine" name="cuisine">
+                                    <option value="" selected>Cuisine</option>
+                                    {% for cuisine in cuisines %}
+                                    <option value="{{ cuisine.pk }}">{{ cuisine.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Dynamic Ingredients Input Fields -->
+                            <div class="admin-dynamic-section">
+                                <div class="admin-dynamic-header">
+                                    <h5>Ingredients:</h5>
+                                    <button type="button" class="btn btn-small waves-effect waves-light btn-add-dynamic"
+                                        id="admin-add-ingredient-btn">
+                                        <i class="material-icons left">add</i> Add Ingredient
+                                    </button>
+                                </div>
+                                <small class="admin-dynamic-hint">Add as many ingredients as needed. Only items with
+                                    values will be saved.</small>
+                                <div id="admin-ingredients-container" class="admin-dynamic-container">
+                                    <div class="admin-dynamic-row">
+                                        <div class="input-field dynamic-input-field">
+                                            <i class="material-icons prefix">ballot</i>
+                                            <input name="ingredient[]" type="text" class="validate"
+                                                placeholder="e.g. 500g Chicken breast, diced">
+                                            <label class="active">Ingredient 1</label>
+                                        </div>
+                                        <button type="button" class="btn-remove-dynamic" title="Remove"
+                                            aria-label="Remove ingredient">
+                                            <i class="material-icons">delete_outline</i>
+                                        </button>
+                                    </div>
+                                    <div class="admin-dynamic-row">
+                                        <div class="input-field dynamic-input-field">
+                                            <i class="material-icons prefix">ballot</i>
+                                            <input name="ingredient[]" type="text" class="validate"
+                                                placeholder="e.g. 2 tbsp Olive oil">
+                                            <label class="active">Ingredient 2</label>
+                                        </div>
+                                        <button type="button" class="btn-remove-dynamic" title="Remove"
+                                            aria-label="Remove ingredient">
+                                            <i class="material-icons">delete_outline</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic Methods / Steps Input Fields -->
+                            <div class="admin-dynamic-section" style="margin-top: 24px;">
+                                <div class="admin-dynamic-header">
+                                    <h5>Method / Steps:</h5>
+                                    <button type="button" class="btn btn-small waves-effect waves-light btn-add-dynamic"
+                                        id="admin-add-method-btn">
+                                        <i class="material-icons left">add</i> Add Step
+                                    </button>
+                                </div>
+                                <small class="admin-dynamic-hint">Add preparation/cooking steps in sequence.</small>
+                                <div id="admin-methods-container" class="admin-dynamic-container">
+                                    <div class="admin-dynamic-row">
+                                        <div class="input-field dynamic-input-field">
+                                            <i class="material-icons prefix">restaurant</i>
+                                            <input name="method[]" type="text" class="validate"
+                                                placeholder="e.g. Heat oil in skillet over medium heat">
+                                            <label class="active">Step 1</label>
+                                        </div>
+                                        <button type="button" class="btn-remove-dynamic" title="Remove"
+                                            aria-label="Remove step">
+                                            <i class="material-icons">delete_outline</i>
+                                        </button>
+                                    </div>
+                                    <div class="admin-dynamic-row">
+                                        <div class="input-field dynamic-input-field">
+                                            <i class="material-icons prefix">restaurant</i>
+                                            <input name="method[]" type="text" class="validate"
+                                                placeholder="e.g. Add ingredients and simmer until done">
+                                            <label class="active">Step 2</label>
+                                        </div>
+                                        <button type="button" class="btn-remove-dynamic" title="Remove"
+                                            aria-label="Remove step">
+                                            <i class="material-icons">delete_outline</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h5>Choose a Date:</h5>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">date_range</i>
+                                <input id="create_on" name="created_on" type="text" class="datepicker">
+                            </div>
+
+                            <h5>Provide Time (mins):</h5>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">timer</i>
+                                <input id="prep_time" name="prep_time" type="number" min="0" max="32000"
+                                    class="validate" required>
+                                <label for="prep_time">Preparation time (mins)</label>
+                            </div>
+                            <div class="input-field col s12">
+                                <i class="material-icons prefix">whatshot</i>
+                                <input id="cook_time" name="cook_time" type="number" min="0" max="32000"
+                                    class="validate" required>
+                                <label for="cook_time">Cooking time (mins)</label>
+                            </div>
+
+                            <div class="input-field col s12 mt-3">
+                                <button class="btn waves-effect waves-light" type="submit" name="action">
+                                    Add Recipe <i class="material-icons right">send</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Forms to Add CATEGORY, CUISINE, and IMAGE UPLOAD -->
+    <div class="row">
+        <!-- Add Category -->
+        <div class="col-12 col-md-4 mb-3">
+            <ul class="collapsible">
+                <li>
+                    <div class="collapsible-header admin-category-thumb">
+                        <i class="material-icons">note_add</i> Add a new Category
+                    </div>
+                    <div class="collapsible-body">
+                        <form action="{% url 'recipes:category_create' %}" method="POST" class="col-12">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+                            <h5>Category Name:</h5>
+                            <div class="input-field col-12">
+                                <i class="material-icons prefix">outdoor_grill</i>
+                                <input id="category_name" name="name" type="text" class="validate" maxlength="100"
+                                    required>
+                                <label for="category_name">Category Name</label>
+                            </div>
+                            <div class="input-field col s12">
+                                <button class="btn waves-effect waves-light" type="submit" name="action">
+                                    Add Category <i class="material-icons right">send</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Add Cuisine -->
+        <div class="col-12 col-md-4 mb-3">
+            <ul class="collapsible">
+                <li>
+                    <div class="collapsible-header admin-cuisine-thumb">
+                        <i class="material-icons">note_add</i> Add a new Cuisine
+                    </div>
+                    <div class="collapsible-body">
+                        <form action="{% url 'recipes:cuisine_create' %}" method="POST" class="col-12">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+                            <h5>Cuisine Name:</h5>
+                            <div class="input-field col-12">
+                                <i class="material-icons prefix">outdoor_grill</i>
+                                <input id="cuisine_name" name="name" type="text" class="validate" maxlength="100"
+                                    required>
+                                <label for="cuisine_name">Cuisine Name</label>
+                            </div>
+                            <div class="input-field col s12">
+                                <button class="btn waves-effect waves-light" type="submit" name="action">
+                                    Add Cuisine <i class="material-icons right">send</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Upload Image -->
+        <div class="col-12 col-md-4 mb-3">
+            <ul class="collapsible">
+                <li>
+                    <div class="collapsible-header admin-image-thumb">
+                        <i class="material-icons">add_photo_alternate</i> Upload to Gallery
+                    </div>
+                    <div class="collapsible-body">
+                        <form action="{% url 'recipes:image_upload' %}" method="POST" enctype="multipart/form-data"
+                            class="col-12">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+                            <h5>Image File:</h5>
+                            <div class="col-12">
+                                <input type="file" id="image_file" name="image"
+                                    accept="image/png, image/jpeg, image/gif, image/webp" required
+                                    style="display: block; margin-top: 8px;">
+                                <small>Supported: JPG, PNG, GIF, WebP (max 16 MB)</small>
+                            </div>
+                            <div class="input-field col s12 mt-3">
+                                <button class="btn waves-effect waves-light" type="submit" name="action">
+                                    Upload <i class="material-icons right">cloud_upload</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Manage Existing RECIPES (Edit & Delete) -->
+    <h4 class="mt-4">
+        Manage <span class="recipe-thumb">Recipes</span>
+        <small style="font-size: 0.9rem; opacity: 0.8; font-weight: normal; display: block;">Click any recipe below to
+            edit or delete</small>
+    </h4>
+
+    {% for recipe in recipes %}
+    <ul class="collapsible">
+        <li>
+            <div class="collapsible-header">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <span><i class="material-icons recipe-thumb">outdoor_grill</i> {{ recipe.name }}</span>
+                    <span class="badge badge-light" style="font-size: 0.8rem;">
+                        {{ recipe.category.name|default:"Uncategorised" }} &bull; {{
+                        recipe.cuisine.name|default:"General" }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="collapsible-body">
+                <div class="admin-recipe-btn-group mb-3">
+                    <a href="{% url 'recipes:recipe_edit' recipe.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Recipe
+                    </a>
+                    <form action="{% url 'recipes:recipe_delete' recipe.pk %}" method="POST"
+                        style="display: inline-block; margin: 0;"
+                        onsubmit="return confirm('Are you sure you want to delete \'{{ recipe.name }}\'?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt"></i> Delete Recipe
+                        </button>
+                    </form>
+                </div>
+                <div class="row featurette">
+                    <div class="col-md-7">
+                        <h5>Category:</h5>
+                        <p><i class="fas fa-fire"></i> {{ recipe.category.name|default:"-" }}</p>
+                        <h5>Cuisine:</h5>
+                        <p><i class="fab fa-free-code-camp"></i> {{ recipe.cuisine.name|default:"-" }}</p>
+                        <h5>Ingredients:</h5>
+                        <p>
+                            {% for ing in recipe.ingredients %}
+                            <i class="fas fa-angle-double-right"></i> {{ ing }}<br>
+                            {% empty %}
+                            <em>None listed</em>
+                            {% endfor %}
+                        </p>
+                        <h5>Method Steps:</h5>
+                        <p>
+                            {% for step in recipe.methods %}
+                            <i class="fas fa-angle-double-right"></i> {{ step }}<br>
+                            {% empty %}
+                            <em>None listed</em>
+                            {% endfor %}
+                        </p>
+                    </div>
+                    <div class="col-md-5">
+                        <h5>Date of Creation:</h5>
+                        <p>{{ recipe.created_on|date:"M d, Y"|default:"N/A" }}</p>
+                        <h5>Preparation Time:</h5>
+                        <p>{{ recipe.prep_display }}</p>
+                        <h5>Cooking Time:</h5>
+                        <p>{{ recipe.cook_display }}</p>
+                    </div>
+                </div>
+            </div>
+        </li>
+    </ul>
+    {% empty %}
+    <p><em>No recipes found in the database. Use "Add a new Recipe" above to get started.</em></p>
+    {% endfor %}
+
+    <!-- Manage Existing CATEGORIES (Edit & Delete) -->
+    <ul class="collapsible col-12 mt-4">
+        <li>
+            <div class="collapsible-header">
+                <h5 class="m-0">Manage <span class="admin-category-thumb">Categories</span></h5>
+            </div>
+            <div class="collapsible-body">
+                <div class="admin-manage-grid">
+                    {% for cate in categories %}
+                    <div class="admin-manage-item">
+                        <span class="admin-manage-name"><i class="material-icons">restaurant_menu</i> {{ cate.name
+                            }}</span>
+                        <div class="admin-manage-btns">
+                            <a href="{% url 'recipes:category_edit' cate.pk %}"
+                                class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form action="{% url 'recipes:category_delete' cate.pk %}" method="POST"
+                                style="display: inline-block; margin: 0;"
+                                onsubmit="return confirm('Are you sure you want to delete this category? Its recipes will be kept.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </li>
+    </ul>
+
+    <!-- Manage Existing CUISINES (Edit & Delete) -->
+    <ul class="collapsible col-12 mt-3">
+        <li>
+            <div class="collapsible-header">
+                <h5 class="m-0">Manage <span class="admin-cuisine-thumb">Cuisines</span></h5>
+            </div>
+            <div class="collapsible-body">
+                <div class="admin-manage-grid">
+                    {% for cuisine in cuisines %}
+                    <div class="admin-manage-item">
+                        <span class="admin-manage-name"><i class="material-icons">public</i> {{ cuisine.name }}</span>
+                        <div class="admin-manage-btns">
+                            <a href="{% url 'recipes:cuisine_edit' cuisine.pk %}"
+                                class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form action="{% url 'recipes:cuisine_delete' cuisine.pk %}" method="POST"
+                                style="display: inline-block; margin: 0;"
+                                onsubmit="return confirm('Are you sure you want to delete this cuisine? Its recipes will be kept.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </li>
+    </ul>
+
+    {% else %}
+    <!-- VISITOR / NON-STAFF LOGIN PANEL -->
+    <div class="admin-inline-login-box p-4 mt-3"
+        style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--card-border);">
+        <div class="d-flex align-items-center mb-3">
+            <i class="material-icons mr-2" style="font-size: 32px; color: var(--warning-color);">lock</i>
+            <div>
+                <h4 class="m-0">Editor &amp; Admin Sign In</h4>
+                <p class="m-0" style="opacity: 0.8; font-size: 0.9rem;">
+                    Sign in with your editor credentials to add, update, or remove recipes, categories, cuisines, and
+                    images directly here.
+                </p>
+            </div>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="alert alert-warning" role="alert">
+            You are logged in as <strong>{{ user.get_username }}</strong>, but this account is not marked as
+            staff/editor yet.
+            Please ask an administrator to grant editor permissions, or log in with another account.
+        </div>
+        <form action="{% url 'recipes:logout' %}" method="POST" style="display: inline-block;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+            <button type="submit" class="btn btn-warning waves-effect waves-light">
+                <i class="fas fa-sign-out-alt"></i> Switch Account
+            </button>
+        </form>
+        {% else %}
+        <form action="{% url 'recipes:login' %}" method="POST" class="row">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+            <div class="input-field col-12 col-md-5">
+                <i class="material-icons prefix">person</i>
+                <input id="admin_username" name="username" type="text" class="validate" required
+                    autocomplete="username">
+                <label for="admin_username">Username</label>
+            </div>
+            <div class="input-field col-12 col-md-5">
+                <i class="material-icons prefix">lock</i>
+                <input id="admin_password" name="password" type="password" class="validate" required
+                    autocomplete="current-password">
+                <label for="admin_password">Password</label>
+            </div>
+            <div class="input-field col-12 col-md-2 d-flex align-items-center">
+                <button type="submit" class="btn btn-warning waves-effect waves-light w-100" style="margin-top: 10px;">
+                    Log In
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<!-- 8. EDITORIAL BRAND SHOWCASE -->
+<section class="about-showcase-card mt-5 mb-5" aria-label="About Recipes">
+    <div class="about-header-badge">
+        <i class="fas fa-award"></i> The UK's Number One Food Brand
+    </div>
+    <h2 class="about-showcase-title">Why Food Lovers Trust Recipes</h2>
+
+    <p class="about-intro-text">
+        As well as helping you decide what to cook we can also help you to cook it. From tips on cookery techniques to
+        facts and information about health and nutrition, we’ve a wealth of foodie know-how for you to explore.
+    </p>
+
+    <!-- 3 Value Pillars -->
+    <div class="about-feature-grid">
+        <div class="about-feature-item">
+            <div class="about-feature-icon-circle">
+                <i class="fas fa-mortar-pestle"></i>
+            </div>
+            <h3 class="about-feature-title">Home Kitchen Tested</h3>
+            <p class="about-feature-desc">
+                All our recipes are tested thoroughly by us to make sure they’re completely suitable for your kitchen at
+                home.
+            </p>
+        </div>
+        <div class="about-feature-item">
+            <div class="about-feature-icon-circle">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+            <h3 class="about-feature-title">Nutritionist Verified</h3>
+            <p class="about-feature-desc">
+                We know many of you care about balanced eating, so our recipes are reviewed with qualified nutritional
+                insight.
+            </p>
+        </div>
+        <div class="about-feature-item">
+            <div class="about-feature-icon-circle">
+                <i class="fas fa-globe-americas"></i>
+            </div>
+            <h3 class="about-feature-title">Global Inspiration</h3>
+            <p class="about-feature-desc">
+                Whether you’re seeking fast family dinners or exotic global flavours across {{ cuisine_total }}
+                cuisines, we’re here to help.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Floating Back to Top Button -->
+<!-- <div class="fixed-action-btn">
+    <a href="#top-page" class="btn-floating red card-top" aria-label="Back to Top">
+        Top
+    </a>
+</div> -->
+
+{% endblock %}

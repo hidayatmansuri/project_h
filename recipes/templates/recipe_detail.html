@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block recipe_content %}
+
+<!-- Breadcrumb Navigation -->
+<div class="recipe-breadcrumb-bar mb-3">
+    <a href="{% url 'recipes:index' %}" class="breadcrumb-link"><i class="fas fa-arrow-left"></i> Recipes Cookbook</a>
+    <i class="fas fa-chevron-right breadcrumb-separator mx-2"></i>
+    <span class="breadcrumb-current font-weight-bold">{{ recipe.name }}</span>
+</div>
+
+<!-- Recipe Header -->
+<div class="recipe-detail-header mb-3">
+    <h1 class="recipe_head" id="top-page">
+        <i class="fas fa-utensils"></i> {{ recipe.name }}
+    </h1>
+
+    <div class="recipe-modal-tags-row">
+        {% if recipe.category %}
+        <div class="recipe-modal-info-item">
+            <span class="recipe-modal-info-label"><i class="fas fa-tag"></i> Category:</span>
+            <span class="recipe-modal-badge badge-type">{{ recipe.category.name }}</span>
+        </div>
+        {% endif %}
+        {% if recipe.cuisine %}
+        <div class="recipe-modal-info-item">
+            <span class="recipe-modal-info-label"><i class="fas fa-globe-americas"></i> Cuisine:</span>
+            <span class="recipe-modal-badge badge-cuisine">{{ recipe.cuisine.name }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Meta Grid (Prep, Cook, Date) -->
+<div class="recipe-modal-meta-grid mb-4">
+    <div class="recipe-modal-meta-card">
+        <span class="recipe-modal-meta-label"><i class="fas fa-clock"></i> Preparation Time:</span>
+        <span class="recipe-modal-meta-value">{{ recipe.prep_display }}</span>
+    </div>
+    <div class="recipe-modal-meta-card">
+        <span class="recipe-modal-meta-label"><i class="fas fa-fire"></i> Cooking Time:</span>
+        <span class="recipe-modal-meta-value">{{ recipe.cook_display }}</span>
+    </div>
+    <div class="recipe-modal-meta-card">
+        <span class="recipe-modal-meta-label"><i class="far fa-calendar-alt"></i> Date Created:</span>
+        <span class="recipe-modal-meta-value">{{ recipe.created_on|date:"M d, Y"|default:"N/A" }}</span>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column: Ingredients & Instructions -->
+    <div class="col-lg-7 col-md-12">
+        <div class="recipe-modal-section">
+            <h3 class="recipe-modal-section-title">
+                <i class="fas fa-carrot"></i> Ingredients
+            </h3>
+            <div class="recipe-modal-ingredients-wrapper">
+                {% if recipe.ingredients %}
+                <ul class="recipe-modal-list recipe-modal-ingredients">
+                    {% for ing in recipe.ingredients %}
+                    <li><i class="fas fa-check-circle"></i> <span>{{ ing }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="recipe-modal-empty-note"><em>No ingredients listed for this recipe.</em></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="recipe-modal-section mt-4">
+            <h3 class="recipe-modal-section-title">
+                <i class="fas fa-list-ol"></i> Cooking Method
+            </h3>
+            <div class="recipe-modal-methods-wrapper">
+                {% if recipe.methods %}
+                <ol class="recipe-modal-methods-list">
+                    {% for step in recipe.methods %}
+                    <li>
+                        <span class="method-step-index">{{ forloop.counter }}</span>
+                        <span class="method-step-desc">{{ step }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="recipe-modal-empty-note"><em>No cooking steps listed for this recipe.</em></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Hero Image & Quick Actions -->
+    <div class="col-lg-5 col-md-12">
+        <div class="recipe-detail-sidebar">
+            <div class="recipe-modal-hero mb-3">
+                <img class="recipe-modal-hero-img"
+                    src="{% if recipe.image_url %}{{ recipe.image_url }}{% else %}{% static 'img/batata_poha_20261004193608.jpeg' %}{% endif %}"
+                    alt="{{ recipe.name }}">
+            </div>
+
+            <div class="recipe-sidebar-actions-card">
+                <h5 class="sidebar-actions-title"><i class="fas fa-sliders-h"></i> Recipe Options</h5>
+                <div class="sidebar-action-buttons">
+                    <button type="button" class="btn btn-outline-custom w-100 mb-2" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print Recipe Card
+                    </button>
+                    <a href="{% url 'recipes:index' %}" class="btn btn-outline-custom w-100 mb-2">
+                        <i class="fas fa-arrow-left"></i> Back to Recipes
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="{% url 'recipes:recipe_edit' recipe.pk %}" class="btn btn-warning-custom w-100 mb-2">
+                        <i class="fas fa-edit"></i> Edit Recipe
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Back to Top Button -->
+<div class="fixed-action-btn">
+    <a href="#top-page" class="btn-floating red card-top" aria-label="Back to Top">
+        Top
+    </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block title %}{% if page_title %}{{ page_title }} | {% endif %}Recipes | project-h{% endblock %}
+
+{% block extra_css %}
+<!-- Materialize Icons & Project Fonts for Recipes -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/fonts.css' %}" type="text/css">
+
+<!-- Lightweight Responsive Framework & Styles -->
+<link rel="stylesheet" href="{% static 'css/bootstrap.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'css/materialize.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
+{% block recipes_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="recipes-app-container container">
+    {% include "_messages.html" %}
+    {% block recipe_content %}
+    {% endblock %}
+</div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script src="{% static 'js/jquery.js' %}"></script>
+<script src="{% static 'js/materialize.js' %}"></script>
+<script src="{% static 'js/recipes-app.js' %}"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        if (typeof $.fn.collapsible === 'function') {
+            $('.collapsible').collapsible();
+        }
+        if (typeof $.fn.formSelect === 'function') {
+            $('select').formSelect();
+        }
+        if (typeof $.fn.datepicker === 'function') {
+            $('.datepicker').datepicker({
+                format: 'mmm dd, yyyy'
+            });
+        }
+        if (typeof $.fn.floatingActionButton === 'function') {
+            $('.fixed-action-btn').floatingActionButton();
+        }
+    });
+</script>
+{% block recipes_extra_js %}{% endblock %}
+{% endblock %}

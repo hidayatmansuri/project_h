@@ -980,7 +980,8 @@ a {
         transition: none;
         z-index: auto;
         flex-direction: row;
-        justify-content: normal;
+        justify-content: flex-end;
+        flex-wrap: wrap;
         align-items: center;
         padding-top: 0;
         padding-bottom: 0;

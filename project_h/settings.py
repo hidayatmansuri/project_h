@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'shades',
     'docedit',
     'listimage',
+    'recipes',
 ]
 
 MIDDLEWARE = [
@@ -154,6 +155,16 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# Uploaded media (recipe photos, etc.)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Recipes configuration
+RECIPES_ALLOW_SIGNUP = True
+RECIPES_SIGNUP_GRANTS_STAFF = False
+recipes_ALLOW_SIGNUP = RECIPES_ALLOW_SIGNUP
+recipes_SIGNUP_GRANTS_STAFF = RECIPES_SIGNUP_GRANTS_STAFF
 
 
 # Default primary key field type

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block recipe_content %}
+
+<div class="mb-3">
+    <a href="{% url 'recipes:index' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Recipes
+    </a>
+</div>
+
+{% if user.is_authenticated %}
+<div class="text-center" style="margin: 40px 0;">
+    <h4>You're already logged in as {{ user.get_username }}!</h4>
+    {% if user.is_staff %}
+    <a href="{% url 'recipes:index' %}#admin-section" class="btn btn-success waves-effect waves-light">Go to Embedded Admin</a>
+    <a href="{% url 'recipes:manage' %}" class="btn btn-info waves-effect waves-light" style="margin-left: 8px;">Admin Dashboard</a>
+    {% else %}
+    <p>This account does not have editor access yet. Ask an administrator to enable it.</p>
+    {% endif %}
+    <form action="{% url 'recipes:logout' %}" method="POST" style="display: inline-block; margin-left: 8px;">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'recipes:index' %}">
+        <button type="submit" class="btn btn-warning waves-effect waves-light">Log Out</button>
+    </form>
+</div>
+{% else %}
+<form action="{% url 'recipes:login' %}" method="POST">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <div class="login">
+        <div class="login-screen">
+            <div class="app-title">
+                <h1>Admin Login</h1>
+            </div>
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">Invalid username or password. Please try again.</div>
+            {% endif %}
+            <div class="login-form">
+                <div class="control-group">
+                    <input type="text" class="login-field" value="{{ form.username.value|default:'' }}"
+                        placeholder="username" name="username" autocomplete="username" required>
+                    <label class="login-field-icon fui-user" for="login-name"></label>
+                </div>
+                <div class="control-group">
+                    <input type="password" class="login-field" value="" placeholder="password" name="password"
+                        autocomplete="current-password" required>
+                    <label class="login-field-icon fui-lock" for="login-pass"></label>
+                </div>
+                <input type="submit" value="Log in" class="btn btn-warning waves-effect waves-light">
+            </div><br>
+
+            {% if signup_enabled %}
+            <p>
+                Click here to <a href="{% url 'recipes:signup' %}">Create New User</a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endif %}
+
+{% endblock %}

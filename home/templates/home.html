@@ -64,19 +64,14 @@
             </div>
             <div class="nav-separator">|</div>
             <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'listimage:index' %}"><i class="fa-solid fa-wand-magic-sparkles"></i>
+                <a class="nav-link ph-hover" href="{% url 'listimage:index' %}"><i
+                        class="fa-solid fa-wand-magic-sparkles"></i>
                     <span>ListImage</span></a>
             </div>
             <div class="nav-separator">|</div>
-            <div class="home-nav-label dropdown">
-                <a class="nav-link ph-hover dropdown-toggle" href="#"><i class="fa-solid fa-repeat"></i>
-                    <span>Converter</span></a>
-                <div class="dropdown-menu">
-                    <a class="nav-link ph-hover menu-item" href="{% url 'passgen' %}"><i
-                            class="fa-solid fa-dollar-sign"></i> <span>Currency</span></a>
-                    <a class="nav-link ph-hover menu-item" href="{% url 'passgen' %}"><i
-                            class="fa-solid fa-weight-scale"></i> <span>Measurement</span></a>
-                </div>
+            <div class="home-nav-label">
+                <a class="nav-link ph-hover" href="{% url 'recipes:index' %}"><i class="fa-solid fa-utensils"></i>
+                    <span>Recipes</span></a>
             </div>
             <div class="nav-separator">|</div>
             <label class="theme-toggle-label" for="theme-toggle">
@@ -132,6 +127,12 @@
                         Pure 2k<br>White
                     </div>
                     <span>List<span class="floating-lable">Image</span></span>
+                </a>
+                <a href="{% url 'recipes:index' %}" class="ph-card floating-card">
+                    <div class="floating-top">
+                        Cook &<br>Share
+                    </div>
+                    <span>Re<span class="floating-lable">cipes</span></span>
                 </a>
             </div>
             <!-- <div class="ph-welcome-subs welcome-desc">

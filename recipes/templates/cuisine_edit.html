@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block recipe_content %}
+
+<div class="mb-3">
+    <a href="{% url 'recipes:index' %}#admin-section" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Recipes Admin
+    </a>
+</div>
+
+<h2>{{ page_title }}</h2>
+
+<div class="row">
+    <form action="{% url 'recipes:cuisine_edit' cuisine.pk %}" method="POST" class="col s12">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'recipes:index' %}#admin-section">
+
+        <h5>Cuisine Name:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">photo_filter</i>
+            <input id="cuisine_name" name="name" type="text" class="validate" maxlength="100" value="{{ cuisine.name }}"
+                required>
+        </div>
+
+        <h5>Short Label (cards &amp; quick links):</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">label</i>
+            <input id="cuisine_short" name="short_name" type="text" class="validate" maxlength="30"
+                value="{{ cuisine.short_name }}">
+        </div>
+
+        <h5>Card Icon (Font Awesome class):</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">star</i>
+            <input id="cuisine_icon" name="icon" type="text" class="validate" maxlength="50" value="{{ cuisine.icon }}"
+                required>
+        </div>
+
+        <h5>Card Tagline:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">short_text</i>
+            <input id="cuisine_tagline" name="tagline" type="text" class="validate" maxlength="140"
+                value="{{ cuisine.tagline }}">
+        </div>
+
+        <h5>Card Colour:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">palette</i>
+            <select id="cuisine_accent" name="accent">
+                {% for value, label in cuisine.ACCENT_CHOICES %}
+                <option value="{{ value }}" {% if value == cuisine.accent %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="input-field col s12">
+            <button class="btn waves-effect waves-light" type="submit" name="action">Edit Cuisine
+                <i class="material-icons right">send</i>
+            </button>
+            <a href="{% url 'recipes:index' %}#admin-section" class="btn btn-secondary waves-effect waves-light"
+                style="margin-left: 10px;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

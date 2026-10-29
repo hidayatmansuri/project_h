@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% block recipe_content %}
+
+<div id="top-page"></div>
+
+<!--ADMIN Header Topbar-->
+<div class="admin-header-bar">
+    <div class="admin-header-info">
+        <h2 class="admin-page-title"><i class="material-icons">admin_panel_settings</i> {{ page_title }}</h2>
+        <span class="admin-user-badge"><i class="fas fa-user-shield"></i> Logged in as: <strong>{{ user.get_username }}</strong></span>
+    </div>
+    <div class="d-flex align-items-center">
+        <a href="{% url 'recipes:index' %}" class="btn btn-outline-secondary mr-2" style="margin-right: 8px;">
+            <i class="fas fa-arrow-left"></i> Back to Recipes
+        </a>
+        <form action="{% url 'recipes:logout' %}" method="POST" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger admin-logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Log Out
+            </button>
+        </form>
+    </div>
+</div>
+
+<!--form to add new RECIPE-->
+<div class="row">
+    <div class="col-12">
+        <ul class="collapsible">
+            <li>
+                <div class="collapsible-header recipe_thumb">
+                    <i class="material-icons">note_add</i> Add a new Recipe
+                </div>
+                <div class="collapsible-body">
+                    <span>
+                        <div class="row">
+                            <form action="{% url 'recipes:recipe_create' %}" method="POST" enctype="multipart/form-data"
+                                class="col s12">
+                                {% csrf_token %}
+
+                                <h5>Recipe Name:</h5>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">outdoor_grill</i>
+                                    <input id="recipe_name" name="name" type="text" class="validate" maxlength="200"
+                                        required>
+                                    <label for="recipe_name">Recipe Name</label>
+                                </div>
+
+                                <h5>Choose a Category:</h5>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">photo_filter</i>
+                                    <select id="recipe_type" name="category">
+                                        <option value="" selected>Recipe Type</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <h5>Recipe Image:</h5>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">photo_filter</i>
+                                    <select id="recipe_image" name="image">
+                                        <option value="" selected>Choose from Existing Image Library</option>
+                                        {% for image in images %}
+                                        <option value="{{ image.pk }}">{{ image }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col s12 admin-upload-box">
+                                    <label for="recipe_image_file">
+                                        <i class="material-icons"
+                                            style="vertical-align: middle; font-size: 18px;">cloud_upload</i> Or Upload
+                                        a New Image from Your Device
+                                    </label>
+                                    <input type="file" id="recipe_image_file" name="image_file"
+                                        accept="image/png, image/jpeg, image/gif, image/webp"
+                                        style="display: block; margin-top: 8px;">
+                                    <small>Supported: JPG, PNG, GIF, WebP (max 16 MB). If uploaded, this file will be
+                                        saved in the library and used for this recipe.</small>
+                                </div>
+
+                                <h5>Choose a Cuisine:</h5>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">photo_filter</i>
+                                    <select id="recipe_cuisine" name="cuisine">
+                                        <option value="" selected>Cuisine</option>
+                                        {% for cuisine in cuisines %}
+                                        <option value="{{ cuisine.pk }}">{{ cuisine.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!--Dynamic Ingredients Input fields-->
+                                <div class="admin-dynamic-section">
+                                    <div class="admin-dynamic-header">
+                                        <h5>Ingredients:</h5>
+                                        <button type="button"
+                                            class="btn btn-small waves-effect waves-light btn-add-dynamic"
+                                            id="admin-add-ingredient-btn">
+                                            <i class="material-icons left">add</i> Add Ingredient
+                                        </button>
+                                    </div>
+                                    <small class="admin-dynamic-hint">Add as many ingredients as needed. Only items with
+                                        values will be shown to users.</small>
+                                    <div id="admin-ingredients-container" class="admin-dynamic-container">
+                                        <div class="admin-dynamic-row">
+                                            <div class="input-field dynamic-input-field">
+                                                <i class="material-icons prefix">ballot</i>
+                                                <input name="ingredient[]" type="text" class="validate"
+                                                    placeholder="e.g. 500g Chicken breast, diced">
+                                                <label class="active">Ingredient 1</label>
+                                            </div>
+                                            <button type="button" class="btn-remove-dynamic" title="Remove"
+                                                aria-label="Remove ingredient"><i
+                                                    class="material-icons">delete_outline</i></button>
+                                        </div>
+                                        <div class="admin-dynamic-row">
+                                            <div class="input-field dynamic-input-field">
+                                                <i class="material-icons prefix">ballot</i>
+                                                <input name="ingredient[]" type="text" class="validate"
+                                                    placeholder="e.g. 2 tbsp Olive oil">
+                                                <label class="active">Ingredient 2</label>
+                                            </div>
+                                            <button type="button" class="btn-remove-dynamic" title="Remove"
+                                                aria-label="Remove ingredient"><i
+                                                    class="material-icons">delete_outline</i></button>
+                                        </div>
+                                        <div class="admin-dynamic-row">
+                                            <div class="input-field dynamic-input-field">
+                                                <i class="material-icons prefix">ballot</i>
+                                                <input name="ingredient[]" type="text" class="validate"
+                                                    placeholder="e.g. 1 Medium onion, sliced">
+                                                <label class="active">Ingredient 3</label>
+                                            </div>
+                                            <button type="button" class="btn-remove-dynamic" title="Remove"
+                                                aria-label="Remove ingredient"><i
+                                                    class="material-icons">delete_outline</i></button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!--Dynamic Methods / Steps Input fields-->
+                                <div class="admin-dynamic-section" style="margin-top: 24px;">
+                                    <div class="admin-dynamic-header">
+                                        <h5>Method / Steps:</h5>
+                                        <button type="button"
+                                            class="btn btn-small waves-effect waves-light btn-add-dynamic"
+                                            id="admin-add-method-btn">
+                                            <i class="material-icons left">add</i> Add Step
+                                        </button>
+                                    </div>
+                                    <small class="admin-dynamic-hint">Add preparation/cooking steps in sequence. Only
+                                        steps with values will be shown to users.</small>
+                                    <div id="admin-methods-container" class="admin-dynamic-container">
+                                        <div class="admin-dynamic-row">
+                                            <div class="input-field dynamic-input-field">
+                                                <i class="material-icons prefix">restaurant</i>
+                                                <input name="method[]" type="text" class="validate"
+                                                    placeholder="e.g. Heat oil in a large skillet over medium-high heat">
+                                                <label class="active">Step 1</label>
+                                            </div>
+                                            <button type="button" class="btn-remove-dynamic" title="Remove"
+                                                aria-label="Remove step"><i
+                                                    class="material-icons">delete_outline</i></button>
+                                        </div>
+                                        <div class="admin-dynamic-row">
+                                            <div class="input-field dynamic-input-field">
+                                                <i class="material-icons prefix">restaurant</i>
+                                                <input name="method[]" type="text" class="validate"
+                                                    placeholder="e.g. Add onions and saute until softened and fragrant">
+                                                <label class="active">Step 2</label>
+                                            </div>
+                                            <button type="button" class="btn-remove-dynamic" title="Remove"
+                                                aria-label="Remove step"><i
+                                                    class="material-icons">delete_outline</i></button>
+                                        </div>
+                                        <div class="admin-dynamic-row">
+                                            <div class="input-field dynamic-input-field">
+                                                <i class="material-icons prefix">restaurant</i>
+                                                <input name="method[]" type="text" class="validate"
+                                                    placeholder="e.g. Simmer gently for 15 minutes and season to taste">
+                                                <label class="active">Step 3</label>
+                                            </div>
+                                            <button type="button" class="btn-remove-dynamic" title="Remove"
+                                                aria-label="Remove step"><i
+                                                    class="material-icons">delete_outline</i></button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h5>Choose a Date:</h5>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">date_range</i>
+                                    <input id="create_on" name="created_on" type="text" class="datepicker">
+                                </div>
+
+                                <h5>Provide time (mins):</h5>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">timer</i>
+                                    <input id="prep_time" name="prep_time" type="number" min="0" max="32000"
+                                        class="validate" required>
+                                    <label for="prep_time">Preparation time (mins)</label>
+                                </div>
+                                <div class="input-field col s12">
+                                    <i class="material-icons prefix">whatshot</i>
+                                    <input id="cook_time" name="cook_time" type="number" min="0" max="32000"
+                                        class="validate" required>
+                                    <label for="cook_time">Cooking time (mins)</label>
+                                </div>
+
+                                <div class="input-field col s12">
+                                    <button class="btn waves-effect waves-light" type="submit" name="action">Add Recipe
+                                        <i class="material-icons right">send</i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </span>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!--forms to add new CATEGORY, CUISINE, and IMAGE (stacked on phones, three columns from 768px)-->
+<div class="row">
+
+    <div class="col-12 col-md-4">
+        <ul class="collapsible">
+            <li>
+                <div class="collapsible-header admin-category-thumb">
+                    <i class="material-icons">note_add</i> Add a new Category
+                </div>
+                <div class="collapsible-body">
+                    <span>
+                        <div class="row">
+                            <form action="{% url 'recipes:category_create' %}" method="POST" class="col-12">
+                                {% csrf_token %}
+                                <h5>Category Name:</h5>
+                                <div class="input-field col-12">
+                                    <i class="material-icons prefix">outdoor_grill</i>
+                                    <input id="category_name" name="name" type="text" class="validate" maxlength="100"
+                                        required>
+                                    <label for="category_name">Category Name</label>
+                                </div>
+                                <div class="input-field col s12">
+                                    <button class="btn waves-effect waves-light" type="submit" name="action">Add
+                                        Category
+                                        <i class="material-icons right">send</i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <ul class="collapsible">
+            <li>
+                <div class="collapsible-header admin-cuisine-thumb">
+                    <i class="material-icons">note_add</i> Add a new Cuisine
+                </div>
+                <div class="collapsible-body">
+                    <span>
+                        <div class="row">
+                            <form action="{% url 'recipes:cuisine_create' %}" method="POST" class="col-12">
+                                {% csrf_token %}
+                                <h5>Cuisine Name:</h5>
+                                <div class="input-field col-12">
+                                    <i class="material-icons prefix">outdoor_grill</i>
+                                    <input id="cuisine_name" name="name" type="text" class="validate" maxlength="100"
+                                        required>
+                                    <label for="cuisine_name">Cuisine Name</label>
+                                </div>
+                                <div class="input-field col s12">
+                                    <button class="btn waves-effect waves-light" type="submit" name="action">Add Cuisine
+                                        <i class="material-icons right">send</i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <ul class="collapsible">
+            <li>
+                <div class="collapsible-header admin-image-thumb">
+                    <i class="material-icons">add_photo_alternate</i> Upload an Image
+                </div>
+                <div class="collapsible-body">
+                    <span>
+                        <div class="row">
+                            <form action="{% url 'recipes:image_upload' %}" method="POST" enctype="multipart/form-data"
+                                class="col-12">
+                                {% csrf_token %}
+                                <h5>Upload to Gallery:</h5>
+                                <div class="col-12">
+                                    <input type="file" id="image_file" name="image"
+                                        accept="image/png, image/jpeg, image/gif, image/webp" required
+                                        style="display: block; margin-top: 8px;">
+                                    <small>Supported: JPG, PNG, GIF, WebP (max 16 MB)</small>
+                                </div>
+                                <div class="input-field col s12">
+                                    <button class="btn waves-effect waves-light" type="submit" name="action">Upload
+                                        <i class="material-icons right">cloud_upload</i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </span>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<h4>List of <span class="recipe-thumb">Recipes</span>
+    <h6>(for Amendment click on RECIPE)</h6>
+</h4>
+
+<!--List of added recipes for Admin-->
+{% for recipe in recipes %}
+<ul class="collapsible">
+    <li>
+        <div class="collapsible-header">
+            <div class="col-md-12">
+                <i class="material-icons recipe-thumb">outdoor_grill</i> {{ recipe.name }}
+            </div>
+        </div>
+
+        <div class="collapsible-body">
+            <span>
+                <div class="col-md-12 admin-recipe-btn-group">
+                    <a href="{% url 'recipes:recipe_edit' recipe.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit Recipe
+                    </a>
+                    <form action="{% url 'recipes:recipe_delete' recipe.pk %}" method="POST"
+                        style="display: inline-block; margin: 0;"
+                        onsubmit="return confirm('Are you sure you want to delete this recipe?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt"></i> Delete Recipe
+                        </button>
+                    </form>
+                </div><br>
+                <div class="row featurette">
+                    <div class="col-md-7">
+                        <h5>Category:</h5>
+                        <p><i class="fas fa-fire"></i> {{ recipe.category.name|default:"-" }}</p><br>
+                        <h5>Cuisine:</h5>
+                        <p><i class="fab fa-free-code-camp"></i> {{ recipe.cuisine.name|default:"-" }}</p><br>
+                        <h5>Ingredient:</h5>
+                        <p>
+                            {% for ing in recipe.ingredients %}
+                            <i class="fas fa-angle-double-right"></i> {{ ing }}<br>
+                            {% empty %}
+                            <em>None listed</em>
+                            {% endfor %}
+                        </p><br>
+                        <h5>Method:</h5>
+                        <p>
+                            {% for step in recipe.methods %}
+                            <i class="fas fa-angle-double-right"></i> {{ step }}<br>
+                            {% empty %}
+                            <em>None listed</em>
+                            {% endfor %}
+                        </p><br>
+                    </div>
+                    <div class="col-md-5">
+                        <p>
+                        <h5>Date of Creation:</h5> {{ recipe.created_on|date:"M d, Y"|default:"N/A" }}</p><br>
+                        <p>
+                        <h5>Time for Preparation:</h5> {{ recipe.prep_display }}</p><br>
+                        <p>
+                        <h5>Time for Cooking:</h5> {{ recipe.cook_display }}</p><br>
+                    </div>
+                </div>
+            </span>
+        </div>
+    </li>
+</ul>
+{% empty %}
+<p><em>No recipes yet. Use "Add a new Recipe" above.</em></p>
+{% endfor %}
+
+<br>
+
+<!--List of added RECIPE CATEGORIES-->
+<ul class="collapsible col-12">
+    <li>
+        <div class="collapsible-header">
+            <h5>List of <span class="admin-category-thumb">Categories</span></h5>
+        </div>
+
+        <div class="collapsible-body">
+            <div class="admin-manage-grid">
+                {% for cate in categories %}
+                <div class="admin-manage-item">
+                    <span class="admin-manage-name"><i class="material-icons">restaurant_menu</i> {{ cate.name }}</span>
+                    <div class="admin-manage-btns">
+                        <a href="{% url 'recipes:category_edit' cate.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <form action="{% url 'recipes:category_delete' cate.pk %}" method="POST"
+                            style="display: inline-block; margin: 0;"
+                            onsubmit="return confirm('Are you sure you want to delete this category? Its recipes will be kept but uncategorised.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </li>
+</ul>
+
+<br>
+
+<!--List of added RECIPE CUISINES-->
+<ul class="collapsible col-12">
+    <li>
+        <div class="collapsible-header">
+            <h5>List of <span class="admin-cuisine-thumb">Cuisines</span></h5>
+        </div>
+        <div class="collapsible-body">
+            <div class="admin-manage-grid">
+                {% for cuisine in cuisines %}
+                <div class="admin-manage-item">
+                    <span class="admin-manage-name"><i class="material-icons">public</i> {{ cuisine.name }}</span>
+                    <div class="admin-manage-btns">
+                        <a href="{% url 'recipes:cuisine_edit' cuisine.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <form action="{% url 'recipes:cuisine_delete' cuisine.pk %}" method="POST"
+                            style="display: inline-block; margin: 0;"
+                            onsubmit="return confirm('Are you sure you want to delete this cuisine? Its recipes will be kept without a cuisine.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </li>
+</ul>
+
+<!--A red button floating at right bottom corner of the screen-->
+<div class="fixed-action-btn">
+    <a href="#top-page" class="btn-floating red card-top">
+        Top
+    </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block recipe_content %}
+
+<!-- Shared page for one category, one cuisine, or the under / over 30 minute lists -->
+<div class="mb-4">
+    <a href="{% url 'recipes:index' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Recipes Cookbook
+    </a>
+</div>
+
+<h2 class="dashhead mb-3">{{ page_title }}</h2>
+
+{% include "_recipe_grid.html" with recipes=recipes section_id=section_id empty_message=empty_message %}
+
+{% endblock %}

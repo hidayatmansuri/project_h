@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block recipe_content %}
+
+<h2>{{ page_title }}</h2>
+
+<div class="row">
+    <form action="{% url 'recipes:recipe_edit' recipe.pk %}" method="POST" enctype="multipart/form-data"
+        class="col s12">
+        {% csrf_token %}
+
+        <h5>Recipe Name:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">outdoor_grill</i>
+            <input id="recipe_name" name="name" type="text" class="validate" maxlength="200" value="{{ recipe.name }}"
+                required>
+        </div>
+
+        <h5>Choose a Category:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">photo_filter</i>
+            <select id="recipe_type" name="category">
+                <option value="">Recipe Type</option>
+                {% for cat in categories %}
+                <option value="{{ cat.pk }}" {% if cat.pk == recipe.category_id %} selected{% endif %}>{{ cat.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!--To CHANGE image-->
+        <h5>Recipe Image:</h5>
+        {% if recipe.image_url %}
+        <div class="col s12" style="margin-bottom: 12px;">
+            <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}"
+                style="max-width: 100%; max-height: 150px; border-radius: var(--radius-md); box-shadow: var(--box-shadow); display: block; margin-bottom: 6px;">
+            <small style="color: var(--text-color); opacity: 0.75;">Current image:
+                <code>{{ recipe.image }}</code></small>
+        </div>
+        {% endif %}
+        <div class="input-field col s12">
+            <i class="material-icons prefix">photo_filter</i>
+            <select id="recipe_image" name="image">
+                <option value="">Choose from Existing Image Library</option>
+                {% for image in images %}
+                <option value="{{ image.pk }}" {% if image.pk == recipe.image_id %} selected{% endif %}>{{ image }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col s12 admin-upload-box">
+            <label for="recipe_image_file">
+                <i class="material-icons" style="vertical-align: middle; font-size: 18px;">cloud_upload</i> Or Upload a
+                New Image from Your Device
+            </label>
+            <input type="file" id="recipe_image_file" name="image_file"
+                accept="image/png, image/jpeg, image/gif, image/webp" style="display: block; margin-top: 8px;">
+            <small>Supported: JPG, PNG, GIF, WebP (max 16 MB). If you upload a file, it will replace the current recipe
+                image and be added to the gallery.</small>
+        </div>
+
+        <h5>Choose a Cuisine:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">photo_filter</i>
+            <select id="recipe_cuisine" name="cuisine">
+                <option value="">Cuisine</option>
+                {% for cuisine in cuisines %}
+                <option value="{{ cuisine.pk }}" {% if cuisine.pk == recipe.cuisine_id %} selected{% endif %}>{{ cuisine.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!--Dynamic Ingredients-->
+        <div class="admin-dynamic-section">
+            <div class="admin-dynamic-header">
+                <h5>Edit Ingredient(s):</h5>
+                <button type="button" class="btn btn-small waves-effect waves-light btn-add-dynamic"
+                    id="admin-add-ingredient-btn">
+                    <i class="material-icons left">add</i> Add Ingredient
+                </button>
+            </div>
+            <div id="admin-ingredients-container" class="admin-dynamic-container">
+                {% for ing in recipe.ingredients %}
+                <div class="admin-dynamic-row">
+                    <div class="input-field dynamic-input-field">
+                        <i class="material-icons prefix">ballot</i>
+                        <input name="ingredient[]" type="text" class="validate" value="{{ ing }}"
+                            placeholder="Ingredient item">
+                        <label class="active">Ingredient {{ forloop.counter }}</label>
+                    </div>
+                    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove ingredient"><i
+                            class="material-icons">delete_outline</i></button>
+                </div>
+                {% empty %}
+                <div class="admin-dynamic-row">
+                    <div class="input-field dynamic-input-field">
+                        <i class="material-icons prefix">ballot</i>
+                        <input name="ingredient[]" type="text" class="validate" value="" placeholder="Ingredient item">
+                        <label class="active">Ingredient 1</label>
+                    </div>
+                    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove ingredient"><i
+                            class="material-icons">delete_outline</i></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!--Dynamic Methods-->
+        <div class="admin-dynamic-section" style="margin-top: 24px;">
+            <div class="admin-dynamic-header">
+                <h5>Edit Method(s):</h5>
+                <button type="button" class="btn btn-small waves-effect waves-light btn-add-dynamic"
+                    id="admin-add-method-btn">
+                    <i class="material-icons left">add</i> Add Step
+                </button>
+            </div>
+            <div id="admin-methods-container" class="admin-dynamic-container">
+                {% for step in recipe.methods %}
+                <div class="admin-dynamic-row">
+                    <div class="input-field dynamic-input-field">
+                        <i class="material-icons prefix">restaurant</i>
+                        <input name="method[]" type="text" class="validate" value="{{ step }}"
+                            placeholder="Instruction step">
+                        <label class="active">Step {{ forloop.counter }}</label>
+                    </div>
+                    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove step"><i
+                            class="material-icons">delete_outline</i></button>
+                </div>
+                {% empty %}
+                <div class="admin-dynamic-row">
+                    <div class="input-field dynamic-input-field">
+                        <i class="material-icons prefix">restaurant</i>
+                        <input name="method[]" type="text" class="validate" value="" placeholder="Instruction step">
+                        <label class="active">Step 1</label>
+                    </div>
+                    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove step"><i
+                            class="material-icons">delete_outline</i></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <h5>Change a Date:</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">date_range</i>
+            <input id="create_on" name="created_on" type="text" class="datepicker"
+                value="{{ recipe.created_on|date:'M d, Y' }}">
+        </div>
+
+        <h5>Edit time (mins):</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">timer</i>
+            <input id="prep_time" name="prep_time" type="number" min="0" max="32000" class="validate"
+                value="{{ recipe.prep_time }}" required>
+            <label for="prep_time" class="active">Preparation time (mins)</label>
+        </div>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">whatshot</i>
+            <input id="cook_time" name="cook_time" type="number" min="0" max="32000" class="validate"
+                value="{{ recipe.cook_time }}" required>
+            <label for="cook_time" class="active">Cooking time (mins)</label>
+        </div>
+
+        <div class="input-field col s12">
+            <button class="btn waves-effect waves-light" type="submit" name="action">Edit Recipe
+                <i class="material-icons right">send</i>
+            </button>
+            <a href="{% url 'recipes:index' %}#admin-section" class="btn btn-secondary waves-effect waves-light"
+                style="margin-left: 10px;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

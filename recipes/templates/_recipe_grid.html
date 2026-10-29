@@ -1,0 +1,156 @@
+{% load static %}{# Replaces the Jinja macro render_recipe_grid. Needs: recipes, section_id, empty_message (optional) #}
+{% if not recipes %}
+<div class="recipe-empty-state">
+    <i class="fas fa-utensils recipe-empty-icon"></i>
+    <span class="not-available">{{ empty_message|default:"Will be available soon" }}</span>
+</div>
+{% else %}
+<!-- Responsive Recipe Cards Grid -->
+<div class="recipe-square-grid">
+    {% for recipe in recipes %}
+    <div class="recipe-card-square" tabindex="0" role="button" aria-haspopup="dialog"
+        aria-label="View {{ recipe.name }} recipe" data-recipe-modal="recipe-modal-{{ section_id }}-{{ recipe.pk }}"
+        data-recipe-name="{{ recipe.name|lower }}" data-recipe-category="{{ recipe.category.name|default:''|lower }}"
+        data-recipe-cuisine="{{ recipe.cuisine.name|default:''|lower }}" data-cook-time="{{ recipe.cook_time }}"
+        data-recipe-ingredients="{{ recipe.search_text|lower }}" data-recipe-id="{{ recipe.pk }}">
+
+        <!-- Recipe Image as Background -->
+        <div class="recipe-card-bg"
+            style="background-image: url('{% if recipe.image_url %}{{ recipe.image_url }}{% else %}{% static 'img/batata_poha_20261004193608.jpeg' %}{% endif %}');">
+        </div>
+
+        <!-- Recipe Information Overlay -->
+        <div class="recipe-card-overlay">
+            <div class="recipe-card-top">
+                {% if recipe.category %}
+                <span class="recipe-category-tag"><i class="fas fa-tag"></i> {{ recipe.category.name }}</span>
+                {% endif %}
+                {% if recipe.cuisine %}
+                <span class="recipe-cuisine-tag"><i class="fas fa-globe-americas"></i> {{ recipe.cuisine.name }}</span>
+                {% endif %}
+            </div>
+
+            <div class="recipe-card-content">
+                <h4 class="recipe-card-title">{{ recipe.name }}</h4>
+                <div class="recipe-card-meta">
+                    <span class="recipe-meta-pill" title="Preparation Time">
+                        <i class="fas fa-clock"></i> Prep: {{ recipe.prep_display }}
+                    </span>
+                    <span class="recipe-meta-pill" title="Cooking Time">
+                        <i class="fas fa-fire"></i> Cook: {{ recipe.cook_display }}
+                    </span>
+                </div>
+                <div class="recipe-card-hint">
+                    <span><i class="fas fa-book-open"></i> Click to view recipe</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modals for recipes in this section -->
+{% for recipe in recipes %}
+<div class="recipe-modal" id="recipe-modal-{{ section_id }}-{{ recipe.pk }}" role="dialog" aria-modal="true"
+    aria-hidden="true" aria-labelledby="modal-title-{{ section_id }}-{{ recipe.pk }}">
+    <div class="recipe-modal-backdrop" data-close-modal></div>
+
+    <div class="recipe-modal-dialog">
+        <div class="recipe-modal-header">
+            <h3 class="recipe-modal-title" id="modal-title-{{ section_id }}-{{ recipe.pk }}">
+                <i class="fas fa-utensils"></i> {{ recipe.name }}
+            </h3>
+            <button type="button" class="recipe-modal-close" data-close-modal aria-label="Close modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="recipe-modal-body">
+            <div class="recipe-modal-hero">
+                <img class="recipe-modal-hero-img" loading="lazy"
+                    src="{% if recipe.image_url %}{{ recipe.image_url }}{% else %}{% static 'img/batata_poha_20261004193608.jpeg' %}{% endif %}"
+                    alt="{{ recipe.name }}">
+            </div>
+
+            <div class="recipe-modal-tags-row">
+                <div class="recipe-modal-info-item">
+                    <span class="recipe-modal-info-label"><i class="fas fa-tag"></i> Type:</span>
+                    <span class="recipe-modal-badge badge-type">{{ recipe.category.name|default:"-" }}</span>
+                </div>
+                <div class="recipe-modal-info-item">
+                    <span class="recipe-modal-info-label"><i class="fas fa-globe-americas"></i> Cuisine:</span>
+                    <span class="recipe-modal-badge badge-cuisine">{{ recipe.cuisine.name|default:"-" }}</span>
+                </div>
+            </div>
+
+            <div class="recipe-modal-section">
+                <h5 class="recipe-modal-section-title"><i class="fas fa-carrot"></i> Ingredients:</h5>
+                <div class="recipe-modal-ingredients-wrapper">
+                    {% if recipe.ingredients %}
+                    <ul class="recipe-modal-list recipe-modal-ingredients">
+                        {% for ing in recipe.ingredients %}
+                        <li><i class="fas fa-check-circle"></i> <span>{{ ing }}</span></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="recipe-modal-empty-note"><em>No ingredients listed.</em></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="recipe-modal-section">
+                <h5 class="recipe-modal-section-title"><i class="fas fa-list-ol"></i> Method:</h5>
+                <div class="recipe-modal-methods-wrapper">
+                    {% if recipe.methods %}
+                    <ol class="recipe-modal-methods-list">
+                        {% for step in recipe.methods %}
+                        <li>
+                            <span class="method-step-index">{{ forloop.counter }}</span>
+                            <span class="method-step-desc">{{ step }}</span>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                    {% else %}
+                    <p class="recipe-modal-empty-note"><em>No method steps listed.</em></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="recipe-modal-meta-grid">
+                <div class="recipe-modal-meta-card">
+                    <span class="recipe-modal-meta-label"><i class="far fa-calendar-alt"></i> Date of Creation:</span>
+                    <span class="recipe-modal-meta-value">{{ recipe.created_on|date:"M d, Y"|default:"N/A" }}</span>
+                </div>
+                <div class="recipe-modal-meta-card">
+                    <span class="recipe-modal-meta-label"><i class="fas fa-clock"></i> Time for Preparation:</span>
+                    <span class="recipe-modal-meta-value">{{ recipe.prep_display }}</span>
+                </div>
+                <div class="recipe-modal-meta-card">
+                    <span class="recipe-modal-meta-label"><i class="fas fa-fire"></i> Time for Cooking:</span>
+                    <span class="recipe-modal-meta-value">{{ recipe.cook_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="recipe-modal-footer">
+            <div class="recipe-modal-footer-left">
+                <a href="{% url 'recipes:recipe_detail' recipe.slug %}" class="btn btn-outline-custom">
+                    <i class="fas fa-external-link-alt"></i> Full Page View
+                </a>
+                {% if user.is_staff %}
+                <a href="{% url 'recipes:recipe_edit' recipe.pk %}" class="btn btn-warning-custom">
+                    <i class="fas fa-edit"></i> Edit Recipe
+                </a>
+                {% endif %}
+            </div>
+            <div class="recipe-modal-footer-right">
+                <button type="button" class="btn btn-secondary modal-close-btn" data-close-modal>
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}

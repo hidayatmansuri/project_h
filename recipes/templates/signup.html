@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block recipe_content %}
+
+<div class="row" style="max-width: 600px; margin: 30px auto;">
+    <form action="{% url 'recipes:signup' %}" method="POST" class="col-12">
+        {% csrf_token %}
+        <h4>Create New User</h4>
+
+        <div class="input-field col-12">
+            <input id="username" name="username" type="text" class="validate"
+                value="{{ form.username.value|default:'' }}" autocomplete="username" required>
+            <label for="username" class="{% if form.username.value %}active{% endif %}">Username</label>
+        </div>
+        <div class="input-field col-12">
+            <input id="useremail" name="email" type="email" class="validate" value="{{ form.email.value|default:'' }}"
+                autocomplete="email" required>
+            <label for="useremail" class="{% if form.email.value %}active{% endif %}">Email Address</label>
+        </div>
+        <div class="input-field col-12">
+            <input id="password1" name="password1" type="password" class="validate" autocomplete="new-password"
+                required>
+            <label for="password1">Password</label>
+        </div>
+        <div class="input-field col-12">
+            <input id="password2" name="password2" type="password" class="validate" autocomplete="new-password"
+                required>
+            <label for="password2">Confirm Password</label>
+        </div>
+
+        <div class="input-field col s12" style="margin-top: 20px;">
+            <button class="btn waves-effect waves-light" type="submit" name="action">
+                Create User
+                <i class="material-icons right">send</i>
+            </button>
+            <a href="{% url 'recipes:login' %}" class="btn btn-secondary waves-effect waves-light"
+                style="margin-left: 10px;">Back to Login</a>
+            <a href="{% url 'recipes:index' %}" class="btn btn-outline-secondary"
+                style="margin-left: 10px;">Back to Recipes</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
