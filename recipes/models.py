@@ -273,6 +273,16 @@ class Recipe(models.Model):
     def search_text(self):
         return " ".join(self.ingredients or [])
 
+    @property
+    def passcode(self):
+        """
+        6-digit creation date password in British DDMMYY format (e.g. '120226' for 12 Feb 2026).
+        Falls back to '000000' if created_on is not set.
+        """
+        if self.created_on:
+            return self.created_on.strftime("%d%m%y")
+        return "000000"
+
 
 class ChatMessage(models.Model):
     """

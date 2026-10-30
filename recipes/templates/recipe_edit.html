@@ -21,8 +21,11 @@
             <select id="recipe_type" name="category">
                 <option value="">Recipe Type</option>
                 {% for cat in categories %}
-                <option value="{{ cat.pk }}" {% if cat.pk == recipe.category_id %} selected{% endif %}>{{ cat.name }}
-                </option>
+                {% if cat.pk == recipe.category_id %}
+                <option value="{{ cat.pk }}" selected>{{ cat.name }}</option>
+                {% else %}
+                <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -42,8 +45,11 @@
             <select id="recipe_image" name="image">
                 <option value="">Choose from Existing Image Library</option>
                 {% for image in images %}
-                <option value="{{ image.pk }}" {% if image.pk == recipe.image_id %} selected{% endif %}>{{ image }}
-                </option>
+                {% if image.pk == recipe.image_id %}
+                <option value="{{ image.pk }}" selected>{{ image }}</option>
+                {% else %}
+                <option value="{{ image.pk }}">{{ image }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -64,7 +70,11 @@
             <select id="recipe_cuisine" name="cuisine">
                 <option value="">Cuisine</option>
                 {% for cuisine in cuisines %}
-                <option value="{{ cuisine.pk }}" {% if cuisine.pk == recipe.cuisine_id %} selected{% endif %}>{{ cuisine.name }}</option>
+                {% if cuisine.pk == recipe.cuisine_id %}
+                <option value="{{ cuisine.pk }}" selected>{{ cuisine.name }}</option>
+                {% else %}
+                <option value="{{ cuisine.pk }}">{{ cuisine.name }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -139,11 +149,11 @@
             </div>
         </div>
 
-        <h5>Change a Date:</h5>
+        <h5>Change Date (British format):</h5>
         <div class="input-field col s12">
             <i class="material-icons prefix">date_range</i>
             <input id="create_on" name="created_on" type="text" class="datepicker"
-                value="{{ recipe.created_on|date:'M d, Y' }}">
+                value="{{ recipe.created_on|date:'d M Y' }}" placeholder="e.g. 12 Feb 2026 or 12/02/2026">
         </div>
 
         <h5>Edit time (mins):</h5>
@@ -160,11 +170,21 @@
             <label for="cook_time" class="active">Cooking time (mins)</label>
         </div>
 
+        <h5>Confirm 6-Digit Password (Creation Date DDMMYY):</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">lock</i>
+            <input id="recipe_edit_passcode" name="passcode" type="password" inputmode="numeric" pattern="\d{6}"
+                maxlength="6" class="validate"
+                placeholder="6-digit creation date (DDMMYY{% if not recipe.created_on %}, e.g. 000000{% endif %})"
+                required autocomplete="off">
+            <label for="recipe_edit_passcode" class="active">6-Digit Password (Creation Date DDMMYY{% if recipe.created_on %} for {{ recipe.created_on|date:"d M Y" }}{% else %} &mdash; 000000{% endif %})</label>
+        </div>
+
         <div class="input-field col s12">
             <button class="btn waves-effect waves-light" type="submit" name="action">Edit Recipe
                 <i class="material-icons right">send</i>
             </button>
-            <a href="{% url 'recipes:index' %}#admin-section" class="btn btn-secondary waves-effect waves-light"
+            <a href="{{ recipe.get_absolute_url }}" class="btn btn-secondary waves-effect waves-light"
                 style="margin-left: 10px;">Cancel</a>
         </div>
     </form>

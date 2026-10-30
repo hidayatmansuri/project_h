@@ -84,16 +84,22 @@
         // 2. ADMIN DYNAMIC INGREDIENT & METHOD BUILDER
         // ======================================================================
 
-        function reindexDynamicRows(containerId, labelPrefix) {
-            $('#' + containerId).find('.admin-dynamic-row').each(function (index) {
+        function reindexDynamicRows($container, labelPrefix) {
+            if (typeof $container === 'string') {
+                $container = $('#' + $container);
+            }
+            $container.find('.admin-dynamic-row').each(function (index) {
                 $(this).find('label').text(labelPrefix + ' ' + (index + 1));
             });
         }
 
         // Add Ingredient
-        $('#admin-add-ingredient-btn').on('click', function (e) {
+        $(document).on('click', '#admin-add-ingredient-btn, .btn-add-ingredient', function (e) {
             e.preventDefault();
-            var $container = $('#admin-ingredients-container');
+            var $container = $(this).closest('.admin-dynamic-section').find('.admin-dynamic-container');
+            if (!$container.length) {
+                $container = $('#admin-ingredients-container');
+            }
             var count = $container.find('.admin-dynamic-row').length + 1;
 
             var rowHtml = [
@@ -114,13 +120,16 @@
             $newRow.slideDown(150, function () {
                 $newRow.find('input').focus();
             });
-            reindexDynamicRows('admin-ingredients-container', 'Ingredient');
+            reindexDynamicRows($container, 'Ingredient');
         });
 
         // Add Method Step
-        $('#admin-add-method-btn').on('click', function (e) {
+        $(document).on('click', '#admin-add-method-btn, .btn-add-method', function (e) {
             e.preventDefault();
-            var $container = $('#admin-methods-container');
+            var $container = $(this).closest('.admin-dynamic-section').find('.admin-dynamic-container');
+            if (!$container.length) {
+                $container = $('#admin-methods-container');
+            }
             var count = $container.find('.admin-dynamic-row').length + 1;
 
             var rowHtml = [
@@ -141,7 +150,7 @@
             $newRow.slideDown(150, function () {
                 $newRow.find('input').focus();
             });
-            reindexDynamicRows('admin-methods-container', 'Step');
+            reindexDynamicRows($container, 'Step');
         });
 
         // Remove row
@@ -149,20 +158,46 @@
             e.preventDefault();
             var $row = $(this).closest('.admin-dynamic-row');
             var $container = $row.parent();
-            var containerId = $container.attr('id') || '';
-            var isMethod = containerId.indexOf('method') !== -1;
+            var isMethod = $row.find('input[name="method[]"]').length > 0 || ($container.attr('id') || '').indexOf('method') !== -1;
             var labelPrefix = isMethod ? 'Step' : 'Ingredient';
 
             if ($container.find('.admin-dynamic-row').length > 1) {
                 $row.slideUp(150, function () {
                     $row.remove();
-                    reindexDynamicRows(containerId, labelPrefix);
+                    reindexDynamicRows($container, labelPrefix);
                 });
             } else {
                 // If only 1 row left, simply clear its value
                 $row.find('input').val('').focus();
             }
         });
+
+        // Open embedded recipe editor collapsible when triggered or via URL hash
+        function openEmbeddedEditor($section) {
+            if (!$section || !$section.length) return;
+            var $collapsible = $section.find('.collapsible').first();
+            var $firstLi = $collapsible.children('li').first();
+            if ($firstLi.length && !$firstLi.hasClass('active')) {
+                $firstLi.children('.collapsible-header').trigger('click');
+            }
+        }
+
+        $(document).on('click', '.js-open-recipe-editor', function (e) {
+            var $editor = $('#embedded-recipe-editor');
+            if ($editor.length) {
+                e.preventDefault();
+                openEmbeddedEditor($editor);
+                $('html, body').stop().animate({
+                    scrollTop: $editor.offset().top - 80
+                }, 400);
+            }
+        });
+
+        if (window.location.hash === '#embedded-recipe-editor') {
+            setTimeout(function () {
+                openEmbeddedEditor($('#embedded-recipe-editor'));
+            }, 150);
+        }
 
         // ======================================================================
         // 3. LANDING PAGE LIVE SEARCH & FILTERING

@@ -257,6 +257,15 @@ main {
     gap: 0.3rem;
 }
 
+.dropdown-caret {
+    font-size: 0.75rem;
+    transition: transform 0.25s ease;
+}
+
+.dropdown.open .dropdown-caret {
+    transform: rotate(180deg);
+}
+
 /* Small: inline accordion inside the sidebar. Medium+: floating panel (768px block) */
 .dropdown-menu {
     display: none;
@@ -275,6 +284,7 @@ main {
     display: flex;
     padding: 0.4rem 0;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .dropdown.open .dropdown-menu {
@@ -361,7 +371,7 @@ main {
     font-family: Peignot;
     right: 0.5rem;
     bottom: 1.5rem;
-    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
     z-index: 199;
     cursor: pointer;
     text-shadow: var(--text-shadow);
@@ -415,8 +425,10 @@ a {
     top: 0;
     left: -250px;
     width: 250px;
+    max-width: 85vw;
     height: 100vh;
     height: 100dvh;
+    box-sizing: border-box;
     background-color: var(--bg-color);
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
     transition: left 1s ease;
@@ -974,6 +986,7 @@ a {
         top: auto;
         left: auto;
         width: auto;
+        max-width: none;
         height: auto;
         background-color: transparent;
         box-shadow: none;

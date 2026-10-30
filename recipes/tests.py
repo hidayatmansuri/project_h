@@ -37,6 +37,12 @@ class ModelTests(TestCase):
         self.assertTrue(recipe.is_quick)
         self.assertFalse(Recipe(name="y", cook_time=31).is_quick)
 
+    def test_recipe_passcode_british_6_digit_format(self):
+        r_with_date = Recipe(name="Curry", created_on=date(2026, 2, 12))
+        self.assertEqual(r_with_date.passcode, "120226")
+        r_without_date = Recipe(name="No Date")
+        self.assertEqual(r_without_date.passcode, "000000")
+
     def test_deleting_category_keeps_recipes(self):
         cat = Category.objects.create(name="Beef")
         recipe = Recipe.objects.create(name="Stew", category=cat)
@@ -53,9 +59,9 @@ class PublicViewTests(TestCase):
         cls.recipe = Recipe.objects.create(
             name="Prawn Curry", category=cls.cat, cuisine=cls.cus,
             ingredients=["prawns", "coconut milk"], methods=["Simmer"], prep_time=10, cook_time=25,
-            created_on=date(2026, 10, 4))
+            created_on=date(2026, 2, 12))
 
-    def test_pages_render(self):
+    def test_pages_render_and_use_british_date_format(self):
         urls = [
             reverse("recipes:index"),
             reverse("recipes:recipes"),
@@ -64,8 +70,7 @@ class PublicViewTests(TestCase):
             reverse("recipes:cuisine", args=[self.cus.slug]),
             reverse("recipes:quick"),
             reverse("recipes:slow"),
-            reverse("recipes:login"),
-            reverse("recipes:signup"),
+            reverse("recipes:manage"),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -74,6 +79,10 @@ class PublicViewTests(TestCase):
                 content = response.content.decode()
                 self.assertNotIn("{%", content)
                 self.assertNotIn("{{", content)
+
+        detail_html = self.client.get(reverse("recipes:recipe_detail", args=[self.recipe.slug])).content.decode()
+        self.assertIn("12 Feb 2026", detail_html)
+        self.assertIn("12/02/2026", detail_html)
 
     def test_quick_and_slow_split(self):
         Recipe.objects.create(name="Slow roast", cook_time=120)
@@ -90,45 +99,77 @@ class PublicViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class EditorAreaTests(TestCase):
+class PasscodeProtectedCrudTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.staff = User.objects.create_user("editor", "e@example.com", "pass12345!", is_staff=True)
-        cls.visitor = User.objects.create_user("visitor", "v@example.com", "pass12345!")
         cls.cat = Category.objects.create(name="Vegan")
         cls.cus = Cuisine.objects.create(name="Chinese Cuisine")
 
-    def test_anonymous_and_non_staff_are_blocked(self):
-        url = reverse("recipes:manage")
-        self.assertEqual(self.client.get(url).status_code, 302)
-        self.client.force_login(self.visitor)
-        self.assertEqual(self.client.get(url).status_code, 302)
-
-    def test_staff_can_open_dashboard(self):
-        self.client.force_login(self.staff)
+    def test_no_login_required_for_manage_and_edit_pages(self):
         self.assertEqual(self.client.get(reverse("recipes:manage")).status_code, 200)
+        recipe = Recipe.objects.create(name="Test Dish", created_on=date(2026, 2, 12))
+        self.assertEqual(self.client.get(reverse("recipes:recipe_edit", args=[recipe.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("recipes:category_edit", args=[self.cat.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("recipes:cuisine_edit", args=[self.cus.pk])).status_code, 200)
 
-    def test_create_recipe_with_dynamic_rows_and_upload(self):
-        self.client.force_login(self.staff)
+    def test_create_recipe_with_british_date_and_000000_passcode(self):
         with tempfile.TemporaryDirectory() as media:
             with override_settings(MEDIA_ROOT=media):
+                # Wrong passcode is rejected
+                self.client.post(reverse("recipes:recipe_create"), {
+                    "name": "Blocked Recipe", "category": self.cat.pk, "cuisine": self.cus.pk,
+                    "created_on": "12 Feb 2026", "prep_time": "5", "cook_time": "12",
+                    "passcode": "999999",
+                })
+                self.assertFalse(Recipe.objects.filter(name="Blocked Recipe").exists())
+
+                # Correct '000000' passcode succeeds without login
                 response = self.client.post(reverse("recipes:recipe_create"), {
                     "name": "Tofu Stir-Fry", "category": self.cat.pk, "cuisine": self.cus.pk,
                     "ingredient[]": ["tofu", "", "basil"], "method[]": ["Fry", "Serve"],
-                    "created_on": "Oct 24, 2026", "prep_time": "5", "cook_time": "12",
+                    "created_on": "12 Feb 2026", "prep_time": "5", "cook_time": "12",
+                    "passcode": "000000",
                     "image_file": SimpleUploadedFile("tofu.gif", TINY_GIF, content_type="image/gif"),
                 })
                 self.assertRedirects(response, reverse("recipes:manage"))
                 recipe = Recipe.objects.get(name="Tofu Stir-Fry")
                 self.assertEqual(recipe.ingredients, ["tofu", "basil"])
                 self.assertEqual(recipe.methods, ["Fry", "Serve"])
-                self.assertEqual(recipe.created_on, date(2026, 10, 24))
+                self.assertEqual(recipe.created_on, date(2026, 2, 12))
+                self.assertEqual(recipe.passcode, "120226")
                 self.assertEqual(recipe.cook_time, 12)
                 self.assertTrue(recipe.image_url)
-                self.assertEqual(RecipeImage.objects.count(), 1)
+
+    def test_edit_and_delete_recipe_require_6_digit_creation_date_passcode(self):
+        recipe = Recipe.objects.create(
+            name="Lamb Tagine", category=self.cat, created_on=date(2026, 2, 12), prep_time=15, cook_time=45
+        )
+        # Wrong passcode ('000000' when recipe has creation date 12 Feb 2026 -> '120226') is rejected
+        self.client.post(reverse("recipes:recipe_edit", args=[recipe.pk]), {
+            "name": "Hacked Name", "category": self.cat.pk, "prep_time": "15", "cook_time": "45",
+            "created_on": "12/02/2026", "passcode": "000000",
+        })
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.name, "Lamb Tagine")
+
+        # Correct 6-digit creation date passcode ('120226') updates the recipe
+        self.client.post(reverse("recipes:recipe_edit", args=[recipe.pk]), {
+            "name": "Fruity Lamb Tagine", "category": self.cat.pk, "prep_time": "20", "cook_time": "50",
+            "created_on": "12/02/2026", "ingredient[]": ["lamb"], "method[]": ["Slow cook"],
+            "passcode": "120226",
+        })
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.name, "Fruity Lamb Tagine")
+
+        # Delete with wrong passcode is rejected
+        self.client.post(reverse("recipes:recipe_delete", args=[recipe.pk]), {"passcode": "000000"})
+        self.assertTrue(Recipe.objects.filter(pk=recipe.pk).exists())
+
+        # Delete with correct 6-digit creation date passcode ('120226') succeeds
+        self.client.post(reverse("recipes:recipe_delete", args=[recipe.pk]), {"passcode": "120226"})
+        self.assertFalse(Recipe.objects.filter(pk=recipe.pk).exists())
 
     def test_edit_keeps_image_when_nothing_chosen(self):
-        self.client.force_login(self.staff)
         with tempfile.TemporaryDirectory() as media:
             with override_settings(MEDIA_ROOT=media):
                 image = RecipeImage.objects.create(
@@ -137,56 +178,46 @@ class EditorAreaTests(TestCase):
                 self.client.post(reverse("recipes:recipe_edit", args=[recipe.pk]), {
                     "name": "Soup v2", "category": self.cat.pk, "prep_time": "1", "cook_time": "2",
                     "ingredient[]": ["water"], "method[]": ["Boil"],
+                    "passcode": "000000",
                 })
                 recipe.refresh_from_db()
                 self.assertEqual(recipe.name, "Soup v2")
                 self.assertEqual(recipe.image_id, image.pk)
 
-    def test_delete_requires_post(self):
-        self.client.force_login(self.staff)
-        recipe = Recipe.objects.create(name="Gone")
-        url = reverse("recipes:recipe_delete", args=[recipe.pk])
-        self.assertEqual(self.client.get(url).status_code, 405)
-        self.assertTrue(Recipe.objects.filter(pk=recipe.pk).exists())
-        self.client.post(url)
-        self.assertFalse(Recipe.objects.filter(pk=recipe.pk).exists())
+    def test_category_and_cuisine_crud_require_000000_passcode(self):
+        # Blocked without '000000'
+        self.client.post(reverse("recipes:category_create"), {"name": "Dessert", "passcode": "123456"})
+        self.assertFalse(Category.objects.filter(name="Dessert").exists())
 
-    def test_category_and_cuisine_crud(self):
-        self.client.force_login(self.staff)
-        self.client.post(reverse("recipes:category_create"), {"name": "Dessert"})
-        self.client.post(reverse("recipes:cuisine_create"), {"name": "French Cuisine"})
+        # Allowed with '000000'
+        self.client.post(reverse("recipes:category_create"), {"name": "Dessert", "passcode": "000000"})
+        self.client.post(reverse("recipes:cuisine_create"), {"name": "French Cuisine", "passcode": "000000"})
         self.assertTrue(Category.objects.filter(name="Dessert").exists())
         self.assertTrue(Cuisine.objects.filter(name="French Cuisine").exists())
+
         category = Category.objects.get(name="Dessert")
         self.client.post(reverse("recipes:category_edit", args=[category.pk]), {
-            "name": "Desserts", "icon": "fa-birthday-cake", "tagline": "Sweet", "accent": "pork"})
+            "name": "Desserts", "icon": "fa-birthday-cake", "tagline": "Sweet", "accent": "pork",
+            "passcode": "000000",
+        })
         category.refresh_from_db()
         self.assertEqual(category.name, "Desserts")
-        self.client.post(reverse("recipes:category_delete", args=[category.pk]))
+
+        # Delete blocked with wrong passcode, allowed with '000000'
+        self.client.post(reverse("recipes:category_delete", args=[category.pk]), {"passcode": "111111"})
+        self.assertTrue(Category.objects.filter(pk=category.pk).exists())
+        self.client.post(reverse("recipes:category_delete", args=[category.pk]), {"passcode": "000000"})
         self.assertFalse(Category.objects.filter(pk=category.pk).exists())
 
     def test_embedded_admin_redirect_with_next(self):
-        self.client.force_login(self.staff)
         next_target = reverse("recipes:index") + "#admin-section"
         response = self.client.post(reverse("recipes:category_create"), {
             "name": "Keto",
+            "passcode": "000000",
             "next": next_target,
         })
         self.assertRedirects(response, next_target)
         self.assertTrue(Category.objects.filter(name="Keto").exists())
-
-    def test_logout_is_post_only(self):
-        self.client.force_login(self.staff)
-        self.assertEqual(self.client.get(reverse("recipes:logout")).status_code, 405)
-        self.client.post(reverse("recipes:logout"))
-        self.assertEqual(self.client.get(reverse("recipes:manage")).status_code, 302)
-
-    def test_signup_creates_non_staff_user(self):
-        self.client.post(reverse("recipes:signup"), {
-            "username": "newbie", "email": "n@example.com",
-            "password1": "Str0ng-pass-123", "password2": "Str0ng-pass-123"})
-        user = User.objects.get(username="newbie")
-        self.assertFalse(user.is_staff)
 
 
 class ImportCommandTests(TestCase):

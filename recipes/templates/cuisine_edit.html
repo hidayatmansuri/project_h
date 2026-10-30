@@ -47,9 +47,21 @@
             <i class="material-icons prefix">palette</i>
             <select id="cuisine_accent" name="accent">
                 {% for value, label in cuisine.ACCENT_CHOICES %}
-                <option value="{{ value }}" {% if value == cuisine.accent %} selected{% endif %}>{{ label }}</option>
+                {% if value == cuisine.accent %}
+                <option value="{{ value }}" selected>{{ label }}</option>
+                {% else %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
+        </div>
+
+        <h5>6-Digit Password (000000):</h5>
+        <div class="input-field col s12">
+            <i class="material-icons prefix">lock</i>
+            <input id="cuisine_passcode" name="passcode" type="password" inputmode="numeric" pattern="\d{6}"
+                maxlength="6" class="validate" placeholder="000000" required autocomplete="off">
+            <label for="cuisine_passcode" class="active">6-Digit Password (enter 000000)</label>
         </div>
 
         <div class="input-field col s12">

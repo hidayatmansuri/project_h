@@ -15,8 +15,19 @@ from .models import (
 # Same limit as the Flask app (MAX_CONTENT_LENGTH = 16 MB).
 MAX_IMAGE_BYTES = 16 * 1024 * 1024
 
-# Materialize's datepicker writes "Oct 24, 2026"; the others are accepted for convenience.
-DATE_INPUT_FORMATS = ["%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%d/%m/%Y"]
+# British date formats ("12 Feb 2026", "12/02/2026", etc.) first; others accepted for compatibility.
+DATE_INPUT_FORMATS = [
+    "%d %b %Y",
+    "%d %B %Y",
+    "%d/%m/%Y",
+    "%d-%m-%Y",
+    "%d.%m.%Y",
+    "%d/%m/%y",
+    "%d%m%y",
+    "%Y-%m-%d",
+    "%b %d, %Y",
+    "%B %d, %Y",
+]
 
 
 def validate_image_size(file):
@@ -70,7 +81,7 @@ class RecipeForm(forms.ModelForm):
     created_on = forms.DateField(
         required=False,
         input_formats=DATE_INPUT_FORMATS,
-        widget=forms.DateInput(format="%b %d, %Y"),
+        widget=forms.DateInput(format="%d %b %Y"),
     )
 
     class Meta:

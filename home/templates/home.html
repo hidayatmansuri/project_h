@@ -43,35 +43,26 @@
                     <span>About Me</span></a>
             </div>
             <div class="nav-separator">|</div>
-            <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'passgen' %}"><i class="fa-solid fa-star-of-life"></i>
-                    <span>Password</span></a>
-            </div>
-            <div class="nav-separator">|</div>
-            <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'utility' %}"><i class="fa-solid fa-fire-flame-curved"></i>
-                    <span>Utility</span></a>
-            </div>
-            <div class="nav-separator">|</div>
-            <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'shades' %}"><i class="fa-solid fa-palette"></i>
-                    <span>Shades</span></a>
-            </div>
-            <div class="nav-separator">|</div>
-            <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'docedit' %}"><i class="fa-solid fa-file-pen"></i>
-                    <span>DocEdit</span></a>
-            </div>
-            <div class="nav-separator">|</div>
-            <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'listimage:index' %}"><i
-                        class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span>ListImage</span></a>
-            </div>
-            <div class="nav-separator">|</div>
-            <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'recipes:index' %}"><i class="fa-solid fa-utensils"></i>
-                    <span>Recipes</span></a>
+            <div class="home-nav-label dropdown">
+                <a class="nav-link ph-hover dropdown-toggle" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span>Tools</span>
+                    <i class="fa-solid fa-caret-down dropdown-caret"></i>
+                </a>
+                <div class="dropdown-menu">
+                    <a class="nav-link ph-hover menu-item" href="{% url 'passgen' %}"><i
+                            class="fa-solid fa-star-of-life"></i> <span>Password</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'utility' %}"><i
+                            class="fa-solid fa-fire-flame-curved"></i> <span>Utility</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'shades' %}"><i
+                            class="fa-solid fa-palette"></i> <span>Shades</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'docedit' %}"><i
+                            class="fa-solid fa-file-pen"></i> <span>DocEdit</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'listimage:index' %}"><i
+                            class="fa-solid fa-wand-magic-sparkles"></i> <span>ListImage</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'recipes:index' %}"><i
+                            class="fa-solid fa-utensils"></i> <span>Recipes</span></a>
+                </div>
             </div>
             <div class="nav-separator">|</div>
             <label class="theme-toggle-label" for="theme-toggle">

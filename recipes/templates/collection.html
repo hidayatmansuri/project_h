@@ -10,6 +10,155 @@
 
 <h2 class="dashhead mb-3">{{ page_title }}</h2>
 
-{% include "_recipe_grid.html" with recipes=recipes section_id=section_id empty_message=empty_message %}
+{% include "_recipe_grid.html" %}
+
+{% if category %}
+<section class="recipes-admin-section mt-5 pt-4" style="border-top: 2px dashed rgba(128, 128, 128, 0.3);"
+    aria-label="Edit Category">
+    <ul class="collapsible">
+        <li>
+            <div class="collapsible-header admin-category-thumb">
+                <i class="material-icons">edit</i> Edit or Delete Category: {{ category.name }} (Password: 000000)
+            </div>
+            <div class="collapsible-body">
+                <form action="{% url 'recipes:category_edit' category.pk %}" method="POST" class="col s12">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ category.get_absolute_url }}">
+                    <h5>Category Name:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">photo_filter</i>
+                        <input name="name" type="text" class="validate" maxlength="100" value="{{ category.name }}" required>
+                    </div>
+                    <h5>Card Icon (Font Awesome class):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">star</i>
+                        <input name="icon" type="text" class="validate" maxlength="50" value="{{ category.icon }}" required>
+                    </div>
+                    <h5>Card Tagline:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">short_text</i>
+                        <input name="tagline" type="text" class="validate" maxlength="140" value="{{ category.tagline }}">
+                    </div>
+                    <h5>Card Colour:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">palette</i>
+                        <select name="accent">
+                            {% for value, label in category.ACCENT_CHOICES %}
+                            {% if value == category.accent %}
+                            <option value="{{ value }}" selected>{{ label }}</option>
+                            {% else %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <h5>6-Digit Password (000000):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">lock</i>
+                        <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                            class="validate" placeholder="000000" required autocomplete="off">
+                    </div>
+                    <div class="input-field col s12">
+                        <button class="btn waves-effect waves-light" type="submit">
+                            Save Category <i class="material-icons right">send</i>
+                        </button>
+                    </div>
+                </form>
+                <hr>
+                <form action="{% url 'recipes:category_delete' category.pk %}" method="POST" class="col s12 mt-3"
+                    onsubmit="return confirm('Delete category \'{{ category.name }}\'? Its recipes will be kept.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'recipes:index' %}#categories-section">
+                    <div class="input-field">
+                        <i class="material-icons prefix">lock</i>
+                        <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                            class="validate" placeholder="Enter 000000 to delete category" required autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Delete Category
+                    </button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</section>
+{% endif %}
+
+{% if cuisine %}
+<section class="recipes-admin-section mt-5 pt-4" style="border-top: 2px dashed rgba(128, 128, 128, 0.3);"
+    aria-label="Edit Cuisine">
+    <ul class="collapsible">
+        <li>
+            <div class="collapsible-header admin-cuisine-thumb">
+                <i class="material-icons">edit</i> Edit or Delete Cuisine: {{ cuisine.name }} (Password: 000000)
+            </div>
+            <div class="collapsible-body">
+                <form action="{% url 'recipes:cuisine_edit' cuisine.pk %}" method="POST" class="col s12">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ cuisine.get_absolute_url }}">
+                    <h5>Cuisine Name:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">photo_filter</i>
+                        <input name="name" type="text" class="validate" maxlength="100" value="{{ cuisine.name }}" required>
+                    </div>
+                    <h5>Short Label:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">label</i>
+                        <input name="short_name" type="text" class="validate" maxlength="30" value="{{ cuisine.short_name }}">
+                    </div>
+                    <h5>Card Icon (Font Awesome class):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">star</i>
+                        <input name="icon" type="text" class="validate" maxlength="50" value="{{ cuisine.icon }}" required>
+                    </div>
+                    <h5>Card Tagline:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">short_text</i>
+                        <input name="tagline" type="text" class="validate" maxlength="140" value="{{ cuisine.tagline }}">
+                    </div>
+                    <h5>Card Colour:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">palette</i>
+                        <select name="accent">
+                            {% for value, label in cuisine.ACCENT_CHOICES %}
+                            {% if value == cuisine.accent %}
+                            <option value="{{ value }}" selected>{{ label }}</option>
+                            {% else %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <h5>6-Digit Password (000000):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">lock</i>
+                        <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                            class="validate" placeholder="000000" required autocomplete="off">
+                    </div>
+                    <div class="input-field col s12">
+                        <button class="btn waves-effect waves-light" type="submit">
+                            Save Cuisine <i class="material-icons right">send</i>
+                        </button>
+                    </div>
+                </form>
+                <hr>
+                <form action="{% url 'recipes:cuisine_delete' cuisine.pk %}" method="POST" class="col s12 mt-3"
+                    onsubmit="return confirm('Delete cuisine \'{{ cuisine.name }}\'? Its recipes will be kept.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'recipes:index' %}#cuisines-section">
+                    <div class="input-field">
+                        <i class="material-icons prefix">lock</i>
+                        <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                            class="validate" placeholder="Enter 000000 to delete cuisine" required autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Delete Cuisine
+                    </button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</section>
+{% endif %}
 
 {% endblock %}

@@ -31,7 +31,7 @@
     </div>
 </div>
 
-<!-- Meta Grid (Prep, Cook, Date) -->
+<!-- Meta Grid (Prep, Cook, Date in British format) -->
 <div class="recipe-modal-meta-grid mb-4">
     <div class="recipe-modal-meta-card">
         <span class="recipe-modal-meta-label"><i class="fas fa-clock"></i> Preparation Time:</span>
@@ -43,7 +43,12 @@
     </div>
     <div class="recipe-modal-meta-card">
         <span class="recipe-modal-meta-label"><i class="far fa-calendar-alt"></i> Date Created:</span>
-        <span class="recipe-modal-meta-value">{{ recipe.created_on|date:"M d, Y"|default:"N/A" }}</span>
+        <span class="recipe-modal-meta-value">
+            {{ recipe.created_on|date:"d M Y"|default:"N/A" }}
+            {% if recipe.created_on %}
+            <small style="opacity: 0.75;">({{ recipe.created_on|date:"d/m/Y" }})</small>
+            {% endif %}
+        </span>
     </div>
 </div>
 
@@ -92,9 +97,12 @@
     <div class="col-lg-5 col-md-12">
         <div class="recipe-detail-sidebar">
             <div class="recipe-modal-hero mb-3">
-                <img class="recipe-modal-hero-img"
-                    src="{% if recipe.image_url %}{{ recipe.image_url }}{% else %}{% static 'img/batata_poha_20261004193608.jpeg' %}{% endif %}"
+                {% if recipe.image_url %}
+                <img class="recipe-modal-hero-img" src="{{ recipe.image_url }}" alt="{{ recipe.name }}">
+                {% else %}
+                <img class="recipe-modal-hero-img" src="{% static 'img/batata_poha_20261004193608.jpeg' %}"
                     alt="{{ recipe.name }}">
+                {% endif %}
             </div>
 
             <div class="recipe-sidebar-actions-card">
@@ -103,25 +111,269 @@
                     <button type="button" class="btn btn-outline-custom w-100 mb-2" onclick="window.print()">
                         <i class="fas fa-print"></i> Print Recipe Card
                     </button>
+                    <a href="#embedded-recipe-editor" class="btn btn-warning-custom w-100 mb-2 js-open-recipe-editor">
+                        <i class="fas fa-edit"></i> Edit / Manage Recipe
+                    </a>
                     <a href="{% url 'recipes:index' %}" class="btn btn-outline-custom w-100 mb-2">
                         <i class="fas fa-arrow-left"></i> Back to Recipes
                     </a>
-                    {% if user.is_staff %}
-                    <a href="{% url 'recipes:recipe_edit' recipe.pk %}" class="btn btn-warning-custom w-100 mb-2">
-                        <i class="fas fa-edit"></i> Edit Recipe
-                    </a>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Floating Back to Top Button -->
-<div class="fixed-action-btn">
-    <a href="#top-page" class="btn-floating red card-top" aria-label="Back to Top">
-        Top
-    </a>
-</div>
+<!-- Embedded Recipe Editor & Delete Section (Guarded by 6-digit Creation Date DDMMYY) -->
+<section id="embedded-recipe-editor" class="recipes-admin-section mt-5 pt-4"
+    style="border-top: 2px dashed rgba(128, 128, 128, 0.3);" aria-label="Edit or Delete Recipe">
+    <div class="admin-header-bar mb-3">
+        <div class="admin-header-info">
+            <h3 class="admin-page-title m-0">
+                <i class="material-icons">edit_note</i> Edit or Manage "{{ recipe.name }}"
+            </h3>
+            <span class="admin-user-badge">
+                <i class="fas fa-key"></i> Protected by 6-digit Creation Date Password (<strong>DDMMYY</strong>
+                {% if not recipe.created_on %}
+                &mdash; <code>000000</code>
+                {% endif %})
+            </span>
+        </div>
+    </div>
+
+    <ul class="collapsible">
+        <li>
+            <div class="collapsible-header recipe_thumb">
+                <i class="material-icons">edit</i> Edit "{{ recipe.name }}"
+            </div>
+            <div class="collapsible-body">
+                <form action="{% url 'recipes:recipe_edit' recipe.pk %}" method="POST" enctype="multipart/form-data"
+                    class="col s12">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ recipe.get_absolute_url }}">
+
+                    <h5>Recipe Name:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">outdoor_grill</i>
+                        <input id="detail_recipe_name" name="name" type="text" class="validate" maxlength="200"
+                            value="{{ recipe.name }}" required>
+                        <label for="detail_recipe_name" class="active">Recipe Name</label>
+                    </div>
+
+                    <h5>Choose a Category:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">photo_filter</i>
+                        <select id="detail_recipe_type" name="category">
+                            <option value="">Recipe Type</option>
+                            {% for cat in categories %}
+                            {% if cat.pk == recipe.category_id %}
+                            <option value="{{ cat.pk }}" selected>{{ cat.name }}</option>
+                            {% else %}
+                            <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <h5>Recipe Image:</h5>
+                    {% if recipe.image_url %}
+                    <div class="col s12" style="margin-bottom: 12px;">
+                        <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}"
+                            style="max-width: 100%; max-height: 150px; border-radius: var(--radius-md); box-shadow: var(--box-shadow); display: block; margin-bottom: 6px;">
+                        <small style="color: var(--text-color); opacity: 0.75;">
+                            Current image: <code>{{ recipe.image }}</code>
+                        </small>
+                    </div>
+                    {% endif %}
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">photo_filter</i>
+                        <select id="detail_recipe_image" name="image">
+                            <option value="">Choose from Existing Image Library</option>
+                            {% for image in images %}
+                            {% if image.pk == recipe.image_id %}
+                            <option value="{{ image.pk }}" selected>{{ image }}</option>
+                            {% else %}
+                            <option value="{{ image.pk }}">{{ image }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col s12 admin-upload-box mb-3">
+                        <label for="detail_recipe_image_file">
+                            <i class="material-icons" style="vertical-align: middle; font-size: 18px;">cloud_upload</i>
+                            Or Upload a New Image from Your Device
+                        </label>
+                        <input type="file" id="detail_recipe_image_file" name="image_file"
+                            accept="image/png, image/jpeg, image/gif, image/webp"
+                            style="display: block; margin-top: 8px;">
+                        <small>Supported: JPG, PNG, GIF, WebP (max 16 MB). Uploading a file replaces the current recipe
+                            image and saves it to the gallery.</small>
+                    </div>
+
+                    <h5>Choose a Cuisine:</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">photo_filter</i>
+                        <select id="detail_recipe_cuisine" name="cuisine">
+                            <option value="">Cuisine</option>
+                            {% for cuisine in cuisines %}
+                            {% if cuisine.pk == recipe.cuisine_id %}
+                            <option value="{{ cuisine.pk }}" selected>{{ cuisine.name }}</option>
+                            {% else %}
+                            <option value="{{ cuisine.pk }}">{{ cuisine.name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Ingredients -->
+                    <div class="admin-dynamic-section">
+                        <div class="admin-dynamic-header">
+                            <h5>Edit Ingredient(s):</h5>
+                            <button type="button"
+                                class="btn btn-small waves-effect waves-light btn-add-dynamic btn-add-ingredient"
+                                id="admin-add-ingredient-btn">
+                                <i class="material-icons left">add</i> Add Ingredient
+                            </button>
+                        </div>
+                        <div id="admin-ingredients-container" class="admin-dynamic-container">
+                            {% for ing in recipe.ingredients %}
+                            <div class="admin-dynamic-row">
+                                <div class="input-field dynamic-input-field">
+                                    <i class="material-icons prefix">ballot</i>
+                                    <input name="ingredient[]" type="text" class="validate" value="{{ ing }}"
+                                        placeholder="Ingredient item">
+                                    <label class="active">Ingredient {{ forloop.counter }}</label>
+                                </div>
+                                <button type="button" class="btn-remove-dynamic" title="Remove"
+                                    aria-label="Remove ingredient">
+                                    <i class="material-icons">delete_outline</i>
+                                </button>
+                            </div>
+                            {% empty %}
+                            <div class="admin-dynamic-row">
+                                <div class="input-field dynamic-input-field">
+                                    <i class="material-icons prefix">ballot</i>
+                                    <input name="ingredient[]" type="text" class="validate" value=""
+                                        placeholder="Ingredient item">
+                                    <label class="active">Ingredient 1</label>
+                                </div>
+                                <button type="button" class="btn-remove-dynamic" title="Remove"
+                                    aria-label="Remove ingredient">
+                                    <i class="material-icons">delete_outline</i>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Methods -->
+                    <div class="admin-dynamic-section" style="margin-top: 24px;">
+                        <div class="admin-dynamic-header">
+                            <h5>Edit Method(s):</h5>
+                            <button type="button"
+                                class="btn btn-small waves-effect waves-light btn-add-dynamic btn-add-method"
+                                id="admin-add-method-btn">
+                                <i class="material-icons left">add</i> Add Step
+                            </button>
+                        </div>
+                        <div id="admin-methods-container" class="admin-dynamic-container">
+                            {% for step in recipe.methods %}
+                            <div class="admin-dynamic-row">
+                                <div class="input-field dynamic-input-field">
+                                    <i class="material-icons prefix">restaurant</i>
+                                    <input name="method[]" type="text" class="validate" value="{{ step }}"
+                                        placeholder="Instruction step">
+                                    <label class="active">Step {{ forloop.counter }}</label>
+                                </div>
+                                <button type="button" class="btn-remove-dynamic" title="Remove"
+                                    aria-label="Remove step">
+                                    <i class="material-icons">delete_outline</i>
+                                </button>
+                            </div>
+                            {% empty %}
+                            <div class="admin-dynamic-row">
+                                <div class="input-field dynamic-input-field">
+                                    <i class="material-icons prefix">restaurant</i>
+                                    <input name="method[]" type="text" class="validate" value=""
+                                        placeholder="Instruction step">
+                                    <label class="active">Step 1</label>
+                                </div>
+                                <button type="button" class="btn-remove-dynamic" title="Remove"
+                                    aria-label="Remove step">
+                                    <i class="material-icons">delete_outline</i>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <h5>Date of Creation (British format):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">date_range</i>
+                        <input id="detail_create_on" name="created_on" type="text" class="datepicker"
+                            value="{{ recipe.created_on|date:'d M Y' }}" placeholder="e.g. 12 Feb 2026 or 12/02/2026">
+                    </div>
+
+                    <h5>Edit Time (mins):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">timer</i>
+                        <input id="detail_prep_time" name="prep_time" type="number" min="0" max="32000" class="validate"
+                            value="{{ recipe.prep_time }}" required>
+                        <label for="detail_prep_time" class="active">Preparation time (mins)</label>
+                    </div>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">whatshot</i>
+                        <input id="detail_cook_time" name="cook_time" type="number" min="0" max="32000" class="validate"
+                            value="{{ recipe.cook_time }}" required>
+                        <label for="detail_cook_time" class="active">Cooking time (mins)</label>
+                    </div>
+
+                    <h5>Confirm 6-Digit Password (Creation Date DDMMYY):</h5>
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">lock</i>
+                        <input id="detail_edit_passcode" name="passcode" type="password" inputmode="numeric"
+                            pattern="\d{6}" maxlength="6" class="validate" placeholder="6-digit creation date (DDMMYY)"
+                            required autocomplete="off">
+                        <label for="detail_edit_passcode" class="active">
+                            6-Digit Password (DDMMYY)
+                        </label>
+                    </div>
+
+                    <div class="input-field col s12 mt-3">
+                        <button class="btn waves-effect waves-light" type="submit" name="action">
+                            Save Recipe Changes <i class="material-icons right">send</i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </li>
+        <li>
+            <div class="collapsible-header" style="color: #e74c3c;">
+                <i class="material-icons" style="color: #e74c3c;">delete_forever</i> Delete "{{ recipe.name }}"
+            </div>
+            <div class="collapsible-body">
+                <form action="{% url 'recipes:recipe_delete' recipe.pk %}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to permanently delete this recipe?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'recipes:index' %}">
+                    <p>
+                        Enter this recipe's 6-digit creation date password (<strong>DDMMYY</strong>) to delete it:
+                    </p>
+                    <div class="input-field">
+                        <i class="material-icons prefix">lock</i>
+                        <input id="detail_delete_passcode" name="passcode" type="password" inputmode="numeric"
+                            pattern="\d{6}" maxlength="6" class="validate" placeholder="6-digit password (DDMMYY)"
+                            required autocomplete="off">
+                        <label for="detail_delete_passcode" class="active">
+                            6-Digit Creation Date Password (DDMMYY)
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-danger waves-effect waves-light">
+                        <i class="fas fa-trash-alt"></i> Confirm Delete Recipe
+                    </button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</section>
 
 {% endblock %}

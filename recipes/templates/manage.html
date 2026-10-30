@@ -7,18 +7,13 @@
 <div class="admin-header-bar">
     <div class="admin-header-info">
         <h2 class="admin-page-title"><i class="material-icons">admin_panel_settings</i> {{ page_title }}</h2>
-        <span class="admin-user-badge"><i class="fas fa-user-shield"></i> Logged in as: <strong>{{ user.get_username }}</strong></span>
+        <span class="admin-user-badge"><i class="fas fa-key"></i> Recipes use 6-digit creation date
+            (<strong>DDMMYY</strong>); Categories, Cuisines &amp; Gallery use <strong>000000</strong></span>
     </div>
     <div class="d-flex align-items-center">
         <a href="{% url 'recipes:index' %}" class="btn btn-outline-secondary mr-2" style="margin-right: 8px;">
             <i class="fas fa-arrow-left"></i> Back to Recipes
         </a>
-        <form action="{% url 'recipes:logout' %}" method="POST" style="margin: 0;">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-danger admin-logout-btn">
-                <i class="fas fa-sign-out-alt"></i> Log Out
-            </button>
-        </form>
     </div>
 </div>
 
@@ -209,6 +204,14 @@
                                 </div>
 
                                 <div class="input-field col s12">
+                                    <i class="material-icons prefix">lock</i>
+                                    <input id="manage_recipe_passcode" name="passcode" type="password"
+                                        inputmode="numeric" pattern="\d{6}" maxlength="6" class="validate"
+                                        placeholder="000000" required autocomplete="off">
+                                    <label for="manage_recipe_passcode" class="active">6-Digit Password (000000)</label>
+                                </div>
+
+                                <div class="input-field col s12">
                                     <button class="btn waves-effect waves-light" type="submit" name="action">Add Recipe
                                         <i class="material-icons right">send</i>
                                     </button>
@@ -243,6 +246,12 @@
                                         required>
                                     <label for="category_name">Category Name</label>
                                 </div>
+                                <div class="input-field col-12">
+                                    <i class="material-icons prefix">lock</i>
+                                    <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}"
+                                        maxlength="6" class="validate" placeholder="000000" required autocomplete="off">
+                                    <label class="active">6-Digit Password (000000)</label>
+                                </div>
                                 <div class="input-field col s12">
                                     <button class="btn waves-effect waves-light" type="submit" name="action">Add
                                         Category
@@ -275,6 +284,12 @@
                                         required>
                                     <label for="cuisine_name">Cuisine Name</label>
                                 </div>
+                                <div class="input-field col-12">
+                                    <i class="material-icons prefix">lock</i>
+                                    <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}"
+                                        maxlength="6" class="validate" placeholder="000000" required autocomplete="off">
+                                    <label class="active">6-Digit Password (000000)</label>
+                                </div>
                                 <div class="input-field col s12">
                                     <button class="btn waves-effect waves-light" type="submit" name="action">Add Cuisine
                                         <i class="material-icons right">send</i>
@@ -306,6 +321,12 @@
                                         accept="image/png, image/jpeg, image/gif, image/webp" required
                                         style="display: block; margin-top: 8px;">
                                     <small>Supported: JPG, PNG, GIF, WebP (max 16 MB)</small>
+                                </div>
+                                <div class="input-field col-12">
+                                    <i class="material-icons prefix">lock</i>
+                                    <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}"
+                                        maxlength="6" class="validate" placeholder="000000" required autocomplete="off">
+                                    <label class="active">6-Digit Password (000000)</label>
                                 </div>
                                 <div class="input-field col s12">
                                     <button class="btn waves-effect waves-light" type="submit" name="action">Upload
@@ -342,9 +363,11 @@
                         <i class="fas fa-edit"></i> Edit Recipe
                     </a>
                     <form action="{% url 'recipes:recipe_delete' recipe.pk %}" method="POST"
-                        style="display: inline-block; margin: 0;"
+                        style="display: inline-flex; align-items: center; gap: 8px; margin: 0;"
                         onsubmit="return confirm('Are you sure you want to delete this recipe?');">
                         {% csrf_token %}
+                        <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                            placeholder="DDMMYY" required style="width: 110px; margin: 0;">
                         <button type="submit" class="btn btn-danger">
                             <i class="fas fa-trash-alt"></i> Delete Recipe
                         </button>
@@ -375,7 +398,7 @@
                     </div>
                     <div class="col-md-5">
                         <p>
-                        <h5>Date of Creation:</h5> {{ recipe.created_on|date:"M d, Y"|default:"N/A" }}</p><br>
+                        <h5>Date of Creation:</h5> {{ recipe.created_on|date:"d M Y"|default:"N/A" }}</p><br>
                         <p>
                         <h5>Time for Preparation:</h5> {{ recipe.prep_display }}</p><br>
                         <p>
@@ -409,9 +432,11 @@
                             <i class="fas fa-edit"></i> Edit
                         </a>
                         <form action="{% url 'recipes:category_delete' cate.pk %}" method="POST"
-                            style="display: inline-block; margin: 0;"
+                            style="display: inline-flex; align-items: center; gap: 6px; margin: 0;"
                             onsubmit="return confirm('Are you sure you want to delete this category? Its recipes will be kept but uncategorised.');">
                             {% csrf_token %}
+                            <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                                placeholder="000000" required style="width: 90px; margin: 0;">
                             <button type="submit" class="btn btn-sm btn-danger">
                                 <i class="fas fa-trash-alt"></i> Delete
                             </button>
@@ -442,9 +467,11 @@
                             <i class="fas fa-edit"></i> Edit
                         </a>
                         <form action="{% url 'recipes:cuisine_delete' cuisine.pk %}" method="POST"
-                            style="display: inline-block; margin: 0;"
+                            style="display: inline-flex; align-items: center; gap: 6px; margin: 0;"
                             onsubmit="return confirm('Are you sure you want to delete this cuisine? Its recipes will be kept without a cuisine.');">
                             {% csrf_token %}
+                            <input name="passcode" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                                placeholder="000000" required style="width: 90px; margin: 0;">
                             <button type="submit" class="btn btn-sm btn-danger">
                                 <i class="fas fa-trash-alt"></i> Delete
                             </button>
@@ -456,12 +483,5 @@
         </div>
     </li>
 </ul>
-
-<!--A red button floating at right bottom corner of the screen-->
-<div class="fixed-action-btn">
-    <a href="#top-page" class="btn-floating red card-top">
-        Top
-    </a>
-</div>
 
 {% endblock %}

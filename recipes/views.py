@@ -1,9 +1,7 @@
-from functools import wraps
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.contrib.auth.views import LoginView, redirect_to_login
+from django.contrib.auth.views import LoginView
 from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -21,6 +19,7 @@ from .forms import (
 from .models import Category, Cuisine, Recipe, RecipeImage, ensure_images_in_static_img
 
 QUICK_MINUTES = 30
+DEFAULT_PASSCODE = "000000"
 
 
 # ============================================================================
@@ -33,22 +32,41 @@ def recipe_queryset():
     return Recipe.objects.select_related("category", "cuisine", "image")
 
 
-def staff_required(view_func):
+def verify_recipe_passcode(request, recipe):
     """
-    Editor-area guard. Uses Django's auth system so staff/superusers can manage recipes.
+    Verify the 6-digit password for editing or deleting an existing recipe.
+    Requires the recipe's creation date in 6-digit British DDMMYY format
+    (e.g. '120226' for 12 Feb 2026), or '000000' if no creation date is set.
     """
+    submitted = (request.POST.get("passcode") or "").strip()
+    expected = recipe.passcode
+    if submitted != expected:
+        if recipe.created_on:
+            date_str = recipe.created_on.strftime("%d %b %Y")
+            hint = f"the 6-digit creation date (DDMMYY for {date_str})"
+        else:
+            hint = f"'{DEFAULT_PASSCODE}'"
+        messages.error(
+            request,
+            f"Incorrect 6-digit password for '{recipe.name}'. Please enter {hint} to prevent accidental actions.",
+        )
+        return False
+    return True
 
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            messages.error(request, "Please log in to access the admin area.")
-            return redirect_to_login(request.get_full_path(), reverse("recipes:login"))
-        if not request.user.is_staff:
-            messages.error(request, "Your account does not have editor access yet.")
-            return redirect("recipes:login")
-        return view_func(request, *args, **kwargs)
 
-    return wrapper
+def verify_default_passcode(request, action_label="complete this action"):
+    """
+    Verify the 6-digit password ('000000') for non-recipe or new-item actions
+    (categories, cuisines, image uploads, adding new recipes).
+    """
+    submitted = (request.POST.get("passcode") or "").strip()
+    if submitted != DEFAULT_PASSCODE:
+        messages.error(
+            request,
+            f"Incorrect 6-digit password to {action_label}. Please enter '{DEFAULT_PASSCODE}' to prevent accidental actions.",
+        )
+        return False
+    return True
 
 
 def flash_form_errors(request, form):
@@ -61,19 +79,24 @@ def flash_form_errors(request, form):
             messages.error(request, f"{label}: {error}")
 
 
-def collection_context(title, recipes, section_id, empty_message="Will be available soon"):
-    return {
+def collection_context(title, recipes, section_id, empty_message="Will be available soon", **extra):
+    ctx = {
         "page_title": title,
         "recipes": recipes,
         "section_id": section_id,
         "empty_message": empty_message,
+        "categories": Category.objects.all(),
+        "cuisines": Cuisine.objects.all(),
+        "images": RecipeImage.objects.all(),
     }
+    ctx.update(extra)
+    return ctx
 
 
-def get_redirect_target(request, default="recipes:manage"):
+def get_redirect_target(request, default="recipes:index"):
     """
-    Returns the custom 'next' URL parameter if provided (e.g. from the embedded
-    admin section on the single-page recipes view), or defaults to the given URL name.
+    Returns the custom 'next' URL parameter if provided, or falls back to
+    the given default URL name.
     """
     next_url = request.POST.get("next") or request.GET.get("next")
     if next_url:
@@ -111,11 +134,11 @@ def get_single_page_context(request):
 
 
 # ============================================================================
-# Public pages
+# Public & Embedded Editor Pages (No Login Required; 6-Digit Passcode Guarded)
 # ============================================================================
 
 def index(request):
-    """Single-page recipes cookbook embedded in project-h with embedded admin."""
+    """Single-page recipes cookbook embedded in project-h with embedded editing."""
     return render(request, "recipes.html", get_single_page_context(request))
 
 
@@ -135,6 +158,9 @@ def recipe_detail(request, slug):
     return render(request, "recipe_detail.html", {
         "recipe": recipe,
         "page_title": recipe.name,
+        "categories": Category.objects.all(),
+        "cuisines": Cuisine.objects.all(),
+        "images": RecipeImage.objects.all(),
     })
 
 
@@ -142,14 +168,22 @@ def category_detail(request, slug):
     category = get_object_or_404(Category, slug=slug)
     recipes = recipe_queryset().filter(category=category)
     return render(request, "collection.html", collection_context(
-        f"{category.name} Recipes", recipes, f"cat-{category.slug}"))
+        f"{category.name} Recipes",
+        recipes,
+        f"cat-{category.slug}",
+        category=category,
+    ))
 
 
 def cuisine_detail(request, slug):
     cuisine = get_object_or_404(Cuisine, slug=slug)
     recipes = recipe_queryset().filter(cuisine=cuisine)
     return render(request, "collection.html", collection_context(
-        f"{cuisine.name}s", recipes, f"cus-{cuisine.slug}"))
+        f"{cuisine.name}s",
+        recipes,
+        f"cus-{cuisine.slug}",
+        cuisine=cuisine,
+    ))
 
 
 def quick_recipes(request):
@@ -165,7 +199,7 @@ def slow_recipes(request):
 
 
 # ============================================================================
-# Accounts
+# Legacy Account Views (kept for URL compatibility; not required for editing)
 # ============================================================================
 
 class LoginView(LoginView):
@@ -210,14 +244,8 @@ def signup(request):
             )
             user.save()
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-            if user.is_staff:
-                messages.info(request, "Account successfully created! You are now logged in.")
-                return redirect(reverse("recipes:index") + "#admin-section")
-            messages.info(
-                request,
-                "Account created. An administrator must enable editor access before you can manage recipes."
-            )
-            return redirect("recipes:index")
+            messages.info(request, "Account successfully created!")
+            return redirect(reverse("recipes:index") + "#admin-section")
         flash_form_errors(request, form)
     else:
         form = SignUpForm()
@@ -225,13 +253,12 @@ def signup(request):
 
 
 # ============================================================================
-# Editor area (staff only)
+# Management & CRUD Endpoints (Guarded by 6-Digit Passcode)
 # ============================================================================
 
-@staff_required
 def manage(request):
     return render(request, "manage.html", {
-        "page_title": "Admin Dashboard",
+        "page_title": "Recipes Management",
         "recipes": recipe_queryset(),
         "categories": Category.objects.all(),
         "cuisines": Cuisine.objects.all(),
@@ -241,27 +268,43 @@ def manage(request):
 
 # --- Recipes ----------------------------------------------------------------
 
-@staff_required
 @require_POST
 def recipe_create(request):
     form = RecipeForm(request.POST, request.FILES)
+    submitted = (request.POST.get("passcode") or "").strip()
     if form.is_valid():
-        form.save()
-        messages.info(request, "Recipe created successfully!")
+        created_on = form.cleaned_data.get("created_on")
+        date_code = created_on.strftime("%d%m%y") if created_on else None
+        if submitted != DEFAULT_PASSCODE and (not date_code or submitted != date_code):
+            messages.error(
+                request,
+                f"Incorrect 6-digit password to add a recipe. Please enter '{DEFAULT_PASSCODE}'"
+                + (f" or '{date_code}'" if date_code else "")
+                + " to prevent accidental actions.",
+            )
+            return redirect(get_redirect_target(request, default="recipes:manage"))
+        recipe = form.save()
+        messages.info(request, f"Recipe '{recipe.name}' created successfully!")
     else:
+        if submitted != DEFAULT_PASSCODE:
+            messages.error(
+                request,
+                f"Incorrect 6-digit password to add a recipe. Please enter '{DEFAULT_PASSCODE}' to prevent accidental actions.",
+            )
         flash_form_errors(request, form)
-    return redirect(get_redirect_target(request))
+    return redirect(get_redirect_target(request, default="recipes:manage"))
 
 
-@staff_required
 def recipe_edit(request, pk):
     recipe = get_object_or_404(recipe_queryset(), pk=pk)
     if request.method == "POST":
+        if not verify_recipe_passcode(request, recipe):
+            return redirect(get_redirect_target(request, default="recipes:manage"))
         form = RecipeForm(request.POST, request.FILES, instance=recipe)
         if form.is_valid():
             form.save()
-            messages.info(request, "Recipe updated successfully!")
-            return redirect(get_redirect_target(request))
+            messages.info(request, f"Recipe '{recipe.name}' updated successfully!")
+            return redirect(get_redirect_target(request, default="recipes:manage"))
         flash_form_errors(request, form)
     return render(request, "recipe_edit.html", {
         "page_title": "Edit Recipe",
@@ -272,38 +315,42 @@ def recipe_edit(request, pk):
     })
 
 
-@staff_required
 @require_POST
 def recipe_delete(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
+    if not verify_recipe_passcode(request, recipe):
+        return redirect(get_redirect_target(request, default="recipes:manage"))
+    recipe_name = recipe.name
     recipe.delete()
-    messages.info(request, "Recipe deleted successfully.")
-    return redirect(get_redirect_target(request))
+    messages.info(request, f"Recipe '{recipe_name}' deleted successfully.")
+    return redirect(get_redirect_target(request, default="recipes:manage"))
 
 
 # --- Categories -------------------------------------------------------------
 
-@staff_required
 @require_POST
 def category_create(request):
+    if not verify_default_passcode(request, "add a category"):
+        return redirect(get_redirect_target(request, default="recipes:manage"))
     form = CategoryCreateForm(request.POST)
     if form.is_valid():
         category = form.save()
         messages.info(request, f"Category '{category.name}' added!")
     else:
         flash_form_errors(request, form)
-    return redirect(get_redirect_target(request))
+    return redirect(get_redirect_target(request, default="recipes:manage"))
 
 
-@staff_required
 def category_edit(request, pk):
     category = get_object_or_404(Category, pk=pk)
     if request.method == "POST":
+        if not verify_default_passcode(request, f"edit category '{category.name}'"):
+            return redirect(get_redirect_target(request, default="recipes:manage"))
         form = CategoryForm(request.POST, instance=category)
         if form.is_valid():
             form.save()
-            messages.info(request, "Category updated successfully!")
-            return redirect(get_redirect_target(request))
+            messages.info(request, f"Category '{category.name}' updated successfully!")
+            return redirect(get_redirect_target(request, default="recipes:manage"))
         flash_form_errors(request, form)
     return render(request, "category_edit.html", {
         "page_title": "Edit Category",
@@ -311,40 +358,43 @@ def category_edit(request, pk):
     })
 
 
-@staff_required
 @require_POST
 def category_delete(request, pk):
     category = get_object_or_404(Category, pk=pk)
+    if not verify_default_passcode(request, f"delete category '{category.name}'"):
+        return redirect(get_redirect_target(request, default="recipes:manage"))
     affected = category.recipes.count()
     category.delete()
     note = f" {affected} recipe(s) are now uncategorised." if affected else ""
     messages.info(request, f"Category deleted.{note}")
-    return redirect(get_redirect_target(request))
+    return redirect(get_redirect_target(request, default="recipes:manage"))
 
 
 # --- Cuisines ---------------------------------------------------------------
 
-@staff_required
 @require_POST
 def cuisine_create(request):
+    if not verify_default_passcode(request, "add a cuisine"):
+        return redirect(get_redirect_target(request, default="recipes:manage"))
     form = CuisineCreateForm(request.POST)
     if form.is_valid():
         cuisine = form.save()
         messages.info(request, f"Cuisine '{cuisine.name}' added!")
     else:
         flash_form_errors(request, form)
-    return redirect(get_redirect_target(request))
+    return redirect(get_redirect_target(request, default="recipes:manage"))
 
 
-@staff_required
 def cuisine_edit(request, pk):
     cuisine = get_object_or_404(Cuisine, pk=pk)
     if request.method == "POST":
+        if not verify_default_passcode(request, f"edit cuisine '{cuisine.name}'"):
+            return redirect(get_redirect_target(request, default="recipes:manage"))
         form = CuisineForm(request.POST, instance=cuisine)
         if form.is_valid():
             form.save()
-            messages.info(request, "Cuisine updated successfully!")
-            return redirect(get_redirect_target(request))
+            messages.info(request, f"Cuisine '{cuisine.name}' updated successfully!")
+            return redirect(get_redirect_target(request, default="recipes:manage"))
         flash_form_errors(request, form)
     return render(request, "cuisine_edit.html", {
         "page_title": "Edit Cuisine",
@@ -352,26 +402,28 @@ def cuisine_edit(request, pk):
     })
 
 
-@staff_required
 @require_POST
 def cuisine_delete(request, pk):
     cuisine = get_object_or_404(Cuisine, pk=pk)
+    if not verify_default_passcode(request, f"delete cuisine '{cuisine.name}'"):
+        return redirect(get_redirect_target(request, default="recipes:manage"))
     affected = cuisine.recipes.count()
     cuisine.delete()
     note = f" {affected} recipe(s) no longer have a cuisine." if affected else ""
     messages.info(request, f"Cuisine deleted.{note}")
-    return redirect(get_redirect_target(request))
+    return redirect(get_redirect_target(request, default="recipes:manage"))
 
 
 # --- Image library ----------------------------------------------------------
 
-@staff_required
 @require_POST
 def image_upload(request):
+    if not verify_default_passcode(request, "upload an image"):
+        return redirect(get_redirect_target(request, default="recipes:manage"))
     form = ImageUploadForm(request.POST, request.FILES)
     if form.is_valid():
         image = form.save()
         messages.info(request, f"Image '{image.title}' uploaded successfully to library!")
     else:
         flash_form_errors(request, form)
-    return redirect(get_redirect_target(request))
+    return redirect(get_redirect_target(request, default="recipes:manage"))
