@@ -1,0 +1,3637 @@
+[
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 1,
+  "fields": {
+    "date": "2025-11-13",
+    "electricity": "36.12",
+    "gas": "10.74"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 2,
+  "fields": {
+    "date": "2025-11-14",
+    "electricity": "34.34",
+    "gas": "5.25"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 3,
+  "fields": {
+    "date": "2025-11-12",
+    "electricity": "37.70",
+    "gas": "14.74"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 4,
+  "fields": {
+    "date": "2025-11-15",
+    "electricity": "32.32",
+    "gas": "50.38"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 5,
+  "fields": {
+    "date": "2025-11-16",
+    "electricity": "30.63",
+    "gas": "45.09"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 6,
+  "fields": {
+    "date": "2025-11-17",
+    "electricity": "28.14",
+    "gas": "38.92"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 7,
+  "fields": {
+    "date": "2025-11-18",
+    "electricity": "26.50",
+    "gas": "32.81"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 8,
+  "fields": {
+    "date": "2025-11-19",
+    "electricity": "24.68",
+    "gas": "26.68"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 9,
+  "fields": {
+    "date": "2025-11-20",
+    "electricity": "22.95",
+    "gas": "20.50"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 10,
+  "fields": {
+    "date": "2025-11-21",
+    "electricity": "21.12",
+    "gas": "12.88"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 11,
+  "fields": {
+    "date": "2025-11-22",
+    "electricity": "18.69",
+    "gas": "23.82"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 12,
+  "fields": {
+    "date": "2025-11-23",
+    "electricity": "17.03",
+    "gas": "17.18"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 13,
+  "fields": {
+    "date": "2025-11-24",
+    "electricity": "15.23",
+    "gas": "11.26"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 14,
+  "fields": {
+    "date": "2025-11-25",
+    "electricity": "13.32",
+    "gas": "4.53"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 15,
+  "fields": {
+    "date": "2025-11-26",
+    "electricity": "11.62",
+    "gas": "18.68"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 16,
+  "fields": {
+    "date": "2025-11-27",
+    "electricity": "9.89",
+    "gas": "12.17"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 17,
+  "fields": {
+    "date": "2025-11-28",
+    "electricity": "8.25",
+    "gas": "6.57"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 18,
+  "fields": {
+    "date": "2025-11-29",
+    "electricity": "6.28",
+    "gas": "62.83"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 19,
+  "fields": {
+    "date": "2025-11-30",
+    "electricity": "4.26",
+    "gas": "56.25"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 20,
+  "fields": {
+    "date": "2025-12-01",
+    "electricity": "2.27",
+    "gas": "50.17"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 21,
+  "fields": {
+    "date": "2025-12-02",
+    "electricity": "50.51",
+    "gas": "44.14"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 22,
+  "fields": {
+    "date": "2025-12-03",
+    "electricity": "48.88",
+    "gas": "37.89"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 23,
+  "fields": {
+    "date": "2025-12-04",
+    "electricity": "47.11",
+    "gas": "31.43"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 24,
+  "fields": {
+    "date": "2025-12-05",
+    "electricity": "45.50",
+    "gas": "25.08"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 25,
+  "fields": {
+    "date": "2025-12-06",
+    "electricity": "43.34",
+    "gas": "18.23"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 26,
+  "fields": {
+    "date": "2025-12-07",
+    "electricity": "41.68",
+    "gas": "12.48"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 27,
+  "fields": {
+    "date": "2025-12-08",
+    "electricity": "39.77",
+    "gas": "7.65"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 28,
+  "fields": {
+    "date": "2025-12-09",
+    "electricity": "38.06",
+    "gas": "52.37"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 29,
+  "fields": {
+    "date": "2025-12-10",
+    "electricity": "36.25",
+    "gas": "47.04"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 30,
+  "fields": {
+    "date": "2025-12-11",
+    "electricity": "34.45",
+    "gas": "41.98"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 31,
+  "fields": {
+    "date": "2025-12-12",
+    "electricity": "32.40",
+    "gas": "34.71"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 32,
+  "fields": {
+    "date": "2025-12-13",
+    "electricity": "30.19",
+    "gas": "29.10"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 33,
+  "fields": {
+    "date": "2025-12-14",
+    "electricity": "28.17",
+    "gas": "22.55"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 34,
+  "fields": {
+    "date": "2025-12-15",
+    "electricity": "26.89",
+    "gas": "18.59"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 35,
+  "fields": {
+    "date": "2025-12-16",
+    "electricity": "25.23",
+    "gas": "12.72"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 36,
+  "fields": {
+    "date": "2025-12-17",
+    "electricity": "23.40",
+    "gas": "7.44"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 37,
+  "fields": {
+    "date": "2025-12-18",
+    "electricity": "21.80",
+    "gas": "41.22"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 38,
+  "fields": {
+    "date": "2025-12-19",
+    "electricity": "20.11",
+    "gas": "34.93"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 39,
+  "fields": {
+    "date": "2025-12-20",
+    "electricity": "18.08",
+    "gas": "28.65"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 40,
+  "fields": {
+    "date": "2025-12-21",
+    "electricity": "16.52",
+    "gas": "22.75"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 41,
+  "fields": {
+    "date": "2025-12-22",
+    "electricity": "14.30",
+    "gas": "16.67"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 42,
+  "fields": {
+    "date": "2025-12-23",
+    "electricity": "12.66",
+    "gas": "10.82"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 43,
+  "fields": {
+    "date": "2025-12-24",
+    "electricity": "10.48",
+    "gas": "3.80"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 44,
+  "fields": {
+    "date": "2025-12-25",
+    "electricity": "8.88",
+    "gas": "37.27"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 45,
+  "fields": {
+    "date": "2025-12-26",
+    "electricity": "6.36",
+    "gas": "28.41"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 46,
+  "fields": {
+    "date": "2025-12-27",
+    "electricity": "4.13",
+    "gas": "20.42"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 47,
+  "fields": {
+    "date": "2025-12-28",
+    "electricity": "1.50",
+    "gas": "12.14"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 48,
+  "fields": {
+    "date": "2025-12-29",
+    "electricity": "7.04",
+    "gas": "6.29"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 49,
+  "fields": {
+    "date": "2025-12-30",
+    "electricity": "4.92",
+    "gas": "12.59"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 50,
+  "fields": {
+    "date": "2026-01-01",
+    "electricity": "60.51",
+    "gas": "56.49"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 51,
+  "fields": {
+    "date": "2025-12-31",
+    "electricity": "2.64",
+    "gas": "5.01"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 52,
+  "fields": {
+    "date": "2026-01-02",
+    "electricity": "58.99",
+    "gas": "51.51"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 53,
+  "fields": {
+    "date": "2026-01-03",
+    "electricity": "56.38",
+    "gas": "42.61"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 54,
+  "fields": {
+    "date": "2026-01-04",
+    "electricity": "54.25",
+    "gas": "34.67"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 55,
+  "fields": {
+    "date": "2026-01-05",
+    "electricity": "52.31",
+    "gas": "28.35"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 56,
+  "fields": {
+    "date": "2026-01-06",
+    "electricity": "50.34",
+    "gas": "20.24"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 57,
+  "fields": {
+    "date": "2026-01-07",
+    "electricity": "47.91",
+    "gas": "12.39"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 58,
+  "fields": {
+    "date": "2026-01-08",
+    "electricity": "45.93",
+    "gas": "5.11"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 59,
+  "fields": {
+    "date": "2026-01-09",
+    "electricity": "43.68",
+    "gas": "46.91"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 60,
+  "fields": {
+    "date": "2026-01-10",
+    "electricity": "41.63",
+    "gas": "39.92"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 61,
+  "fields": {
+    "date": "2026-01-11",
+    "electricity": "39.52",
+    "gas": "31.60"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 62,
+  "fields": {
+    "date": "2026-01-12",
+    "electricity": "36.52",
+    "gas": "21.89"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 63,
+  "fields": {
+    "date": "2026-01-13",
+    "electricity": "35.40",
+    "gas": "19.39"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 64,
+  "fields": {
+    "date": "2026-01-14",
+    "electricity": "33.50",
+    "gas": "13.24"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 65,
+  "fields": {
+    "date": "2026-01-15",
+    "electricity": "31.30",
+    "gas": "6.33"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 66,
+  "fields": {
+    "date": "2026-01-16",
+    "electricity": "29.12",
+    "gas": "33.63"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 67,
+  "fields": {
+    "date": "2026-01-17",
+    "electricity": "26.95",
+    "gas": "27.11"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 68,
+  "fields": {
+    "date": "2026-01-18",
+    "electricity": "24.71",
+    "gas": "21.11"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 69,
+  "fields": {
+    "date": "2026-01-19",
+    "electricity": "22.94",
+    "gas": "16.15"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 70,
+  "fields": {
+    "date": "2026-01-20",
+    "electricity": "20.96",
+    "gas": "10.45"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 71,
+  "fields": {
+    "date": "2026-01-21",
+    "electricity": "18.79",
+    "gas": "4.57"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 72,
+  "fields": {
+    "date": "2026-01-22",
+    "electricity": "16.72",
+    "gas": "22.69"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 73,
+  "fields": {
+    "date": "2026-01-23",
+    "electricity": "14.76",
+    "gas": "16.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 74,
+  "fields": {
+    "date": "2026-01-24",
+    "electricity": "12.10",
+    "gas": "8.45"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 75,
+  "fields": {
+    "date": "2026-01-25",
+    "electricity": "10.20",
+    "gas": "2.77"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 76,
+  "fields": {
+    "date": "2026-01-27",
+    "electricity": "6.10",
+    "gas": "14.10"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 77,
+  "fields": {
+    "date": "2026-01-26",
+    "electricity": "8.12",
+    "gas": "21.58"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 78,
+  "fields": {
+    "date": "2026-01-28",
+    "electricity": "4.14",
+    "gas": "15.18"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 79,
+  "fields": {
+    "date": "2026-01-29",
+    "electricity": "2.03",
+    "gas": "8.13"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 80,
+  "fields": {
+    "date": "2026-01-30",
+    "electricity": "59.99",
+    "gas": "0.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 81,
+  "fields": {
+    "date": "2026-01-31",
+    "electricity": "57.81",
+    "gas": "72.40"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 82,
+  "fields": {
+    "date": "2026-02-01",
+    "electricity": "55.74",
+    "gas": "66.49"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 83,
+  "fields": {
+    "date": "2026-02-02",
+    "electricity": "53.84",
+    "gas": "60.62"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 84,
+  "fields": {
+    "date": "2026-02-03",
+    "electricity": "51.81",
+    "gas": "54.27"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 85,
+  "fields": {
+    "date": "2026-02-04",
+    "electricity": "49.96",
+    "gas": "46.26"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 86,
+  "fields": {
+    "date": "2026-02-05",
+    "electricity": "48.30",
+    "gas": "39.45"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 87,
+  "fields": {
+    "date": "2026-02-08",
+    "electricity": "42.27",
+    "gas": "17.73"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 88,
+  "fields": {
+    "date": "2026-02-06",
+    "electricity": "46.55",
+    "gas": "31.39"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 89,
+  "fields": {
+    "date": "2026-02-07",
+    "electricity": "44.25",
+    "gas": "23.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 90,
+  "fields": {
+    "date": "2026-02-09",
+    "electricity": "40.26",
+    "gas": "12.81"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 91,
+  "fields": {
+    "date": "2026-02-10",
+    "electricity": "38.57",
+    "gas": "7.74"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 92,
+  "fields": {
+    "date": "2026-02-11",
+    "electricity": "36.63",
+    "gas": "1.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 93,
+  "fields": {
+    "date": "2026-02-12",
+    "electricity": "35.05",
+    "gas": "7.40"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 94,
+  "fields": {
+    "date": "2026-02-13",
+    "electricity": "33.32",
+    "gas": "36.33"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 95,
+  "fields": {
+    "date": "2026-02-14",
+    "electricity": "31.36",
+    "gas": "28.89"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 96,
+  "fields": {
+    "date": "2026-02-15",
+    "electricity": "29.59",
+    "gas": "22.41"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 97,
+  "fields": {
+    "date": "2026-02-16",
+    "electricity": "27.65",
+    "gas": "16.46"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 98,
+  "fields": {
+    "date": "2026-02-17",
+    "electricity": "25.96",
+    "gas": "50.48"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 99,
+  "fields": {
+    "date": "2026-02-18",
+    "electricity": "23.93",
+    "gas": "44.08"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 100,
+  "fields": {
+    "date": "2026-02-20",
+    "electricity": "20.00",
+    "gas": "29.31"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 101,
+  "fields": {
+    "date": "2026-02-19",
+    "electricity": "21.67",
+    "gas": "36.18"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 102,
+  "fields": {
+    "date": "2026-02-21",
+    "electricity": "18.07",
+    "gas": "22.37"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 103,
+  "fields": {
+    "date": "2026-02-22",
+    "electricity": "16.03",
+    "gas": "17.04"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 104,
+  "fields": {
+    "date": "2026-02-23",
+    "electricity": "14.35",
+    "gas": "12.65"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 105,
+  "fields": {
+    "date": "2026-02-24",
+    "electricity": "12.60",
+    "gas": "8.18"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 106,
+  "fields": {
+    "date": "2026-02-25",
+    "electricity": "11.10",
+    "gas": "3.85"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 107,
+  "fields": {
+    "date": "2026-02-26",
+    "electricity": "9.59",
+    "gas": "9.34"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 108,
+  "fields": {
+    "date": "2026-02-27",
+    "electricity": "7.88",
+    "gas": "4.16"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 109,
+  "fields": {
+    "date": "2026-02-28",
+    "electricity": "6.15",
+    "gas": "80.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 110,
+  "fields": {
+    "date": "2026-03-01",
+    "electricity": "4.44",
+    "gas": "74.97"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 111,
+  "fields": {
+    "date": "2026-03-02",
+    "electricity": "2.61",
+    "gas": "70.23"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 112,
+  "fields": {
+    "date": "2026-03-03",
+    "electricity": "60.94",
+    "gas": "65.44"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 113,
+  "fields": {
+    "date": "2026-03-05",
+    "electricity": "57.44",
+    "gas": "55.44"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 114,
+  "fields": {
+    "date": "2026-03-04",
+    "electricity": "59.36",
+    "gas": "60.35"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 115,
+  "fields": {
+    "date": "2026-03-06",
+    "electricity": "55.58",
+    "gas": "51.46"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 116,
+  "fields": {
+    "date": "2026-03-07",
+    "electricity": "53.45",
+    "gas": "46.76"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 117,
+  "fields": {
+    "date": "2026-03-08",
+    "electricity": "51.69",
+    "gas": "41.01"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 118,
+  "fields": {
+    "date": "2026-03-09",
+    "electricity": "49.53",
+    "gas": "36.48"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 119,
+  "fields": {
+    "date": "2026-03-10",
+    "electricity": "47.92",
+    "gas": "31.90"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 120,
+  "fields": {
+    "date": "2026-03-11",
+    "electricity": "46.33",
+    "gas": "27.18"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 121,
+  "fields": {
+    "date": "2026-03-12",
+    "electricity": "44.81",
+    "gas": "22.12"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 122,
+  "fields": {
+    "date": "2026-03-13",
+    "electricity": "43.07",
+    "gas": "17.29"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 123,
+  "fields": {
+    "date": "2026-03-14",
+    "electricity": "41.09",
+    "gas": "11.67"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 124,
+  "fields": {
+    "date": "2026-03-15",
+    "electricity": "39.40",
+    "gas": "6.11"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 125,
+  "fields": {
+    "date": "2026-03-16",
+    "electricity": "37.51",
+    "gas": "31.09"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 126,
+  "fields": {
+    "date": "2026-03-17",
+    "electricity": "35.91",
+    "gas": "25.96"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 127,
+  "fields": {
+    "date": "2026-03-18",
+    "electricity": "34.03",
+    "gas": "21.77"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 128,
+  "fields": {
+    "date": "2026-03-19",
+    "electricity": "32.30",
+    "gas": "18.55"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 129,
+  "fields": {
+    "date": "2026-03-20",
+    "electricity": "30.59",
+    "gas": "14.91"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 130,
+  "fields": {
+    "date": "2026-03-21",
+    "electricity": "28.37",
+    "gas": "10.57"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 131,
+  "fields": {
+    "date": "2026-03-22",
+    "electricity": "26.67",
+    "gas": "7.20"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 132,
+  "fields": {
+    "date": "2026-03-23",
+    "electricity": "24.99",
+    "gas": "3.48"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 133,
+  "fields": {
+    "date": "2026-03-24",
+    "electricity": "23.39",
+    "gas": "28.61"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 134,
+  "fields": {
+    "date": "2026-03-25",
+    "electricity": "21.47",
+    "gas": "23.64"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 135,
+  "fields": {
+    "date": "2026-03-26",
+    "electricity": "19.77",
+    "gas": "17.52"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 136,
+  "fields": {
+    "date": "2026-03-27",
+    "electricity": "17.88",
+    "gas": "11.34"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 137,
+  "fields": {
+    "date": "2026-03-28",
+    "electricity": "15.97",
+    "gas": "5.46"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 138,
+  "fields": {
+    "date": "2026-03-29",
+    "electricity": "13.74",
+    "gas": "9.19"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 139,
+  "fields": {
+    "date": "2026-03-30",
+    "electricity": "12.49",
+    "gas": "5.72"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 140,
+  "fields": {
+    "date": "2026-03-31",
+    "electricity": "10.70",
+    "gas": "4.78"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 141,
+  "fields": {
+    "date": "2026-04-01",
+    "electricity": "8.87",
+    "gas": "80.19"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 142,
+  "fields": {
+    "date": "2026-04-02",
+    "electricity": "7.45",
+    "gas": "75.77"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 143,
+  "fields": {
+    "date": "2026-04-03",
+    "electricity": "5.90",
+    "gas": "71.30"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 144,
+  "fields": {
+    "date": "2026-04-04",
+    "electricity": "4.24",
+    "gas": "67.16"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 145,
+  "fields": {
+    "date": "2026-04-05",
+    "electricity": "2.19",
+    "gas": "62.20"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 146,
+  "fields": {
+    "date": "2026-04-06",
+    "electricity": "60.28",
+    "gas": "57.52"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 147,
+  "fields": {
+    "date": "2026-04-07",
+    "electricity": "58.83",
+    "gas": "54.01"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 148,
+  "fields": {
+    "date": "2026-04-08",
+    "electricity": "57.51",
+    "gas": "50.91"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 149,
+  "fields": {
+    "date": "2026-04-09",
+    "electricity": "56.20",
+    "gas": "48.30"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 150,
+  "fields": {
+    "date": "2026-04-10",
+    "electricity": "54.71",
+    "gas": "44.93"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 151,
+  "fields": {
+    "date": "2026-04-12",
+    "electricity": "51.55",
+    "gas": "35.67"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 152,
+  "fields": {
+    "date": "2026-04-11",
+    "electricity": "53.16",
+    "gas": "40.38"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 153,
+  "fields": {
+    "date": "2026-04-13",
+    "electricity": "49.84",
+    "gas": "31.39"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 154,
+  "fields": {
+    "date": "2026-04-14",
+    "electricity": "48.44",
+    "gas": "27.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 155,
+  "fields": {
+    "date": "2026-04-15",
+    "electricity": "47.02",
+    "gas": "22.71"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 156,
+  "fields": {
+    "date": "2026-04-16",
+    "electricity": "45.15",
+    "gas": "18.93"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 157,
+  "fields": {
+    "date": "2026-04-17",
+    "electricity": "43.82",
+    "gas": "14.87"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 158,
+  "fields": {
+    "date": "2026-04-18",
+    "electricity": "42.26",
+    "gas": "10.93"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 159,
+  "fields": {
+    "date": "2026-04-19",
+    "electricity": "40.80",
+    "gas": "7.32"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 160,
+  "fields": {
+    "date": "2026-04-20",
+    "electricity": "39.07",
+    "gas": "3.88"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 161,
+  "fields": {
+    "date": "2026-04-21",
+    "electricity": "37.69",
+    "gas": "49.96"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 162,
+  "fields": {
+    "date": "2026-04-22",
+    "electricity": "36.31",
+    "gas": "45.96"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 163,
+  "fields": {
+    "date": "2026-04-23",
+    "electricity": "34.87",
+    "gas": "41.49"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 164,
+  "fields": {
+    "date": "2026-04-24",
+    "electricity": "33.30",
+    "gas": "37.08"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 165,
+  "fields": {
+    "date": "2026-04-25",
+    "electricity": "31.52",
+    "gas": "33.95"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 166,
+  "fields": {
+    "date": "2026-04-26",
+    "electricity": "29.86",
+    "gas": "31.50"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 167,
+  "fields": {
+    "date": "2026-04-27",
+    "electricity": "28.55",
+    "gas": "29.40"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 168,
+  "fields": {
+    "date": "2026-04-28",
+    "electricity": "27.17",
+    "gas": "26.98"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 169,
+  "fields": {
+    "date": "2026-04-29",
+    "electricity": "25.71",
+    "gas": "24.05"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 170,
+  "fields": {
+    "date": "2026-04-30",
+    "electricity": "24.23",
+    "gas": "20.81"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 171,
+  "fields": {
+    "date": "2026-05-01",
+    "electricity": "22.59",
+    "gas": "17.03"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 172,
+  "fields": {
+    "date": "2026-05-02",
+    "electricity": "21.01",
+    "gas": "13.21"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 173,
+  "fields": {
+    "date": "2026-05-03",
+    "electricity": "19.34",
+    "gas": "12.24"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 174,
+  "fields": {
+    "date": "2026-05-04",
+    "electricity": "17.99",
+    "gas": "9.36"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 175,
+  "fields": {
+    "date": "2026-05-05",
+    "electricity": "66.39",
+    "gas": "86.28"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 176,
+  "fields": {
+    "date": "2026-05-06",
+    "electricity": "65.07",
+    "gas": "83.34"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 177,
+  "fields": {
+    "date": "2026-05-07",
+    "electricity": "63.71",
+    "gas": "80.20"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 178,
+  "fields": {
+    "date": "2026-05-08",
+    "electricity": "62.21",
+    "gas": "76.15"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 179,
+  "fields": {
+    "date": "2026-05-09",
+    "electricity": "60.47",
+    "gas": "72.75"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 180,
+  "fields": {
+    "date": "2026-05-10",
+    "electricity": "58.91",
+    "gas": "69.81"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 181,
+  "fields": {
+    "date": "2026-05-11",
+    "electricity": "57.53",
+    "gas": "66.69"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 182,
+  "fields": {
+    "date": "2026-05-12",
+    "electricity": "55.94",
+    "gas": "63.29"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 183,
+  "fields": {
+    "date": "2026-05-13",
+    "electricity": "54.42",
+    "gas": "59.93"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 184,
+  "fields": {
+    "date": "2026-05-14",
+    "electricity": "52.91",
+    "gas": "56.39"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 185,
+  "fields": {
+    "date": "2026-05-15",
+    "electricity": "51.19",
+    "gas": "51.71"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 186,
+  "fields": {
+    "date": "2026-05-16",
+    "electricity": "49.41",
+    "gas": "47.33"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 187,
+  "fields": {
+    "date": "2026-05-17",
+    "electricity": "47.85",
+    "gas": "43.84"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 188,
+  "fields": {
+    "date": "2026-05-18",
+    "electricity": "46.18",
+    "gas": "40.45"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 189,
+  "fields": {
+    "date": "2026-05-19",
+    "electricity": "44.94",
+    "gas": "37.40"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 190,
+  "fields": {
+    "date": "2026-05-20",
+    "electricity": "43.50",
+    "gas": "34.20"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 191,
+  "fields": {
+    "date": "2026-05-21",
+    "electricity": "41.90",
+    "gas": "31.15"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 192,
+  "fields": {
+    "date": "2026-05-22",
+    "electricity": "40.52",
+    "gas": "27.87"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 193,
+  "fields": {
+    "date": "2026-05-24",
+    "electricity": "37.60",
+    "gas": "25.14"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 194,
+  "fields": {
+    "date": "2026-05-23",
+    "electricity": "39.17",
+    "gas": "26.40"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 195,
+  "fields": {
+    "date": "2026-05-25",
+    "electricity": "36.21",
+    "gas": "23.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 196,
+  "fields": {
+    "date": "2026-05-26",
+    "electricity": "34.92",
+    "gas": "22.52"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 197,
+  "fields": {
+    "date": "2026-05-27",
+    "electricity": "33.37",
+    "gas": "20.32"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 198,
+  "fields": {
+    "date": "2026-05-28",
+    "electricity": "31.87",
+    "gas": "18.55"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 199,
+  "fields": {
+    "date": "2026-05-29",
+    "electricity": "30.68",
+    "gas": "17.45"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 200,
+  "fields": {
+    "date": "2026-05-30",
+    "electricity": "29.53",
+    "gas": "16.26"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 201,
+  "fields": {
+    "date": "2026-05-31",
+    "electricity": "28.38",
+    "gas": "15.17"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 202,
+  "fields": {
+    "date": "2026-06-01",
+    "electricity": "26.98",
+    "gas": "13.83"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 203,
+  "fields": {
+    "date": "2026-06-02",
+    "electricity": "25.86",
+    "gas": "12.46"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 204,
+  "fields": {
+    "date": "2026-06-03",
+    "electricity": "24.74",
+    "gas": "10.94"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 205,
+  "fields": {
+    "date": "2026-06-04",
+    "electricity": "73.22",
+    "gas": "89.13"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 206,
+  "fields": {
+    "date": "2026-06-05",
+    "electricity": "71.70",
+    "gas": "86.13"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 207,
+  "fields": {
+    "date": "2026-06-06",
+    "electricity": "70.16",
+    "gas": "83.63"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 208,
+  "fields": {
+    "date": "2026-06-07",
+    "electricity": "68.83",
+    "gas": "81.46"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 209,
+  "fields": {
+    "date": "2026-06-08",
+    "electricity": "67.35",
+    "gas": "79.28"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 210,
+  "fields": {
+    "date": "2026-06-09",
+    "electricity": "65.91",
+    "gas": "76.94"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 211,
+  "fields": {
+    "date": "2026-06-10",
+    "electricity": "64.55",
+    "gas": "74.35"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 212,
+  "fields": {
+    "date": "2026-06-11",
+    "electricity": "63.01",
+    "gas": "71.58"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 213,
+  "fields": {
+    "date": "2026-06-12",
+    "electricity": "61.64",
+    "gas": "68.04"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 214,
+  "fields": {
+    "date": "2026-06-13",
+    "electricity": "59.74",
+    "gas": "64.90"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 215,
+  "fields": {
+    "date": "2026-06-14",
+    "electricity": "58.44",
+    "gas": "62.53"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 216,
+  "fields": {
+    "date": "2026-06-15",
+    "electricity": "57.06",
+    "gas": "60.08"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 217,
+  "fields": {
+    "date": "2026-06-16",
+    "electricity": "55.45",
+    "gas": "58.31"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 218,
+  "fields": {
+    "date": "2026-06-17",
+    "electricity": "54.20",
+    "gas": "56.60"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 219,
+  "fields": {
+    "date": "2026-06-18",
+    "electricity": "53.07",
+    "gas": "54.97"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 220,
+  "fields": {
+    "date": "2026-06-19",
+    "electricity": "51.91",
+    "gas": "53.85"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 221,
+  "fields": {
+    "date": "2026-06-20",
+    "electricity": "50.48",
+    "gas": "52.49"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 222,
+  "fields": {
+    "date": "2026-06-21",
+    "electricity": "49.24",
+    "gas": "51.26"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 223,
+  "fields": {
+    "date": "2026-06-22",
+    "electricity": "47.83",
+    "gas": "49.97"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 224,
+  "fields": {
+    "date": "2026-06-23",
+    "electricity": "46.65",
+    "gas": "48.86"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 225,
+  "fields": {
+    "date": "2026-06-24",
+    "electricity": "45.30",
+    "gas": "47.51"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 226,
+  "fields": {
+    "date": "2026-06-25",
+    "electricity": "43.82",
+    "gas": "46.02"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 227,
+  "fields": {
+    "date": "2026-06-26",
+    "electricity": "42.35",
+    "gas": "44.54"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 228,
+  "fields": {
+    "date": "2026-06-27",
+    "electricity": "40.63",
+    "gas": "43.43"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 229,
+  "fields": {
+    "date": "2026-06-29",
+    "electricity": "37.40",
+    "gas": "41.07"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 230,
+  "fields": {
+    "date": "2026-06-28",
+    "electricity": "38.88",
+    "gas": "42.19"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 231,
+  "fields": {
+    "date": "2026-06-30",
+    "electricity": "35.96",
+    "gas": "39.71"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 232,
+  "fields": {
+    "date": "2026-07-01",
+    "electricity": "34.64",
+    "gas": "38.50"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 233,
+  "fields": {
+    "date": "2026-07-02",
+    "electricity": "33.13",
+    "gas": "37.10"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 234,
+  "fields": {
+    "date": "2026-07-03",
+    "electricity": "31.57",
+    "gas": "35.04"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 235,
+  "fields": {
+    "date": "2026-07-04",
+    "electricity": "29.65",
+    "gas": "32.87"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 236,
+  "fields": {
+    "date": "2026-07-05",
+    "electricity": "28.38",
+    "gas": "31.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 237,
+  "fields": {
+    "date": "2026-07-06",
+    "electricity": "27.16",
+    "gas": "30.50"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 238,
+  "fields": {
+    "date": "2026-07-07",
+    "electricity": "25.92",
+    "gas": "28.97"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 239,
+  "fields": {
+    "date": "2026-07-08",
+    "electricity": "74.55",
+    "gas": "107.20"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 240,
+  "fields": {
+    "date": "2026-07-09",
+    "electricity": "73.27",
+    "gas": "105.49"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 241,
+  "fields": {
+    "date": "2026-07-10",
+    "electricity": "71.68",
+    "gas": "103.32"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 242,
+  "fields": {
+    "date": "2026-07-11",
+    "electricity": "70.25",
+    "gas": "101.74"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 243,
+  "fields": {
+    "date": "2026-07-12",
+    "electricity": "68.95",
+    "gas": "100.43"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 244,
+  "fields": {
+    "date": "2026-07-13",
+    "electricity": "67.67",
+    "gas": "99.03"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 245,
+  "fields": {
+    "date": "2026-07-14",
+    "electricity": "66.43",
+    "gas": "97.62"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 246,
+  "fields": {
+    "date": "2026-07-15",
+    "electricity": "65.21",
+    "gas": "96.31"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 247,
+  "fields": {
+    "date": "2026-07-16",
+    "electricity": "63.22",
+    "gas": "94.30"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 248,
+  "fields": {
+    "date": "2026-07-17",
+    "electricity": "61.41",
+    "gas": "92.96"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 249,
+  "fields": {
+    "date": "2026-07-18",
+    "electricity": "59.96",
+    "gas": "90.94"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 250,
+  "fields": {
+    "date": "2026-07-19",
+    "electricity": "58.61",
+    "gas": "89.56"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 251,
+  "fields": {
+    "date": "2026-07-20",
+    "electricity": "57.04",
+    "gas": "87.82"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 252,
+  "fields": {
+    "date": "2026-07-21",
+    "electricity": "55.82",
+    "gas": "86.92"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 253,
+  "fields": {
+    "date": "2026-07-22",
+    "electricity": "54.64",
+    "gas": "84.83"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 254,
+  "fields": {
+    "date": "2026-07-23",
+    "electricity": "53.28",
+    "gas": "83.34"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 255,
+  "fields": {
+    "date": "2026-07-24",
+    "electricity": "52.02",
+    "gas": "81.53"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 256,
+  "fields": {
+    "date": "2026-07-25",
+    "electricity": "50.74",
+    "gas": "80.13"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 257,
+  "fields": {
+    "date": "2026-07-26",
+    "electricity": "49.55",
+    "gas": "78.95"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 258,
+  "fields": {
+    "date": "2026-07-27",
+    "electricity": "48.21",
+    "gas": "77.25"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 259,
+  "fields": {
+    "date": "2026-07-28",
+    "electricity": "46.99",
+    "gas": "75.78"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 260,
+  "fields": {
+    "date": "2026-07-29",
+    "electricity": "45.43",
+    "gas": "74.32"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 261,
+  "fields": {
+    "date": "2026-07-30",
+    "electricity": "43.99",
+    "gas": "72.47"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 262,
+  "fields": {
+    "date": "2026-07-31",
+    "electricity": "42.75",
+    "gas": "70.36"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 263,
+  "fields": {
+    "date": "2026-08-01",
+    "electricity": "41.22",
+    "gas": "69.09"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 264,
+  "fields": {
+    "date": "2026-08-04",
+    "electricity": "37.10",
+    "gas": "63.62"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 265,
+  "fields": {
+    "date": "2026-08-02",
+    "electricity": "39.99",
+    "gas": "67.93"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 266,
+  "fields": {
+    "date": "2026-08-03",
+    "electricity": "38.38",
+    "gas": "66.26"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 267,
+  "fields": {
+    "date": "2026-08-05",
+    "electricity": "35.59",
+    "gas": "61.95"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 268,
+  "fields": {
+    "date": "2026-08-07",
+    "electricity": "32.58",
+    "gas": "58.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 269,
+  "fields": {
+    "date": "2026-08-06",
+    "electricity": "34.11",
+    "gas": "59.47"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 270,
+  "fields": {
+    "date": "2026-08-08",
+    "electricity": "31.67",
+    "gas": "57.35"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 271,
+  "fields": {
+    "date": "2026-08-09",
+    "electricity": "30.76",
+    "gas": "56.70"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 272,
+  "fields": {
+    "date": "2026-08-10",
+    "electricity": "29.52",
+    "gas": "55.87"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 273,
+  "fields": {
+    "date": "2026-08-11",
+    "electricity": "28.35",
+    "gas": "54.83"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 274,
+  "fields": {
+    "date": "2026-08-12",
+    "electricity": "27.15",
+    "gas": "53.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 275,
+  "fields": {
+    "date": "2026-08-13",
+    "electricity": "25.75",
+    "gas": "52.67"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 276,
+  "fields": {
+    "date": "2026-08-14",
+    "electricity": "24.54",
+    "gas": "51.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 277,
+  "fields": {
+    "date": "2026-08-15",
+    "electricity": "23.29",
+    "gas": "50.73"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 278,
+  "fields": {
+    "date": "2026-08-16",
+    "electricity": "22.06",
+    "gas": "49.37"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 279,
+  "fields": {
+    "date": "2026-08-17",
+    "electricity": "20.90",
+    "gas": "48.12"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 280,
+  "fields": {
+    "date": "2026-08-18",
+    "electricity": "19.75",
+    "gas": "47.08"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 281,
+  "fields": {
+    "date": "2026-08-19",
+    "electricity": "18.57",
+    "gas": "46.14"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 282,
+  "fields": {
+    "date": "2026-08-20",
+    "electricity": "67.18",
+    "gas": "124.91"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 283,
+  "fields": {
+    "date": "2026-08-21",
+    "electricity": "65.95",
+    "gas": "123.64"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 284,
+  "fields": {
+    "date": "2026-08-22",
+    "electricity": "64.65",
+    "gas": "122.22"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 285,
+  "fields": {
+    "date": "2026-08-23",
+    "electricity": "63.37",
+    "gas": "120.42"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 286,
+  "fields": {
+    "date": "2026-08-24",
+    "electricity": "61.75",
+    "gas": "118.38"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 287,
+  "fields": {
+    "date": "2026-08-27",
+    "electricity": "58.75",
+    "gas": "116.32"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 288,
+  "fields": {
+    "date": "2026-08-28",
+    "electricity": "57.52",
+    "gas": "114.82"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 289,
+  "fields": {
+    "date": "2026-08-25",
+    "electricity": "60.75",
+    "gas": "117.69"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 290,
+  "fields": {
+    "date": "2026-08-26",
+    "electricity": "59.75",
+    "gas": "117.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 291,
+  "fields": {
+    "date": "2026-08-29",
+    "electricity": "56.01",
+    "gas": "113.20"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 292,
+  "fields": {
+    "date": "2026-08-30",
+    "electricity": "54.69",
+    "gas": "112.07"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 293,
+  "fields": {
+    "date": "2026-08-31",
+    "electricity": "53.32",
+    "gas": "109.96"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 294,
+  "fields": {
+    "date": "2026-09-01",
+    "electricity": "52.04",
+    "gas": "108.33"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 295,
+  "fields": {
+    "date": "2026-09-02",
+    "electricity": "50.87",
+    "gas": "106.87"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 296,
+  "fields": {
+    "date": "2026-09-03",
+    "electricity": "49.40",
+    "gas": "104.94"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 297,
+  "fields": {
+    "date": "2026-09-04",
+    "electricity": "48.02",
+    "gas": "102.88"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 298,
+  "fields": {
+    "date": "2026-09-05",
+    "electricity": "46.14",
+    "gas": "101.16"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 299,
+  "fields": {
+    "date": "2026-09-06",
+    "electricity": "44.85",
+    "gas": "99.37"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 300,
+  "fields": {
+    "date": "2026-09-07",
+    "electricity": "43.33",
+    "gas": "97.36"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 301,
+  "fields": {
+    "date": "2026-09-08",
+    "electricity": "42.07",
+    "gas": "95.34"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 302,
+  "fields": {
+    "date": "2026-09-09",
+    "electricity": "40.52",
+    "gas": "92.67"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 303,
+  "fields": {
+    "date": "2026-09-10",
+    "electricity": "38.18",
+    "gas": "90.10"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 304,
+  "fields": {
+    "date": "2026-09-11",
+    "electricity": "37.21",
+    "gas": "86.55"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 305,
+  "fields": {
+    "date": "2026-09-12",
+    "electricity": "35.61",
+    "gas": "83.95"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 306,
+  "fields": {
+    "date": "2026-09-13",
+    "electricity": "34.19",
+    "gas": "81.62"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 307,
+  "fields": {
+    "date": "2026-09-14",
+    "electricity": "32.94",
+    "gas": "80.53"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 308,
+  "fields": {
+    "date": "2026-09-15",
+    "electricity": "31.71",
+    "gas": "79.12"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 309,
+  "fields": {
+    "date": "2026-09-16",
+    "electricity": "30.23",
+    "gas": "77.58"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 310,
+  "fields": {
+    "date": "2026-09-17",
+    "electricity": "28.79",
+    "gas": "74.70"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 311,
+  "fields": {
+    "date": "2026-09-18",
+    "electricity": "27.21",
+    "gas": "71.97"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 312,
+  "fields": {
+    "date": "2026-09-19",
+    "electricity": "25.44",
+    "gas": "68.83"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 313,
+  "fields": {
+    "date": "2026-09-20",
+    "electricity": "23.96",
+    "gas": "65.90"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 314,
+  "fields": {
+    "date": "2026-09-21",
+    "electricity": "22.20",
+    "gas": "63.24"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 315,
+  "fields": {
+    "date": "2026-09-22",
+    "electricity": "20.73",
+    "gas": "60.36"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 316,
+  "fields": {
+    "date": "2026-09-23",
+    "electricity": "19.49",
+    "gas": "58.72"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 317,
+  "fields": {
+    "date": "2026-09-24",
+    "electricity": "18.03",
+    "gas": "56.64"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 318,
+  "fields": {
+    "date": "2026-09-25",
+    "electricity": "16.58",
+    "gas": "53.80"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 319,
+  "fields": {
+    "date": "2026-09-26",
+    "electricity": "14.71",
+    "gas": "51.15"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 320,
+  "fields": {
+    "date": "2026-09-30",
+    "electricity": "7.89",
+    "gas": "40.51"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 321,
+  "fields": {
+    "date": "2026-09-27",
+    "electricity": "12.64",
+    "gas": "48.45"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 322,
+  "fields": {
+    "date": "2026-09-28",
+    "electricity": "11.08",
+    "gas": "45.46"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 323,
+  "fields": {
+    "date": "2026-09-29",
+    "electricity": "9.34",
+    "gas": "43.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 324,
+  "fields": {
+    "date": "2026-10-01",
+    "electricity": "6.24",
+    "gas": "38.18"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 325,
+  "fields": {
+    "date": "2026-10-02",
+    "electricity": "4.85",
+    "gas": "35.87"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 326,
+  "fields": {
+    "date": "2026-10-03",
+    "electricity": "53.20",
+    "gas": "32.62"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 327,
+  "fields": {
+    "date": "2026-10-04",
+    "electricity": "51.76",
+    "gas": "29.77"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 328,
+  "fields": {
+    "date": "2026-10-05",
+    "electricity": "49.83",
+    "gas": "26.79"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 329,
+  "fields": {
+    "date": "2026-10-06",
+    "electricity": "48.25",
+    "gas": "23.86"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 330,
+  "fields": {
+    "date": "2026-10-07",
+    "electricity": "46.82",
+    "gas": "21.21"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 331,
+  "fields": {
+    "date": "2026-10-08",
+    "electricity": "45.23",
+    "gas": "17.78"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 332,
+  "fields": {
+    "date": "2026-10-09",
+    "electricity": "43.56",
+    "gas": "13.00"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 333,
+  "fields": {
+    "date": "2026-10-10",
+    "electricity": "41.68",
+    "gas": "8.80"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 334,
+  "fields": {
+    "date": "2026-10-11",
+    "electricity": "40.11",
+    "gas": "4.24"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 335,
+  "fields": {
+    "date": "2026-10-12",
+    "electricity": "38.14",
+    "gas": "79.96"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 336,
+  "fields": {
+    "date": "2026-10-13",
+    "electricity": "36.58",
+    "gas": "75.73"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 337,
+  "fields": {
+    "date": "2026-10-14",
+    "electricity": "35.04",
+    "gas": "71.65"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 338,
+  "fields": {
+    "date": "2026-10-15",
+    "electricity": "33.16",
+    "gas": "66.71"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 339,
+  "fields": {
+    "date": "2026-10-16",
+    "electricity": "31.57",
+    "gas": "62.72"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 340,
+  "fields": {
+    "date": "2026-10-17",
+    "electricity": "29.92",
+    "gas": "57.65"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 341,
+  "fields": {
+    "date": "2026-10-18",
+    "electricity": "28.44",
+    "gas": "53.02"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 342,
+  "fields": {
+    "date": "2026-10-19",
+    "electricity": "26.59",
+    "gas": "48.15"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 343,
+  "fields": {
+    "date": "2026-10-20",
+    "electricity": "24.94",
+    "gas": "43.02"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 344,
+  "fields": {
+    "date": "2026-10-21",
+    "electricity": "23.38",
+    "gas": "38.07"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 345,
+  "fields": {
+    "date": "2026-10-22",
+    "electricity": "21.71",
+    "gas": "32.54"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 346,
+  "fields": {
+    "date": "2026-10-23",
+    "electricity": "19.84",
+    "gas": "26.34"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 347,
+  "fields": {
+    "date": "2026-10-24",
+    "electricity": "17.91",
+    "gas": "19.33"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 348,
+  "fields": {
+    "date": "2026-10-25",
+    "electricity": "16.24",
+    "gas": "12.82"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 349,
+  "fields": {
+    "date": "2026-10-26",
+    "electricity": "14.45",
+    "gas": "6.48"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 350,
+  "fields": {
+    "date": "2026-10-27",
+    "electricity": "12.89",
+    "gas": "19.81"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 351,
+  "fields": {
+    "date": "2026-10-28",
+    "electricity": "11.23",
+    "gas": "14.24"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 352,
+  "fields": {
+    "date": "2026-10-29",
+    "electricity": "9.39",
+    "gas": "8.97"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 353,
+  "fields": {
+    "date": "2026-10-30",
+    "electricity": "7.74",
+    "gas": "3.68"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 354,
+  "fields": {
+    "date": "2026-10-31",
+    "electricity": "5.97",
+    "gas": "78.59"
+  }
+},
+{
+  "model": "utilitytracker.utilityreading",
+  "pk": 355,
+  "fields": {
+    "date": "2026-11-01",
+    "electricity": "4.51",
+    "gas": "73.92"
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 1,
+  "fields": {
+    "date": "2025-11-15T00:08:34Z",
+    "meter": "gas",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 2,
+  "fields": {
+    "date": "2025-11-22T11:53:01.133Z",
+    "meter": "gas",
+    "amount": "20.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 3,
+  "fields": {
+    "date": "2025-11-26T06:44:34.192Z",
+    "meter": "gas",
+    "amount": "20.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 4,
+  "fields": {
+    "date": "2025-11-29T06:33:31.962Z",
+    "meter": "gas",
+    "amount": "62.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 5,
+  "fields": {
+    "date": "2025-12-02T06:36:05.166Z",
+    "meter": "electricity",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 6,
+  "fields": {
+    "date": "2025-12-09T06:47:50.055Z",
+    "meter": "gas",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 7,
+  "fields": {
+    "date": "2025-12-18T20:17:41.850Z",
+    "meter": "gas",
+    "amount": "40.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 8,
+  "fields": {
+    "date": "2025-12-25T11:22:49.895Z",
+    "meter": "gas",
+    "amount": "40.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 9,
+  "fields": {
+    "date": "2025-12-29T20:04:06.131Z",
+    "meter": "electricity",
+    "amount": "7.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 10,
+  "fields": {
+    "date": "2025-12-30T21:11:33.791Z",
+    "meter": "gas",
+    "amount": "15.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 11,
+  "fields": {
+    "date": "2026-01-01T19:13:42.218Z",
+    "meter": "electricity",
+    "amount": "60.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 12,
+  "fields": {
+    "date": "2026-01-01T19:13:47.387Z",
+    "meter": "gas",
+    "amount": "60.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 13,
+  "fields": {
+    "date": "2026-01-09T20:38:54.911Z",
+    "meter": "gas",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 14,
+  "fields": {
+    "date": "2026-01-16T12:15:36.035Z",
+    "meter": "gas",
+    "amount": "35.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 15,
+  "fields": {
+    "date": "2026-01-22T19:42:45.370Z",
+    "meter": "gas",
+    "amount": "25.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 16,
+  "fields": {
+    "date": "2026-01-26T19:49:02Z",
+    "meter": "gas",
+    "amount": "25.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 17,
+  "fields": {
+    "date": "2026-01-28T20:25:22.988Z",
+    "meter": "gas",
+    "amount": "9.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 18,
+  "fields": {
+    "date": "2026-01-30T13:40:42.141Z",
+    "meter": "electricity",
+    "amount": "60.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 20,
+  "fields": {
+    "date": "2026-01-31T19:54:45.532Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 21,
+  "fields": {
+    "date": "2026-02-12T23:11:55.617Z",
+    "meter": "gas",
+    "amount": "10.84",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 22,
+  "fields": {
+    "date": "2026-02-13T20:50:36.871Z",
+    "meter": "gas",
+    "amount": "35.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 23,
+  "fields": {
+    "date": "2026-02-17T21:18:58.207Z",
+    "meter": "gas",
+    "amount": "40.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 24,
+  "fields": {
+    "date": "2026-02-26T22:10:34Z",
+    "meter": "gas",
+    "amount": "10.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 25,
+  "fields": {
+    "date": "2026-02-28T21:57:01.881Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 26,
+  "fields": {
+    "date": "2026-03-03T22:07:24.526Z",
+    "meter": "electricity",
+    "amount": "60.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 27,
+  "fields": {
+    "date": "2026-03-16T18:25:12Z",
+    "meter": "gas",
+    "amount": "30.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 28,
+  "fields": {
+    "date": "2026-03-24T18:25:38.903Z",
+    "meter": "gas",
+    "amount": "30.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 29,
+  "fields": {
+    "date": "2026-03-29T14:26:00.016Z",
+    "meter": "gas",
+    "amount": "10.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 30,
+  "fields": {
+    "date": "2026-03-31T18:29:43.322Z",
+    "meter": "gas",
+    "amount": "5.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 31,
+  "fields": {
+    "date": "2026-04-01T18:35:57.555Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 32,
+  "fields": {
+    "date": "2026-04-06T22:16:12.799Z",
+    "meter": "electricity",
+    "amount": "60.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 33,
+  "fields": {
+    "date": "2026-04-21T19:31:49.010Z",
+    "meter": "gas",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 34,
+  "fields": {
+    "date": "2026-05-05T00:00:00Z",
+    "meter": "electricity",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 35,
+  "fields": {
+    "date": "2026-05-05T00:00:00Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 36,
+  "fields": {
+    "date": "2026-06-04T00:00:00Z",
+    "meter": "electricity",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 37,
+  "fields": {
+    "date": "2026-06-04T00:00:00Z",
+    "meter": "gas",
+    "amount": "79.99",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 38,
+  "fields": {
+    "date": "2026-07-08T00:00:00Z",
+    "meter": "electricity",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 39,
+  "fields": {
+    "date": "2026-07-08T00:00:00Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 40,
+  "fields": {
+    "date": "2026-08-20T00:00:00Z",
+    "meter": "electricity",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 41,
+  "fields": {
+    "date": "2026-08-20T00:00:00Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 44,
+  "fields": {
+    "date": "2026-10-03T00:00:00Z",
+    "meter": "electricity",
+    "amount": "50.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 45,
+  "fields": {
+    "date": "2026-10-12T00:00:00Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 46,
+  "fields": {
+    "date": "2026-10-27T00:00:00Z",
+    "meter": "gas",
+    "amount": "20.00",
+    "note": ""
+  }
+},
+{
+  "model": "utilitytracker.topup",
+  "pk": 47,
+  "fields": {
+    "date": "2026-10-31T00:00:00Z",
+    "meter": "gas",
+    "amount": "80.00",
+    "note": ""
+  }
+}
+]

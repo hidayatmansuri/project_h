@@ -766,8 +766,8 @@ header.masthead .page-heading .subheading {
   background-color: var(--card-bg);
   border: 1.5px solid var(--card-border);
   border-radius: var(--radius-md);
-  font-family: var(--font-display);
-  font-size: 16px;
+  font-family: Gotu;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-color);
   box-shadow: var(--box-shadow);
@@ -798,7 +798,7 @@ header.masthead .page-heading .subheading {
 .recipe_head {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 28px;
+  font-size: 1.5rem;
   color: var(--text-color);
   margin: 36px 0 16px 0;
   display: flex;
@@ -813,17 +813,17 @@ ul.collapsible {
   border-radius: var(--radius-lg);
   overflow: hidden;
   margin: 12px 0 20px 0;
-  background-color: var(--card-bg);
+  background-color: var(--bg-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .collapsible-header {
-  font-family: var(--font-display);
+  font-family: Gotu;
   font-size: 21px;
   font-weight: 700;
   color: var(--text-color);
   padding: 18px 24px;
-  background-color: var(--card-bg);
+  background-color: var(--bg-color);
   border-bottom: 1px solid var(--card-border);
   display: flex;
   align-items: center;
@@ -1464,7 +1464,7 @@ ul.collapsible {
 
 .recipe-modal-meta-value {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 1;
   font-weight: 700;
   color: var(--text-color);
 }
@@ -1473,7 +1473,7 @@ ul.collapsible {
 .recipe-modal-footer {
   padding: 12px 16px;
   border-top: 1px solid var(--card-border);
-  background-color: var(--card-bg);
+  background-color: var(--bg-color);
   display: flex;
   flex-direction: column-reverse;
   align-items: stretch;
@@ -1591,7 +1591,7 @@ body.modal-open-lock {
   justify-content: space-between;
   align-items: center;
   padding: 22px 28px;
-  background-color: var(--card-bg);
+  background-color: var(--bg-color);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   margin-bottom: 30px;
@@ -1688,7 +1688,7 @@ body.modal-open-lock {
 
 .admin-manage-item:hover {
   border-color: var(--button-color);
-  background-color: var(--card-bg);
+  background-color: var(--bg-color);
   box-shadow: var(--box-shadow);
 }
 
@@ -1732,7 +1732,7 @@ body.modal-open-lock {
   margin: 25px 0;
   color: var(--btn-text) !important;
   background-color: var(--button-color) !important;
-  border: 2px solid var(--card-bg);
+  border: 2px solid var(--bg-color);
   box-shadow: var(--box-shadow);
   display: inline-flex;
   align-items: center;
@@ -2163,7 +2163,7 @@ ul.dropdown-content.select-dropdown li.disabled>span {
    ========================================================================== */
 .landing-hero-card {
   position: relative;
-  background: var(--card-bg);
+  background: var(--bg-color);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-xl, 20px);
   padding: 24px 18px 22px;
@@ -2218,8 +2218,8 @@ ul.dropdown-content.select-dropdown li.disabled>span {
 }
 
 .landing-hero-sub {
-  font-family: var(--font-body);
-  font-size: 16.5px;
+  font-family: Gotu;
+  font-size: 1rem;
   color: var(--text-color);
   opacity: 0.88;
   max-width: 680px;
@@ -2443,7 +2443,7 @@ ul.dropdown-content.select-dropdown li.disabled>span {
 }
 
 .filter-pill-btn {
-  background-color: var(--card-bg);
+  background-color: var(--bg-color);
   color: var(--text-color);
   border: 1.5px solid var(--card-border);
   border-radius: var(--radius-full);
