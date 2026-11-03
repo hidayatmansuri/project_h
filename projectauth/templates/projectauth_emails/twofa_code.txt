@@ -1,0 +1,10 @@
+[{{ site_name }}] Your verification code
+
+{% if username %}Hello {{ username }},
+
+{% endif %}Your one-time verification code for {{ site_name }} is: {{ code }} (expires in {{ expires_minutes|default:10 }} minutes).
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

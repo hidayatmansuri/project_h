@@ -1,6 +1,11 @@
 from django.shortcuts import render
+from django.views.decorators.cache import never_cache
 import string
 import secrets
+
+MIN_PASSWORD_LENGTH = 4
+MAX_PASSWORD_LENGTH = 128
+MAX_DESIRED_LENGTH = 128
 
 # Map characters to their possible symbol/number substitutions
 LEET_SUBS = {
@@ -18,6 +23,7 @@ LEET_SUBS = {
     "z": {"symbols": [], "numbers": ["2"]},
 }
 
+@never_cache
 def passgen(request):
     
     password = ""
@@ -32,14 +38,18 @@ def passgen(request):
     includeSymbols = True
     
     if request.method == 'POST':
-        length = int(request.POST.get('length', 12))
+        try:
+            length = int(request.POST.get('length', 12))
+        except (ValueError, TypeError):
+            length = 12
+        length = max(MIN_PASSWORD_LENGTH, min(MAX_PASSWORD_LENGTH, length))
         
         includeUpper = request.POST.get('upper') == 'on'
         includeLower = request.POST.get('lower') == 'on'
         includeNumbers = request.POST.get('numbs') == 'on'
         includeSymbols = request.POST.get('symbols') == 'on'
         
-        desire_password = request.POST.get("desired", "")
+        desire_password = request.POST.get("desired", "")[:MAX_DESIRED_LENGTH]
         
         special_chars = "!£$%^&*+#~@"
         
@@ -116,7 +126,7 @@ def passgen(request):
                 secrets.SystemRandom().shuffle(password_chars)
                 password = "".join(password_chars)
 
-    return render(request, 'passgen.html', {
+    response = render(request, 'passgen.html', {
         'password': password,
         'desired': desire_password,
         'error_message': error_message,
@@ -126,3 +136,5 @@ def passgen(request):
         'numbs': includeNumbers,
         'symbols': includeSymbols,
     })
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response

@@ -1,0 +1,520 @@
+{% extends "home.html" %}
+{% load static %}
+
+{% block title %}
+{% if mode == "login" %}Sign In | project-h
+{% elif mode == "signup" or mode == "signup_done" %}Create Account | project-h
+{% elif mode == "pending" %}Access Pending | project-h
+{% elif mode == "forgot_password" or mode == "reset_password" %}Reset Password | project-h
+{% elif mode == "forgot_username" %}Username Reminder | project-h
+{% elif mode == "account" %}My Account | project-h
+{% else %}Authentication | project-h{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/projectauth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="home-body pa-container" data-pa-mode="{{ mode }}">
+    {% if messages %}
+    <div class="pa-toast-stack" role="status" aria-live="polite">
+        {% for message in messages %}
+        <div class="pa-toast pa-toast-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if mode == "signup" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Create Account</h1>
+        {% if signup_disabled %}
+        <p class="ph-warning">Self sign-up is currently disabled ({{ signup_mode }}). Please contact an administrator for an invitation.</p>
+        {% else %}
+        <form method="post" action="{% url 'projectauth:signup' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            {{ form.form_rendered_at }}
+            <div class="pa-honeypot-wrap" aria-hidden="true">{{ form.website_url }}</div>
+            {% if form.non_field_errors %}
+            <div class="ph-warning pa-field-error" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                {{ form.username }}
+                {% if form.username.errors %}<div class="ph-warning pa-field-error">{{ form.username.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="ph-warning pa-field-error">{{ form.email.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                <button type="button" class="ph-button pa-btn-secondary" id="paSuggestPasswordBtn">Suggest a password</button>
+                {% if form.password.errors %}<div class="ph-warning pa-field-error">{{ form.password.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+                {{ form.password_confirm }}
+                {% if form.password_confirm.errors %}<div class="ph-warning pa-field-error">{{ form.password_confirm.errors }}</div>{% endif %}
+            </div>
+            <fieldset class="pa-fieldset">
+                <legend class="ph-label">{{ form.requested_apps.label }}</legend>
+                {{ form.requested_apps }}
+            </fieldset>
+            <div class="pa-row">
+                <label class="ph-label">{{ form.accept_terms }} {{ form.accept_terms.label }}</label>
+                {% if form.accept_terms.errors %}<div class="ph-warning pa-field-error">{{ form.accept_terms.errors }}</div>{% endif %}
+            </div>
+            <button type="submit" class="ph-button">Create account</button>
+        </form>
+        {% endif %}
+    </section>
+
+    {% elif mode == "signup_done" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Account created: access pending.</h1>
+        <p>
+            Thanks, <strong>{{ signup_name }}</strong>! We've emailed a verification link to
+            <strong>{{ masked_email }}</strong>. Once you've verified it, an administrator will review
+            your request and give you access to the apps you asked for. We'll email you as soon as it's
+            ready, so you don't need to sign up again.
+        </p>
+        <div class="pa-actions">
+            <a href="{% url 'home' %}" class="ph-button">Go to home</a>
+            <a href="{% url 'projectauth:login' %}" class="ph-link">Sign in</a>
+        </div>
+    </section>
+    <dialog id="paSignupModal" class="pa-modal" aria-labelledby="paSignupModalTitle" aria-live="polite" open>
+        <div class="pa-modal-content ph-card">
+            <h2 id="paSignupModalTitle" class="ph-heading">Account created: access pending.</h2>
+            <p>
+                Thanks, <strong>{{ signup_name }}</strong>! We've emailed a verification link to
+                <strong>{{ masked_email }}</strong>. Once you've verified it, an administrator will review
+                your request and give you access to the apps you asked for. We'll email you as soon as it's
+                ready, so you don't need to sign up again.
+            </p>
+            <div class="pa-modal-actions">
+                <form method="dialog"><button type="submit" class="ph-button">OK</button></form>
+                <a href="{% url 'home' %}" class="ph-button">Go to home</a>
+            </div>
+        </div>
+    </dialog>
+
+    {% elif mode == "verify_sent" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Verify your email</h1>
+        <p>Please check <strong>{{ masked_email }}</strong> for your verification link before signing in.</p>
+        <form method="post" action="{% url 'projectauth:verify_email_resend' %}" class="ph-form">
+            {% csrf_token %}
+            <button type="submit" class="ph-button">Resend verification email</button>
+        </form>
+    </section>
+
+    {% elif mode == "verify_result" %}
+    <section class="ph-card pa-card">
+        {% if verified %}
+        <h1 class="ph-heading">Email verified</h1>
+        {% if email_changed_to %}
+        <p>Your email address has been updated to <strong>{{ email_changed_to }}</strong>.</p>
+        {% else %}
+        <p>Thanks, <strong>{{ verified_username }}</strong>! Your email is verified and your account is now awaiting administrator approval.</p>
+        {% endif %}
+        <a href="{% url 'projectauth:login' %}" class="ph-button">Go to Sign In</a>
+        {% else %}
+        <h1 class="ph-heading">Verification link invalid</h1>
+        <p class="ph-warning">{{ error_message }}</p>
+        <a href="{% url 'projectauth:login' %}" class="ph-link">Back to Sign In</a>
+        {% endif %}
+    </section>
+
+    {% elif mode == "pending" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Account created: access pending.</h1>
+        <p>
+            Thanks, <strong>{{ pending_user.username }}</strong>! An administrator is reviewing your
+            account and app access requests. We'll email <strong>{{ masked_email }}</strong> as soon as your access is ready.
+        </p>
+        <h2 class="ph-subs">Requested apps</h2>
+        <ul>
+            {% for req in access_requests %}
+            <li>{{ req.app.name }} — <span class="pa-badge">{{ req.get_status_display }}</span></li>
+            {% empty %}
+            <li>No app requests submitted yet.</li>
+            {% endfor %}
+        </ul>
+        {% if available_apps %}
+        <form method="post" action="{% url 'projectauth:request_access' %}" class="ph-form">
+            {% csrf_token %}
+            <label class="ph-label" for="paRequestAppSelect">Request another app</label>
+            <select name="app_label" id="paRequestAppSelect" class="ph-field">
+                {% for app in available_apps %}
+                <option value="{{ app.app_label }}">{{ app.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="message" class="ph-field" placeholder="Optional note for administrator">
+            <button type="submit" class="ph-button">Request access</button>
+        </form>
+        {% endif %}
+    </section>
+
+    {% elif mode == "login" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Sign In</h1>
+        <form method="post" action="{% url 'projectauth:login' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% if form.non_field_errors %}
+            <div class="ph-warning pa-field-error" role="alert" aria-live="polite">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.identifier.id_for_label }}">{{ form.identifier.label }}</label>
+                {{ form.identifier }}
+                {% if form.identifier.errors %}<div class="ph-warning pa-field-error">{{ form.identifier.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}<div class="ph-warning pa-field-error">{{ form.password.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label">{{ form.remember_me }} {{ form.remember_me.label }}</label>
+            </div>
+            <button type="submit" class="ph-button">Sign in</button>
+        </form>
+        <div class="pa-links">
+            <a href="{% url 'projectauth:forgot_password' %}" class="ph-link">Forgot password?</a>
+            <a href="{% url 'projectauth:forgot_username' %}" class="ph-link">Forgot username?</a>
+            <a href="{% url 'projectauth:signup' %}" class="ph-link">Create an account</a>
+        </div>
+    </section>
+
+    {% elif mode == "forgot_password" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Forgot Password</h1>
+        <form method="post" action="{% url 'projectauth:forgot_password' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            {{ form.form_rendered_at }}
+            <div class="pa-honeypot-wrap" aria-hidden="true">{{ form.website_url }}</div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="ph-warning pa-field-error">{{ form.email.errors }}</div>{% endif %}
+            </div>
+            <button type="submit" class="ph-button">Send reset link</button>
+        </form>
+    </section>
+
+    {% elif mode == "reset_password" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Set New Password</h1>
+        {% if token_invalid %}
+        <p class="ph-warning">{{ error_message }}</p>
+        <a href="{% url 'projectauth:forgot_password' %}" class="ph-button">Request a new reset link</a>
+        {% else %}
+        <form method="post" class="ph-form" novalidate>
+            {% csrf_token %}
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}<div class="ph-warning pa-field-error">{{ form.password.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+                {{ form.password_confirm }}
+                {% if form.password_confirm.errors %}<div class="ph-warning pa-field-error">{{ form.password_confirm.errors }}</div>{% endif %}
+            </div>
+            <button type="submit" class="ph-button">Save new password</button>
+        </form>
+        {% endif %}
+    </section>
+
+    {% elif mode == "forgot_username" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Username Reminder</h1>
+        <form method="post" action="{% url 'projectauth:forgot_username' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            {{ form.form_rendered_at }}
+            <div class="pa-honeypot-wrap" aria-hidden="true">{{ form.website_url }}</div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="ph-warning pa-field-error">{{ form.email.errors }}</div>{% endif %}
+            </div>
+            <button type="submit" class="ph-button">Send username reminder</button>
+        </form>
+    </section>
+
+    {% elif mode == "force_password_change" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Change Your Temporary Password</h1>
+        <p>You must choose a new password before continuing.</p>
+        <form method="post" action="{% url 'projectauth:force_password_change' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.current_password.id_for_label }}">{{ form.current_password.label }}</label>
+                {{ form.current_password }}
+                {% if form.current_password.errors %}<div class="ph-warning pa-field-error">{{ form.current_password.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}<div class="ph-warning pa-field-error">{{ form.password.errors }}</div>{% endif %}
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+                {{ form.password_confirm }}
+                {% if form.password_confirm.errors %}<div class="ph-warning pa-field-error">{{ form.password_confirm.errors }}</div>{% endif %}
+            </div>
+            <button type="submit" class="ph-button">Update password</button>
+        </form>
+    </section>
+
+    {% elif mode == "account" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">My Account ({{ request.user.username }})</h1>
+        <p class="pa-help">All timestamps are displayed in UTC.</p>
+
+        <h2 class="ph-subs">Change Password</h2>
+        <form method="post" action="{% url 'projectauth:account' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="account_action" value="change_password">
+            {{ pw_form.as_p }}
+            <button type="submit" class="ph-button">Update password</button>
+        </form>
+
+        <h2 class="ph-subs">Change Username</h2>
+        <form method="post" action="{% url 'projectauth:account' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="account_action" value="change_username">
+            {{ uname_form.as_p }}
+            <button type="submit" class="ph-button">Update username</button>
+        </form>
+
+        <h2 class="ph-subs">Change Email ({{ request.user.email }})</h2>
+        {% if pending_email_change %}
+        <p class="pa-help">Pending confirmation for: <strong>{{ pending_email_change.new_email }}</strong></p>
+        {% endif %}
+        <form method="post" action="{% url 'projectauth:account' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="account_action" value="change_email">
+            {{ email_form.as_p }}
+            <button type="submit" class="ph-button">Send confirmation to new email</button>
+        </form>
+
+        <h2 class="ph-subs">Active Sessions</h2>
+        <ul>
+            {% for s in active_sessions %}
+            <li>
+                {{ s.ip|default:"Unknown IP" }} — {{ s.user_agent|truncatechars:60 }} ({{ s.last_seen_at|date:"d M Y H:i" }} UTC)
+                {% if s.session_key_hash == current_sk_hash %}
+                <strong>(Current session)</strong>
+                {% else %}
+                <form method="post" action="{% url 'projectauth:account' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="account_action" value="revoke_session">
+                    <input type="hidden" name="session_record_id" value="{{ s.pk }}">
+                    <button type="submit" class="ph-button">Revoke</button>
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        <form method="post" action="{% url 'projectauth:account' %}">
+            {% csrf_token %}
+            <input type="hidden" name="account_action" value="revoke_other_sessions">
+            <button type="submit" class="ph-button">Sign out of all other sessions</button>
+        </form>
+        <form method="post" action="{% url 'projectauth:logout' %}">
+            {% csrf_token %}
+            <input type="hidden" name="all_devices" value="1">
+            <button type="submit" class="ph-button">Log out of all devices</button>
+        </form>
+
+        <h2 class="ph-subs">Privacy & Data (UK GDPR)</h2>
+        <p><a href="{% url 'projectauth:account_export' %}" class="ph-button">Download my data (JSON)</a></p>
+        <form method="post" action="{% url 'projectauth:account_delete' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            {{ delete_form.as_p }}
+            <button type="submit" class="ph-button">Delete my account</button>
+        </form>
+    </section>
+
+    {% elif mode == "twofa_challenge" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Two-Factor Verification</h1>
+        {% if error_message %}
+        <div class="ph-warning pa-field-error" role="alert" aria-live="polite">{{ error_message }}</div>
+        {% endif %}
+        <form method="post" action="{% url 'projectauth:twofa_challenge' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="challenge_action" value="verify">
+            <div class="pa-row">
+                <label class="ph-label" for="paOtpInput">Enter 6-digit authenticator/email code or 8-character recovery code</label>
+                <input type="text" name="code" id="paOtpInput" class="ph-field pa-otp-input" inputmode="numeric" autocomplete="one-time-code" required>
+            </div>
+            <div class="pa-row">
+                <label class="ph-label">
+                    <input type="checkbox" name="trust_device" class="ph-checkbox">
+                    Trust this device for 30 days
+                </label>
+            </div>
+            <button type="submit" class="ph-button">Verify &amp; Sign In</button>
+        </form>
+        <form method="post" action="{% url 'projectauth:twofa_challenge' %}" class="ph-form">
+            {% csrf_token %}
+            <input type="hidden" name="challenge_action" value="send_email_code">
+            <button type="submit" class="ph-button pa-btn-secondary">Email me a one-time code ({{ masked_email }})</button>
+        </form>
+    </section>
+
+    {% elif mode == "twofa_setup" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Two-Factor Authentication (Authenticator App)</h1>
+        {% if must_enrol %}
+        <p class="ph-warning">Two-factor authentication is required for your account before continuing.</p>
+        {% endif %}
+        {% if error_message %}
+        <div class="ph-warning pa-field-error" role="alert" aria-live="polite">{{ error_message }}</div>
+        {% endif %}
+        <div class="pa-qr-container" aria-label="Authenticator QR code">
+            {{ qr_svg|safe }}
+        </div>
+        <p class="pa-help">Manual setup key: <code>{{ totp_secret }}</code></p>
+        <form method="post" action="{% url 'projectauth:twofa_setup' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="setup_action" value="confirm_totp">
+            <div class="pa-row">
+                <label class="ph-label" for="paTotpConfirmCode">Enter 6-digit code from your authenticator app to confirm</label>
+                <input type="text" name="code" id="paTotpConfirmCode" class="ph-field pa-otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+            </div>
+            <button type="submit" class="ph-button">Verify &amp; Enable Authenticator</button>
+        </form>
+        {% if twofa_summary.has_totp %}
+        <hr class="ph-line">
+        <p>Authenticator status: <strong>Enabled</strong> ({{ twofa_summary.unused_recovery_codes }} recovery codes remaining)</p>
+        <p><a href="{% url 'projectauth:twofa_recovery' %}" class="ph-link">View / regenerate recovery codes</a></p>
+        <form method="post" action="{% url 'projectauth:twofa_setup' %}">
+            {% csrf_token %}
+            <input type="hidden" name="setup_action" value="revoke_trusted_devices">
+            <button type="submit" class="ph-button pa-btn-secondary">Revoke trusted devices ({{ twofa_summary.trusted_device_count }})</button>
+        </form>
+        {% if not twofa_summary.required_by_policy %}
+        <form method="post" action="{% url 'projectauth:twofa_setup' %}">
+            {% csrf_token %}
+            <input type="hidden" name="setup_action" value="disable_2fa">
+            <button type="submit" class="ph-button">Disable two-factor authentication</button>
+        </form>
+        {% endif %}
+        {% endif %}
+    </section>
+
+    {% elif mode == "recovery_codes" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Recovery Codes</h1>
+        {% if recovery_codes %}
+        <p class="ph-warning">Save these 10 single-use recovery codes now. They will not be shown again.</p>
+        <ul class="pa-recovery-list" id="paRecoveryCodeList">
+            {% for rc in recovery_codes %}
+            <li><code>{{ rc }}</code></li>
+            {% endfor %}
+        </ul>
+        <div class="pa-actions">
+            <button type="button" class="ph-button" id="paPrintRecoveryBtn">Print / Save</button>
+            <a href="{% url 'projectauth:account' %}" class="ph-button">Done</a>
+        </div>
+        {% else %}
+        <p>You currently have <strong>{{ unused_recovery_count }}</strong> unused recovery code(s).</p>
+        <form method="post" action="{% url 'projectauth:twofa_recovery' %}">
+            {% csrf_token %}
+            <button type="submit" class="ph-button">Generate 10 new recovery codes</button>
+        </form>
+        {% endif %}
+    </section>
+
+    {% elif mode == "reauth" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">Confirm Your Identity</h1>
+        {% if error_message %}
+        <div class="ph-warning pa-field-error" role="alert" aria-live="polite">{{ error_message }}</div>
+        {% endif %}
+        <form method="post" action="{% url 'projectauth:reauth' %}" class="ph-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <input type="hidden" name="reauth_action" value="verify">
+            <div class="pa-row">
+                <label class="ph-label" for="paReauthPassword">Current password</label>
+                <input type="password" name="password" id="paReauthPassword" class="ph-field" autocomplete="current-password" required>
+            </div>
+            {% if has_2fa %}
+            <div class="pa-row">
+                <label class="ph-label" for="paReauthCode">Authenticator, email, or recovery code</label>
+                <input type="text" name="code" id="paReauthCode" class="ph-field" inputmode="numeric" autocomplete="one-time-code" required>
+            </div>
+            {% endif %}
+            <button type="submit" class="ph-button">Confirm</button>
+        </form>
+        {% if has_2fa %}
+        <form method="post" action="{% url 'projectauth:reauth' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <input type="hidden" name="reauth_action" value="send_email_code">
+            <button type="submit" class="ph-button pa-btn-secondary">Send email verification code ({{ masked_email }})</button>
+        </form>
+        {% endif %}
+    </section>
+
+    {% elif mode == "access_denied" %}
+    <section class="ph-card pa-card">
+        <h1 class="ph-heading">You don't have access to {{ denied_app_name }}</h1>
+        {% if read_only_blocked %}
+        <p class="ph-warning">
+            Your access to <strong>{{ denied_app_name }}</strong> is <strong>Read-only</strong>.
+            Viewing is permitted, but saving, adding, or deleting items is disabled for your account.
+        </p>
+        {% elif expired_grant %}
+        <p class="ph-warning">
+            Your temporary access grant to <strong>{{ denied_app_name }}</strong> has expired.
+        </p>
+        {% else %}
+        <p>
+            Access to <strong>{{ denied_app_name }}</strong> requires an administrator grant.
+        </p>
+        {% endif %}
+
+        {% if existing_request %}
+        <p class="pa-help">
+            You already have a <strong>Pending</strong> request for {{ denied_app_name }} (submitted {{ existing_request.created_at|date:"d M Y H:i" }} UTC).
+        </p>
+        {% elif denied_app %}
+        <form method="post" action="{% url 'projectauth:request_access' %}" class="ph-form">
+            {% csrf_token %}
+            <input type="hidden" name="app_label" value="{{ denied_app.app_label }}">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <div class="pa-row">
+                <label class="ph-label" for="paDeniedReqNote">Reason / note for administrator (optional)</label>
+                <input type="text" name="message" id="paDeniedReqNote" class="ph-field" placeholder="Why do you need access to {{ denied_app_name }}?">
+            </div>
+            <button type="submit" class="ph-button">Request access to {{ denied_app_name }}</button>
+        </form>
+        {% endif %}
+
+        {% if admin_contact %}
+        <p class="pa-help">Administrator contact: <a href="mailto:{{ admin_contact }}" class="ph-link">{{ admin_contact }}</a></p>
+        {% endif %}
+        <div class="pa-actions">
+            <a href="{% url 'home' %}" class="ph-button pa-btn-secondary">Back to Home</a>
+        </div>
+    </section>
+    {% else %}
+    {% include "projectauth_parts/console_panel.html" %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script src="{% static 'js/projectauth.js' %}"></script>
+{% endblock %}
+

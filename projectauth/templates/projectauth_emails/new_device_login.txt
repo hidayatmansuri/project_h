@@ -1,0 +1,10 @@
+[{{ site_name }}] New sign-in to your account
+
+{% if username %}Hello {{ username }},
+
+{% endif %}Your {{ site_name }} account ({{ username }}) was just signed in from a new device or browser (IP: {{ ip|default:"unknown" }}, Browser: {{ user_agent|default:"unknown" }}).
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

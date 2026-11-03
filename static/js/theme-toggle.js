@@ -9,24 +9,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (storedTheme) {
         htmlElement.classList.remove('light', 'dark');
         htmlElement.classList.add(storedTheme);
-        toggleCheckbox.checked = storedTheme === 'dark';
+        if (toggleCheckbox) {
+            toggleCheckbox.checked = storedTheme === 'dark';
+        }
     }
 
     // Toggle on checkbox change
-    toggleCheckbox.addEventListener('change', function () {
-        const newTheme = toggleCheckbox.checked ? 'dark' : 'light';
-        htmlElement.classList.remove('light', 'dark');
-        htmlElement.classList.add(newTheme);
-        localStorage.setItem('theme', newTheme);
-    });
+    if (toggleCheckbox) {
+        toggleCheckbox.addEventListener('change', function () {
+            const newTheme = toggleCheckbox.checked ? 'dark' : 'light';
+            htmlElement.classList.remove('light', 'dark');
+            htmlElement.classList.add(newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    }
 
-    window.addEventListener("scroll", () => {
-        if(window.scrollY > 10) {
-            backToTop.style.display = "flex";
-        } else {
-            backToTop.style.display = "none";
-        }
-    });
+    if (backToTop) {
+        window.addEventListener("scroll", () => {
+            if(window.scrollY > 10) {
+                backToTop.style.display = "flex";
+            } else {
+                backToTop.style.display = "none";
+            }
+        });
+    }
 });
 
 

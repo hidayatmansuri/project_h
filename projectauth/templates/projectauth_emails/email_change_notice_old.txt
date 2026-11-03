@@ -1,0 +1,10 @@
+[{{ site_name }}] Security notice: email change requested
+
+{% if username %}Hello {{ username }},
+
+{% endif %}A request was made to change the email address on your {{ site_name }} account ({{ username }}) to {{ masked_new_email }}. Your current email stays active until confirmed.
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

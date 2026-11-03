@@ -27,7 +27,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 if not SECRET_KEY:
     if DEBUG:
@@ -62,6 +62,8 @@ INSTALLED_APPS = [
     'docedit',
     'listimage',
     'recipes',
+    'axes',
+    'projectauth.apps.ProjectAuthConfig',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +73,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'projectauth.middleware.IdleTimeoutMiddleware',
+    'axes.middleware.AxesMiddleware',
+    'projectauth.middleware.ProjectAuthMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -86,6 +91,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'projectauth.context_processors.projectauth_context',
             ],
         },
     },
@@ -155,16 +161,19 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Uploaded media (recipe photos, etc.)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Recipes configuration
-RECIPES_ALLOW_SIGNUP = True
+# Recipes configuration (legacy recipes signup disabled in favour of projectauth)
+RECIPES_ALLOW_SIGNUP = False
 RECIPES_SIGNUP_GRANTS_STAFF = False
 recipes_ALLOW_SIGNUP = RECIPES_ALLOW_SIGNUP
 recipes_SIGNUP_GRANTS_STAFF = RECIPES_SIGNUP_GRANTS_STAFF
+SIMASRECIPES_ALLOW_SIGNUP = False
+SIMASRECIPES_SIGNUP_GRANTS_STAFF = False
 
 
 # Default primary key field type
@@ -178,3 +187,135 @@ LISTIMAGE_MAX_CONCURRENT_JOBS = int(os.getenv('LISTIMAGE_MAX_CONCURRENT_JOBS', '
 LISTIMAGE_MAX_QUEUE = int(os.getenv('LISTIMAGE_MAX_QUEUE', '10'))
 LISTIMAGE_MAX_AGE_MINUTES = int(os.getenv('LISTIMAGE_MAX_AGE_MINUTES', '60'))
 LISTIMAGE_WORKSPACE_DIR = BASE_DIR / 'listimage' / 'workspace'
+
+
+# --- projectauth & security configuration (Section 7 & 10) ---
+from datetime import timedelta
+
+PROJECTAUTH_PUBLIC_APPS = ['home', 'cv']
+PROJECTAUTH_ENCRYPTION_KEYS = os.getenv('PROJECTAUTH_ENCRYPTION_KEYS', '')
+PROJECTAUTH_SITE_NAME = os.getenv('PROJECTAUTH_SITE_NAME', 'project-h')
+PROJECTAUTH_BASE_URL = os.getenv('PROJECTAUTH_BASE_URL', 'http://127.0.0.1:8000')
+PROJECTAUTH_ADMIN_NOTIFY_EMAILS = [
+    e.strip() for e in os.getenv('PROJECTAUTH_ADMIN_NOTIFY_EMAILS', '').split(',') if e.strip()
+]
+PROJECTAUTH_MAX_EMAILS_PER_DAY = int(os.getenv('PROJECTAUTH_MAX_EMAILS_PER_DAY', '300'))
+PROJECTAUTH_HIBP_CHECK = os.getenv('PROJECTAUTH_HIBP_CHECK', 'False').lower() in ('true', '1', 'yes')
+PROJECTAUTH_PASSWORD_MIN_LENGTH = int(os.getenv('PROJECTAUTH_PASSWORD_MIN_LENGTH', '12'))
+PROJECTAUTH_ADMIN_IDLE_TIMEOUT_MIN = int(os.getenv('PROJECTAUTH_ADMIN_IDLE_TIMEOUT_MIN', '30'))
+PROJECTAUTH_USER_IDLE_TIMEOUT_HOURS = int(os.getenv('PROJECTAUTH_USER_IDLE_TIMEOUT_HOURS', '12'))
+PROJECTAUTH_REQUIRE_2FA_FOR_ADMINS = True
+PROJECTAUTH_REQUIRE_2FA_FOR_ALL = False
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'projectauth.backends.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+]
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': PROJECTAUTH_PASSWORD_MIN_LENGTH},
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+LOGIN_URL = 'projectauth:login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
+# Email configuration (Gmail SMTP with App Password in production, console in dev)
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587') or '587')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '') or EMAIL_HOST_USER or 'noreply@project-h.local'
+
+# django-axes configuration (5 failures per identifier+IP, 15-min cool-off)
+AXES_FAILURE_LIMIT = int(os.getenv('AXES_FAILURE_LIMIT', '5'))
+AXES_COOLOFF_TIME = timedelta(minutes=int(os.getenv('AXES_COOLOFF_MINUTES', '15')))
+AXES_LOCKOUT_PARAMETERS = [['username', 'ip_address']]
+AXES_RESET_ON_SUCCESS = True
+AXES_IPWARE_PROXY_COUNT = int(os.getenv('AXES_IPWARE_PROXY_COUNT', '0') or '0')
+AXES_SILENCE_SYSTEM_CHECKS = True
+
+# Cookie & transport security flags
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days absolute max
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+
+csrf_origins_env = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+if csrf_origins_env:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_origins_env.split(',') if o.strip()]
+
+if os.getenv('SECURE_PROXY_SSL', 'False').lower() in ('true', '1', 'yes'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True').lower() in ('true', '1', 'yes')
+    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'True').lower() in ('true', '1', 'yes')
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '3600'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = False
+
+# Security & audit logging (console + rotating file handler)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'security': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'security',
+        },
+        'security_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(BASE_DIR / 'projectauth_security.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5 MB
+            'backupCount': 3,
+            'formatter': 'security',
+            'delay': True,
+        },
+    },
+    'loggers': {
+        'projectauth.security': {
+            'handlers': ['console', 'security_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+

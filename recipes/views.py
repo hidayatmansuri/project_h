@@ -205,21 +205,8 @@ def slow_recipes(request):
 class LoginView(LoginView):
     template_name = "login.html"
 
-    def get_success_url(self):
-        return self.get_redirect_url() or (reverse("recipes:index") + "#admin-section")
-
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.info(self.request, f"Welcome back, {form.get_user().get_username()}!")
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["page_title"] = "Login"
-        context["signup_enabled"] = getattr(
-            settings, "RECIPES_ALLOW_SIGNUP", getattr(settings, "recipes_ALLOW_SIGNUP", True)
-        )
-        return context
+    def dispatch(self, request, *args, **kwargs):
+        return redirect(f"{reverse('projectauth:login')}?next={reverse('recipes:index')}")
 
 
 @require_POST
@@ -231,9 +218,8 @@ def logout_view(request):
 
 
 def signup(request):
-    if not getattr(settings, "RECIPES_ALLOW_SIGNUP", getattr(settings, "recipes_ALLOW_SIGNUP", True)):
-        messages.error(request, "Account creation is disabled.")
-        return redirect("recipes:login")
+    if not getattr(settings, "RECIPES_ALLOW_SIGNUP", getattr(settings, "recipes_ALLOW_SIGNUP", False)):
+        return redirect("projectauth:signup")
 
     if request.method == "POST":
         form = SignUpForm(request.POST)

@@ -1,0 +1,42 @@
+{% if is_authenticated %}
+<div class="home-nav-label dropdown pa-nav-control">
+    <a class="nav-link ph-hover dropdown-toggle" href="#" role="button" aria-haspopup="true" aria-expanded="false" aria-label="Account ({{ username }})" title="Account ({{ username }})">
+        <span class="pa-nav-avatar" aria-hidden="true">{{ user_initial }}</span>
+        <span class="pa-nav-label-text">{{ username }}</span>
+        <i class="fa-solid fa-caret-down dropdown-caret" aria-hidden="true"></i>
+    </a>
+    <div class="dropdown-menu dropdown-menu-end">
+        <a class="nav-link ph-hover menu-item" href="{% url 'projectauth:account' %}">
+            <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+            <span>My account</span>
+        </a>
+        <a class="nav-link ph-hover menu-item" href="{% url 'projectauth:twofa_setup' %}">
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+            <span>Security (2FA)</span>
+        </a>
+        {% if show_console %}
+        <a class="nav-link ph-hover menu-item" href="{% url 'projectauth:console_dashboard' %}">
+            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+            <span>Admin console</span>
+            {% if pending_count %}
+            <span class="pa-nav-badge" aria-label="{{ pending_count }} pending">{{ pending_count }}</span>
+            {% endif %}
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'projectauth:logout' %}" class="pa-nav-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="nav-link ph-hover menu-item pa-nav-logout-btn">
+                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                <span>Log out</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="home-nav-label pa-nav-control">
+    <a class="nav-link ph-hover" href="{% url 'projectauth:login' %}?next={{ next_path }}" aria-label="Login" title="Login">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+        <span class="pa-nav-label-text">Login</span>
+    </a>
+</div>
+{% endif %}

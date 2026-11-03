@@ -1,0 +1,10 @@
+[{{ site_name }}] App access granted
+
+{% if username %}Hello {{ username }},
+
+{% endif %}You have been granted {{ level|default:"Full" }} access to {{ app_name }} ({{ app_label }}) on {{ site_name }}. Expires: {{ expires_at|default:"No expiry" }}.
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

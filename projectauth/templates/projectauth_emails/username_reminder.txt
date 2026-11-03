@@ -1,0 +1,10 @@
+[{{ site_name }}] Your username reminder
+
+{% if username %}Hello {{ username }},
+
+{% endif %}You requested a username reminder for {{ site_name }}. Registered username(s) for this email: {{ usernames }}.
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

@@ -1,0 +1,10 @@
+[{{ site_name }}] Test email configuration check
+
+{% if username %}Hello {{ username }},
+
+{% endif %}This is a diagnostic test email from {{ site_name }}. {{ message }}
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

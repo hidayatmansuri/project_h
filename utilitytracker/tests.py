@@ -45,6 +45,9 @@ class UtilityReadingTest(TestCase):
 
     def test_utility_view_update_reading(self):
         """Test that the view handles updates of existing readings via POST without uniqueness errors"""
+        from projectauth.test_helpers import grant_test_client_app_access
+
+        grant_test_client_app_access(self.client, "utilitytracker")
         test_date = timezone.now().date()
         
         # 1. Create an initial reading

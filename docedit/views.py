@@ -41,6 +41,7 @@ from .storage import (
     apply_atomic_block_updates,
     cleanup_expired_sessions,
     confirm_session_download,
+    count_owner_sessions,
     create_download_token,
     create_session,
     get_document_content,
@@ -62,11 +63,29 @@ logger = logging.getLogger(__name__)
 _LAST_CLEANUP_TIME = 0.0
 
 
+def _get_owner_key(request: HttpRequest) -> str:
+    """
+    Returns the session owner identifier:
+    - 'user:<pk>' when authenticated (survives session key rotation on re-auth / password change)
+    - request.session.session_key fallback for anonymous/legacy test setups
+    """
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return f"user:{user.pk}"
+    if not request.session.session_key:
+        request.session.save()
+    return request.session.session_key
+
+
 def _is_session_authorized(request: HttpRequest, meta: dict) -> bool:
     """Verifies that the request comes from the owner of the session."""
     owner_key = meta.get("owner_key")
     if not owner_key:
         return True  # Legacy session or unauthenticated local setup
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        if owner_key == f"user:{user.pk}":
+            return True
     curr_key = request.session.session_key
     return bool(curr_key and curr_key == owner_key)
 
@@ -147,12 +166,28 @@ def upload_document(request: HttpRequest) -> JsonResponse:
 
     file_bytes = upload.read()
 
-    # Session ownership: bind session to Django session_key
-    if not request.session.session_key:
-        request.session.save()
-    owner_key = request.session.session_key
+    # Validate PDF magic header (%PDF-)
+    if not file_bytes.lstrip().startswith(b"%PDF-"):
+        return JsonResponse({
+            "success": False,
+            "error": "Invalid PDF file: missing %PDF- header."
+        }, status=400)
 
-    sid = create_session(upload.name, file_bytes, owner_key=owner_key)
+    # Session ownership: bind session to authenticated user pk or Django session_key
+    owner_key = _get_owner_key(request)
+
+    # Enforce per-user / per-owner active session cap
+    if count_owner_sessions(owner_key) >= conf.MAX_ACTIVE_SESSIONS_PER_USER:
+        return JsonResponse({
+            "success": False,
+            "error": f"Active session limit ({conf.MAX_ACTIVE_SESSIONS_PER_USER}) reached. Please finish or cancel an open document first."
+        }, status=429)
+
+    import re
+    safe_stem = re.sub(r"[^a-zA-Z0-9._\- ]", "_", Path(upload.name).stem).strip(" ._") or "document"
+    safe_upload_name = f"{safe_stem[:80]}.pdf"
+
+    sid = create_session(safe_upload_name, file_bytes, owner_key=owner_key)
 
     # Kick off processing
     start_session_processing(
@@ -220,8 +255,16 @@ def session_page_image(request: HttpRequest, sid: str, page_num: int) -> HttpRes
     if not meta or not _is_session_authorized(request, meta):
         return HttpResponseForbidden("Access denied.")
 
-    work_dir = get_session_dir(sid)
-    img_path = work_dir / f"page_{page_num}.png"
+    work_dir = get_session_dir(sid).resolve()
+    try:
+        page_num = int(page_num)
+    except (ValueError, TypeError):
+        raise Http404("Invalid page number.")
+    if page_num < 1 or page_num > conf.MAX_PAGES:
+        raise Http404("Page number out of range.")
+    img_path = (work_dir / f"page_{page_num}.png").resolve()
+    if not img_path.is_relative_to(work_dir):
+        return HttpResponseForbidden("Access denied.")
     if img_path.is_file():
         return HttpResponse(img_path.read_bytes(), content_type="image/png")
 
@@ -289,32 +332,37 @@ def session_font_file(request: HttpRequest, sid: str, filename: str) -> HttpResp
         return HttpResponseForbidden("Access denied.")
 
     target_path = None
+    allowed_roots = [conf.FONT_LIBRARY_DIR.resolve()] + [p.resolve() for p in conf.PROJECT_FONT_DIRS]
     # 3. If sid is not 'shared' or 'common', check session directory first
     if sid not in ("shared", "common"):
         meta = get_session_meta(sid)
         if not meta or not _is_session_authorized(request, meta):
             return HttpResponseForbidden("Access denied.")
-        session_font = get_session_dir(sid) / "fonts" / filename
-        if session_font.is_file():
+        s_fonts_dir = (get_session_dir(sid) / "fonts").resolve()
+        allowed_roots.append(s_fonts_dir)
+        session_font = (s_fonts_dir / filename).resolve()
+        if session_font.is_relative_to(s_fonts_dir) and session_font.is_file():
             target_path = session_font
 
     # 4. Check library and project font directories
     if not target_path or not target_path.is_file():
-        lib_font = conf.FONT_LIBRARY_DIR / filename
-        if lib_font.is_file():
+        lib_dir = conf.FONT_LIBRARY_DIR.resolve()
+        lib_font = (lib_dir / filename).resolve()
+        if lib_font.is_relative_to(lib_dir) and lib_font.is_file():
             target_path = lib_font
         else:
             for pdir in conf.PROJECT_FONT_DIRS:
-                cand = pdir / filename
-                if cand.is_file():
+                pdir_res = pdir.resolve()
+                cand = (pdir_res / filename).resolve()
+                if cand.is_relative_to(pdir_res) and cand.is_file():
                     target_path = cand
                     break
-                cand_sub = pdir / "docedit" / filename
-                if cand_sub.is_file():
+                cand_sub = (pdir_res / "docedit" / filename).resolve()
+                if cand_sub.is_relative_to(pdir_res) and cand_sub.is_file():
                     target_path = cand_sub
                     break
 
-    if not target_path or not target_path.is_file():
+    if not target_path or not target_path.is_file() or not any(target_path.resolve().is_relative_to(r) for r in allowed_roots):
         raise Http404("Font file not found.")
 
     ext = target_path.suffix.lower()
@@ -654,9 +702,23 @@ def install_font_api(request: HttpRequest) -> JsonResponse:
                 "success": False,
                 "error": f"Invalid font format '{ext}'. Please upload a .ttf or .otf font file."
             }, status=400)
+        max_font_bytes = conf.MAX_FONT_UPLOAD_MB * 1024 * 1024
+        if font_file.size > max_font_bytes:
+            return JsonResponse({
+                "success": False,
+                "error": f"Font file is too large. Maximum allowed size is {conf.MAX_FONT_UPLOAD_MB} MB."
+            }, status=400)
+        font_bytes = font_file.read()
+        if len(font_bytes) < 4 or font_bytes[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true", b"typ1"):
+            return JsonResponse({
+                "success": False,
+                "error": "Invalid font file header. Only valid TrueType (.ttf) or OpenType (.otf) files are accepted."
+            }, status=400)
         try:
-            safe_filename = Path(font_file.name).name
-            res = install_uploaded_font(font_file.read(), safe_filename)
+            import re
+            raw_stem = re.sub(r"[^a-zA-Z0-9_\-]", "_", Path(font_file.name).stem).strip("_") or "UploadedFont"
+            safe_filename = f"{raw_stem[:64]}{ext}"
+            res = install_uploaded_font(font_bytes, safe_filename)
             res["fonts"] = get_categorized_font_list(force_refresh=True)
             return JsonResponse(res)
         except Exception as e:
@@ -720,8 +782,14 @@ def session_word_crop(request: HttpRequest, sid: str, word_id: str) -> HttpRespo
         raise Http404("Word bounding box not available.")
 
     x, y, w, h = bbox
-    work_dir = get_session_dir(sid)
-    page_img_path = work_dir / f"page_{page_num}.png"
+    work_dir = get_session_dir(sid).resolve()
+    try:
+        page_num = int(page_num)
+    except (ValueError, TypeError):
+        raise Http404("Invalid page number.")
+    page_img_path = (work_dir / f"page_{page_num}.png").resolve()
+    if not page_img_path.is_relative_to(work_dir):
+        return HttpResponseForbidden("Access denied.")
     if not page_img_path.is_file():
         orig_path = get_original_file_path(sid)
         if not orig_path or not orig_path.is_file():

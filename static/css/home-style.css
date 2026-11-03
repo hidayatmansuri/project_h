@@ -282,7 +282,7 @@ main {
 
 .menu-item {
     display: flex;
-    padding: 0.4rem 0;
+    padding: 0.5rem 0;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -1227,4 +1227,75 @@ span.flatpickr-weekday {
     background: var(--button-color) !important;
     border-color: var(--button-color) !important;
     color: var(--bg-color) !important;
+}
+
+/* ==========================================================================
+   projectauth header control (Section 3 & 6 - mobile-first: Small / 768px / 1200px)
+   ========================================================================== */
+
+.pa-nav-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--text-color);
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Small (up to 767px, off-canvas sidebar): label visible */
+.pa-nav-label-text {
+    display: inline;
+}
+
+.pa-nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background-color: var(--warning-color);
+    color: var(--bg-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 0.25rem;
+}
+
+.pa-nav-logout-form {
+    margin: 0;
+    padding: 0;
+}
+
+.pa-nav-logout-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font: inherit;
+    width: 100%;
+    text-align: left;
+    min-height: 44px;
+}
+
+/* Medium (768px - 1199px): icon-only in tight inline top bar, right-aligned dropdown */
+@media screen and (min-width: 768px) {
+    .pa-nav-label-text {
+        display: none;
+    }
+
+    .dropdown-menu.dropdown-menu-end {
+        left: auto;
+        right: 0;
+    }
+}
+
+/* Large (1200px+): label visible again */
+@media screen and (min-width: 1200px) {
+    .pa-nav-label-text {
+        display: inline;
+    }
 }

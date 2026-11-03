@@ -1,0 +1,476 @@
+/* ==========================================================================
+   projectauth.css — Mobile-first styles for projectauth (Constraint C3, C6, Section 3 & 11)
+   Tiers:
+     Small  : Base styles (up to 767px)
+     Medium : @media (min-width: 768px)
+     Large  : @media (min-width: 1200px)
+   Zero max-width media queries. 16px inputs, >=44px touch targets, dvh fallbacks.
+   ========================================================================== */
+
+.pa-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-height: 75vh;
+    min-height: 75dvh;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.pa-card {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1.25rem;
+}
+
+.pa-card:hover {
+    transform: none;
+}
+
+/* Honeypot trap (visually hidden off-screen, never display:none so bots fill it) */
+.pa-honeypot-wrap,
+.pa-honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Form rows, inputs (16px = 1rem to prevent mobile iOS zoom), and >=44px touch targets */
+.pa-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+}
+
+.pa-container .ph-field,
+.pa-container input[type="text"],
+.pa-container input[type="email"],
+.pa-container input[type="password"],
+.pa-container input[type="search"],
+.pa-container input[type="number"],
+.pa-container input[type="date"],
+.pa-container select,
+.pa-container textarea {
+    font-size: 16px;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pa-container .ph-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.6rem 1.1rem;
+    font-size: 16px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.pa-btn-secondary {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--text-color);
+}
+
+.pa-field-error {
+    font-size: 0.9rem;
+    margin: 0.15rem 0 0 0;
+    padding: 0.25rem 0.5rem;
+}
+
+.pa-help {
+    font-size: 0.9rem;
+    opacity: 0.88;
+    margin: 0.4rem 0;
+}
+
+.pa-fieldset {
+    border: 1px solid var(--text-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.pa-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 1rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pa-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.pa-links .ph-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+/* Visible keyboard focus ring */
+.pa-container a:focus-visible,
+.pa-container button:focus-visible,
+.pa-container input:focus-visible,
+.pa-container select:focus-visible,
+.pa-container textarea:focus-visible {
+    outline: 2px solid var(--hover-color);
+    outline-offset: 2px;
+}
+
+/* Toast notifications (pattern adapted from shades/docedit without importing their CSS) */
+.pa-toast-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pa-toast {
+    padding: 0.75rem 1rem;
+    border-left: 4px solid var(--button-color);
+    background-color: var(--bg-color);
+    box-shadow: var(--box-shadow);
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.pa-toast-error,
+.pa-toast-warning {
+    border-left-color: var(--warning-color);
+}
+
+/* Badges */
+.pa-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid var(--text-color);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Password strength meter & show/hide controls */
+.pa-strength {
+    height: 6px;
+    width: 100%;
+    background: rgba(128, 128, 128, 0.25);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.pa-strength-bar {
+    height: 100%;
+    width: 0%;
+    background-color: var(--warning-color);
+    transition: width 0.2s ease;
+}
+
+.pa-strength-bar[data-score="3"],
+.pa-strength-bar[data-score="4"] {
+    background-color: var(--button-color);
+}
+
+/* 6-box OTP input (Section 3 & 11) */
+.pa-otp-boxes {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.pa-otp-digit {
+    width: 2.75rem;
+    height: 3rem;
+    min-height: 44px;
+    font-size: 1.25rem;
+    text-align: center;
+    border: 1.5px solid var(--text-color);
+    border-radius: 6px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* QR code SVG container & recovery codes */
+.pa-qr-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    background-color: #ffffff;
+    color: #000000;
+    border-radius: 8px;
+    width: fit-content;
+    margin: 0.75rem auto;
+}
+
+.pa-qr-container svg {
+    display: block;
+    width: 200px;
+    height: 200px;
+}
+
+.pa-recovery-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+}
+
+.pa-recovery-list li {
+    padding: 0.5rem;
+    border: 1px dashed var(--text-color);
+    text-align: center;
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+}
+
+/* <dialog> Modal: full-width bottom sheet on Small, centred card from 768px (Section 11) */
+.pa-modal {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    z-index: 1200;
+}
+
+.pa-modal::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.pa-modal-content {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-top: 2px solid var(--button-color);
+    padding: 1.25rem;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.pa-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Admin Console Navigation & Stats */
+.pa-console-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem;
+}
+
+.pa-console-nav .ph-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.pa-console-nav .ph-link.active {
+    border-color: var(--button-color);
+    font-weight: 700;
+}
+
+.pa-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.pa-stat-box {
+    padding: 0.75rem;
+    border: 1px solid var(--text-color);
+    border-radius: 6px;
+}
+
+.pa-pending-card {
+    border: 1px solid var(--text-color);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Responsive Tables: stacked labelled cards on Small, real tables from 768px (Section 11) */
+.pa-table,
+.pa-table tbody,
+.pa-table tr,
+.pa-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pa-table thead {
+    display: none;
+}
+
+.pa-table tr {
+    border: 1px solid var(--text-color);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+}
+
+.pa-table td {
+    border: none;
+    text-align: left;
+    padding: 0.35rem 0.5rem;
+}
+
+.pa-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+}
+
+/* Access Matrix: horizontal scroll with sticky first column on Small (Section 8.1 & 11) */
+.pa-matrix-scroll {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.pa-matrix {
+    min-width: 560px;
+}
+
+.pa-matrix th:first-child,
+.pa-matrix td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: var(--bg-color);
+    z-index: 2;
+}
+
+/* ==========================================================================
+   Medium Tier: @media (min-width: 768px)
+   ========================================================================== */
+@media (min-width: 768px) {
+    .pa-card {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .pa-container[data-pa-mode^="console_"] .pa-card {
+        max-width: 100%;
+    }
+
+    .pa-actions,
+    .pa-modal-actions,
+    .pa-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .pa-filter-bar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .pa-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .pa-recovery-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pa-modal {
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+
+    .pa-modal:not([open]) {
+        display: none;
+    }
+
+    .pa-modal-content {
+        max-width: 520px;
+        width: 100%;
+        border: 1px solid var(--button-color);
+        border-radius: 8px;
+    }
+
+    /* Standard table layout on Medium+ */
+    .pa-table {
+        display: table;
+    }
+
+    .pa-table thead {
+        display: table-header-group;
+    }
+
+    .pa-table tbody {
+        display: table-row-group;
+    }
+
+    .pa-table tr {
+        display: table-row;
+        border: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .pa-table th,
+    .pa-table td {
+        display: table-cell;
+        width: auto;
+        border: 1px solid var(--text-color);
+        text-align: center;
+        padding: 0.5rem;
+    }
+
+    .pa-table td::before {
+        content: none;
+    }
+}
+
+/* ==========================================================================
+   Large Tier: @media (min-width: 1200px)
+   ========================================================================== */
+@media (min-width: 1200px) {
+    .pa-filter-bar {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .pa-stats-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .pa-matrix {
+        min-width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pa-strength-bar {
+        transition: none;
+    }
+}
+

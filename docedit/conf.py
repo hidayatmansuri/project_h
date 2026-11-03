@@ -95,6 +95,14 @@ class DocEditConf:
     def MAX_WORKERS(self) -> int:
         return int(_get("MAX_WORKERS", 4))
 
+    @property
+    def MAX_ACTIVE_SESSIONS_PER_USER(self) -> int:
+        return int(_get("MAX_ACTIVE_SESSIONS_PER_USER", 10))
+
+    @property
+    def MAX_FONT_UPLOAD_MB(self) -> int:
+        return int(_get("MAX_FONT_UPLOAD_MB", 15))
+
     # -------------------------------------------------------------------- OCR
     @property
     def TESSERACT_CMD(self):

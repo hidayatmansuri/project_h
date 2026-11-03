@@ -235,8 +235,12 @@ class ViewsAndWorkflowTests(TestCase):
     """End-to-end integration tests for views, ownership security, concurrency, and download."""
 
     def setUp(self):
+        from projectauth.test_helpers import grant_test_client_app_access
+
         self.client_a = Client()
         self.client_b = Client()
+        grant_test_client_app_access(self.client_a, "listimage", username="listimage_user_a")
+        grant_test_client_app_access(self.client_b, "listimage", username="listimage_user_b")
 
     def _create_sample_upload(self):
         img = Image.new('RGB', (300, 300), color=(200, 50, 50))
@@ -267,12 +271,17 @@ class ViewsAndWorkflowTests(TestCase):
         status_data = status_res.json()
         self.assertEqual(status_data['status'], 'queued')
 
+    def _get_owner(self, client):
+        user_id = client.session.get('_auth_user_id')
+        if user_id:
+            return f"user:{user_id}"
+        return f"session:{client.session.session_key}"
+
     def test_cross_user_access_returns_404(self):
         """Requester B attempting to access Requester A's job gets 404."""
-        # Create job owned by client A's session
+        # Create job owned by client A's session/user
         self.client_a.get(reverse('listimage:index'))
-        session_a = self.client_a.session.session_key
-        owner_a = f"session:{session_a}"
+        owner_a = self._get_owner(self.client_a)
 
         job = ImageJob.objects.create(
             owner=owner_a,
@@ -311,8 +320,8 @@ class ViewsAndWorkflowTests(TestCase):
         """When queued jobs reach LISTIMAGE_MAX_QUEUE, new uploads receive 429."""
         from listimage.executor import MAX_QUEUE
 
-        # Create MAX_QUEUE queued jobs from different owners
-        for i in range(MAX_QUEUE):
+        # Create MAX_QUEUE * 5 queued jobs from different owners
+        for i in range(MAX_QUEUE * 5):
             ImageJob.objects.create(
                 owner=f"user_batch_{i}",
                 status=ImageJob.Status.QUEUED
@@ -326,8 +335,7 @@ class ViewsAndWorkflowTests(TestCase):
     def test_edit_endpoint_applies_nudge_and_rerenders(self):
         """Tests that edit_job adjusts coordinates non-destructively and produces updated preview."""
         self.client_a.get(reverse('listimage:index'))
-        session_a = self.client_a.session.session_key
-        owner_a = f"session:{session_a}"
+        owner_a = self._get_owner(self.client_a)
 
         job = ImageJob.objects.create(
             owner=owner_a,
@@ -358,8 +366,7 @@ class ViewsAndWorkflowTests(TestCase):
     def test_download_and_cleanup_redirect(self):
         """Simulates download and post-download cleanup redirect to listimage:index."""
         self.client_a.get(reverse('listimage:index'))
-        session_a = self.client_a.session.session_key
-        owner_a = f"session:{session_a}"
+        owner_a = self._get_owner(self.client_a)
 
         job = ImageJob.objects.create(
             owner=owner_a,

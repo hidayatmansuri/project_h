@@ -1,4 +1,4 @@
-{% load static %}
+{% load static projectauth_tags %}
 <!DOCTYPE html>
 <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
@@ -64,6 +64,8 @@
                             class="fa-solid fa-utensils"></i> <span>Recipes</span></a>
                 </div>
             </div>
+            <div class="nav-separator">|</div>
+            {% projectauth_nav %}
             <div class="nav-separator">|</div>
             <label class="theme-toggle-label" for="theme-toggle">
                 <input type="checkbox" id="theme-toggle" hidden />

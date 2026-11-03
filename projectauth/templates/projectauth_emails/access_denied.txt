@@ -1,0 +1,10 @@
+[{{ site_name }}] Update on your app access request
+
+{% if username %}Hello {{ username }},
+
+{% endif %}Your request for access to {{ app_name }} on {{ site_name }} was not approved at this time. {% if decision_note %}Note: {{ decision_note }}{% endif %}
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

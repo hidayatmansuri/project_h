@@ -554,3 +554,25 @@ def cleanup_expired_sessions() -> int:
             except Exception as e:
                 logger.warning("Failed cleanup on %s: %s", entry, e)
     return purged
+
+
+def count_owner_sessions(owner_key: str) -> int:
+    """Counts active temporary sessions belonging to `owner_key`."""
+    if not owner_key:
+        return 0
+    root = conf.WORK_DIR
+    if not root.is_dir():
+        return 0
+    count = 0
+    for entry in root.iterdir():
+        if entry.is_dir():
+            meta_file = entry / "session.json"
+            if meta_file.is_file():
+                try:
+                    with open(meta_file, "r", encoding="utf-8") as f:
+                        meta = json.load(f)
+                    if meta.get("owner_key") == owner_key and meta.get("status") not in ("downloaded", "cancelled"):
+                        count += 1
+                except Exception:
+                    pass
+    return count

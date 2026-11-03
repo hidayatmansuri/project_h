@@ -1,0 +1,10 @@
+[{{ site_name }}] You have been invited as an administrator
+
+{% if username %}Hello {{ username }},
+
+{% endif %}You have been invited by {{ invited_by }} to join {{ site_name }} as {{ role }}. This single-use invitation link expires in {{ expires_hours|default:72 }} hours:
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

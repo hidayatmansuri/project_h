@@ -5,7 +5,10 @@ from shades.views import shades
 
 class ShadesViewTests(TestCase):
     def setUp(self):
+        from projectauth.test_helpers import grant_test_client_app_access
+
         self.client = Client()
+        grant_test_client_app_access(self.client, "shades")
 
     def test_shades_url_resolves(self):
         match = resolve('/shades/')

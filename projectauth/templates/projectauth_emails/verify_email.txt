@@ -1,0 +1,10 @@
+[{{ site_name }}] Verify your email address
+
+{% if username %}Hello {{ username }},
+
+{% endif %}Please verify your email address for {{ site_name }} by opening the link below (valid for {{ expires_hours|default:24 }} hours):
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

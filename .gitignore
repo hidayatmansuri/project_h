@@ -8,7 +8,10 @@ __pycache__/
 
 # Django
 db.sqlite3
+*.sqlite3
 media/
+staticfiles/
+*.log
 db_test.sqlite3
 docedit/media/docedit_tmp/
 docedit/scratch/

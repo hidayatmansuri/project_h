@@ -1,0 +1,632 @@
+{% if is_console %}
+<nav class="pa-console-nav ph-card" aria-label="Admin console navigation">
+    <a href="{% url 'projectauth:console_dashboard' %}" class="ph-link {% if mode == 'console_dashboard' %}active{% endif %}">Dashboard</a>
+    <a href="{% url 'projectauth:console_pending' %}" class="ph-link {% if mode == 'console_pending' %}active{% endif %}">
+        Pending {% if pending_users_badge %}<span class="pa-badge">{{ pending_users_badge }}</span>{% endif %}
+    </a>
+    <a href="{% url 'projectauth:console_users' %}" class="ph-link {% if mode == 'console_users' or mode == 'console_user_detail' %}active{% endif %}">Users</a>
+    <a href="{% url 'projectauth:console_apps' %}" class="ph-link {% if mode == 'console_apps' %}active{% endif %}">Apps Matrix</a>
+    <a href="{% url 'projectauth:console_requests' %}" class="ph-link {% if mode == 'console_requests' %}active{% endif %}">
+        Access Requests {% if pending_requests_badge %}<span class="pa-badge">{{ pending_requests_badge }}</span>{% endif %}
+    </a>
+    {% if viewer_is_admin %}
+    <a href="{% url 'projectauth:console_admins' %}" class="ph-link {% if mode == 'console_admins' %}active{% endif %}">Admins</a>
+    <a href="{% url 'projectauth:console_invites' %}" class="ph-link {% if mode == 'console_invites' %}active{% endif %}">Invites</a>
+    <a href="{% url 'projectauth:console_audit' %}" class="ph-link {% if mode == 'console_audit' %}active{% endif %}">Audit Log</a>
+    <a href="{% url 'projectauth:console_settings' %}" class="ph-link {% if mode == 'console_settings' %}active{% endif %}">Policies</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% if mode == "invite_accept" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Accept Administrator Invitation</h1>
+    {% if invite_invalid %}
+    <p class="ph-warning">{{ error_message }}</p>
+    <a href="{% url 'projectauth:login' %}" class="ph-link">Go to Sign In</a>
+    {% else %}
+    <p>
+        You have been invited as <strong>{{ invitation.get_role_display }}</strong> for
+        <strong>{{ invitation.email }}</strong>. Choose your username and password below;
+        you will then set up two-factor authentication.
+    </p>
+    <form method="post" class="ph-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="ph-warning pa-field-error" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="pa-row">
+            <label class="ph-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+            {{ form.username }}
+            {% if form.username.errors %}<div class="ph-warning pa-field-error">{{ form.username.errors }}</div>{% endif %}
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+            {{ form.password }}
+            {% if form.password.errors %}<div class="ph-warning pa-field-error">{{ form.password.errors }}</div>{% endif %}
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+            {{ form.password_confirm }}
+            {% if form.password_confirm.errors %}<div class="ph-warning pa-field-error">{{ form.password_confirm.errors }}</div>{% endif %}
+        </div>
+        <button type="submit" class="ph-button">Accept Invitation &amp; Set Up 2FA</button>
+    </form>
+    {% endif %}
+</section>
+
+{% elif mode == "console_dashboard" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Admin Console — Dashboard</h1>
+    <p class="pa-help">All timestamps are in UTC.</p>
+
+    {% if health_warnings %}
+    <div class="pa-health-warnings" role="region" aria-label="Security and configuration warnings">
+        <h2 class="ph-subs">Health &amp; Security Warnings</h2>
+        <ul>
+            {% for w in health_warnings %}
+            <li class="ph-warning" data-warning-code="{{ w.code }}">{{ w.message }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="pa-stats-grid">
+        <div class="pa-stat-box"><strong>Pending Users:</strong> {{ counts.pending_users }}</div>
+        <div class="pa-stat-box"><strong>Pending Access Requests:</strong> {{ counts.pending_requests }}</div>
+        <div class="pa-stat-box"><strong>Active Users:</strong> {{ counts.active_users }}</div>
+        <div class="pa-stat-box"><strong>Active Admins:</strong> {{ counts.admins }}</div>
+        <div class="pa-stat-box"><strong>Locked Accounts:</strong> {{ counts.locked_accounts }}</div>
+        <div class="pa-stat-box"><strong>Emails Today:</strong> {{ email_budget.sent_today }} / {{ email_budget.daily_cap }} ({{ email_budget.percent }}%)</div>
+    </div>
+
+    <h2 class="ph-subs">Recent Audit Events</h2>
+    <table class="ph-table pa-table">
+        <thead>
+            <tr>
+                <th>Time (UTC)</th>
+                <th>Action</th>
+                <th>Actor</th>
+                <th>Target</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in recent_audit %}
+            <tr>
+                <td data-label="Time (UTC)">{{ ev.created_at|date:"d M Y H:i:s" }}</td>
+                <td data-label="Action"><code>{{ ev.action }}</code></td>
+                <td data-label="Actor">{% if ev.actor %}{{ ev.actor.username }}{% else %}{{ ev.actor_label|default:"—" }}{% endif %}</td>
+                <td data-label="Target">{% if ev.target_user %}{{ ev.target_user.username }}{% else %}{{ ev.target_label|default:"—" }}{% endif %}</td>
+                <td data-label="IP">{{ ev.ip|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No audit events recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% elif mode == "console_pending" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Pending User Approvals</h1>
+    {% for item in pending_items %}
+    <div class="pa-pending-card">
+        <h2 class="ph-subs">{{ item.user.username }} ({{ item.user.email }})</h2>
+        <p class="pa-help">Status: <span class="pa-badge">{{ item.profile.get_status_display }}</span> | Signed up: {{ item.profile.created_at|date:"d M Y H:i" }} UTC</p>
+
+        <form method="post" action="{% url 'projectauth:console_pending' %}" class="ph-form">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ item.user.pk }}">
+            <input type="hidden" name="pending_action" value="approve">
+            <fieldset class="pa-fieldset">
+                <legend class="ph-label">Apps to grant on approval (requested apps are pre-ticked):</legend>
+                {% for app in governed_apps %}
+                <label class="ph-label">
+                    <input type="checkbox" name="app_labels" value="{{ app.app_label }}" class="ph-checkbox"
+                        {% if app.app_label in item.requested_app_labels %}checked{% endif %}>
+                    {{ app.name }} ({{ app.app_label }})
+                </label>
+                {% endfor %}
+            </fieldset>
+            <div class="pa-row">
+                <label class="ph-label" for="paLevel_{{ item.user.pk }}">Access level</label>
+                <select name="level" id="paLevel_{{ item.user.pk }}" class="ph-field">
+                    <option value="full">Full access</option>
+                    <option value="read_only">Read-only</option>
+                </select>
+            </div>
+            <div class="pa-row">
+                <label class="ph-label" for="paExp_{{ item.user.pk }}">Optional expiry date (UTC)</label>
+                <input type="date" name="expires_at" id="paExp_{{ item.user.pk }}" class="ph-field">
+            </div>
+            <div class="pa-actions">
+                <button type="submit" class="ph-button">Approve &amp; Grant Selected Apps</button>
+                <button type="submit" name="preset" value="tester" class="ph-button pa-btn-secondary">Approve with Tester Preset (Read-only, 7 days)</button>
+            </div>
+        </form>
+
+        <form method="post" action="{% url 'projectauth:console_pending' %}" class="ph-form">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ item.user.pk }}">
+            <input type="hidden" name="pending_action" value="reject">
+            <div class="pa-row">
+                <label class="ph-label" for="paRej_{{ item.user.pk }}">Rejection reason (optional)</label>
+                <input type="text" name="reason" id="paRej_{{ item.user.pk }}" class="ph-field" placeholder="Reason for rejection">
+            </div>
+            <button type="submit" class="ph-button pa-btn-secondary">Reject Account</button>
+        </form>
+    </div>
+    {% empty %}
+    <p>No accounts are currently awaiting approval.</p>
+    {% endfor %}
+</section>
+
+{% elif mode == "console_users" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Users</h1>
+    <form method="get" action="{% url 'projectauth:console_users' %}" class="ph-form pa-filter-bar">
+        <div class="pa-row">
+            <label class="ph-label" for="paUserSearch">Search username or email</label>
+            <input type="search" name="q" id="paUserSearch" value="{{ q }}" class="ph-field" placeholder="Search...">
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paStatusFilter">Status</label>
+            <select name="status" id="paStatusFilter" class="ph-field">
+                <option value="">All statuses</option>
+                {% for code, label in status_choices %}
+                <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="ph-button">Filter</button>
+    </form>
+
+    <table class="ph-table pa-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Role</th>
+                <th>Manage</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users_list %}
+            <tr>
+                <td data-label="Username"><strong>{{ u.username }}</strong></td>
+                <td data-label="Email">{{ u.email|default:"—" }}</td>
+                <td data-label="Status"><span class="pa-badge">{{ u.profile.status|default:"active" }}</span></td>
+                <td data-label="Role">{% if u.is_superuser %}Admin{% else %}User{% endif %}</td>
+                <td data-label="Manage"><a href="{% url 'projectauth:console_user_detail' u.pk %}" class="ph-link">Details</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No matching users found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% elif mode == "console_user_detail" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">User Detail: {{ target_user.username }}</h1>
+    <p class="pa-help">
+        Email: <strong>{{ target_user.email|default:"—" }}</strong> |
+        Status: <span class="pa-badge">{{ target_profile.get_status_display }}</span> |
+        2FA Enrolled: <strong>{% if twofa_summary.has_totp %}Yes{% else %}No{% endif %}</strong>
+    </p>
+
+    {% if temp_password_once %}
+    <div class="ph-warning pa-temp-password-box" role="alert">
+        <strong>Temporary Password (shown once — copy now):</strong>
+        <code id="paTempPasswordOnce">{{ temp_password_once }}</code>
+    </div>
+    {% endif %}
+
+    <h2 class="ph-subs">Account Status Actions</h2>
+    <div class="pa-actions">
+        {% if target_profile.status != 'active' %}
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="approve">
+            <button type="submit" class="ph-button">Approve / Activate</button>
+        </form>
+        {% endif %}
+        {% if target_profile.status == 'active' %}
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="suspend">
+            <button type="submit" class="ph-button pa-btn-secondary">Suspend</button>
+        </form>
+        {% elif target_profile.status == 'suspended' %}
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="reactivate">
+            <button type="submit" class="ph-button">Reactivate</button>
+        </form>
+        {% endif %}
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="unlock">
+            <button type="submit" class="ph-button pa-btn-secondary">Unlock (Clear Lockouts)</button>
+        </form>
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="force_signout">
+            <button type="submit" class="ph-button pa-btn-secondary">Force Sign-Out</button>
+        </form>
+    </div>
+
+    <h2 class="ph-subs">Per-App Access</h2>
+    <table class="ph-table pa-table">
+        <thead>
+            <tr>
+                <th>App</th>
+                <th>Current Grant</th>
+                <th>Expires (UTC)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in app_access_rows %}
+            <tr>
+                <td data-label="App"><strong>{{ row.app.name }}</strong> (<code>{{ row.app.app_label }}</code>)</td>
+                <td data-label="Current Grant">
+                    {% if row.grant and row.grant.is_currently_active %}
+                    <span class="pa-badge">{{ row.grant.get_level_display }}</span>
+                    {% else %}
+                    <span>No access</span>
+                    {% endif %}
+                </td>
+                <td data-label="Expires">{% if row.grant and row.grant.expires_at %}{{ row.grant.expires_at|date:"d M Y H:i" }}{% else %}—{% endif %}</td>
+                <td data-label="Actions">
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_action" value="grant_app">
+                        <input type="hidden" name="app_label" value="{{ row.app.app_label }}">
+                        <input type="hidden" name="level" value="full">
+                        <button type="submit" class="ph-button">Grant Full</button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_action" value="tester_preset">
+                        <input type="hidden" name="app_label" value="{{ row.app.app_label }}">
+                        <button type="submit" class="ph-button pa-btn-secondary">Tester (Read-only 7d)</button>
+                    </form>
+                    {% if row.grant and row.grant.is_currently_active %}
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_action" value="revoke_app">
+                        <input type="hidden" name="app_label" value="{{ row.app.app_label }}">
+                        <button type="submit" class="ph-button pa-btn-secondary">Revoke</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if viewer_is_admin %}
+    <h2 class="ph-subs">Administrator Credential &amp; Security Controls</h2>
+    <div class="pa-actions">
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="send_reset_link">
+            <button type="submit" class="ph-button">Send Password Reset Link</button>
+        </form>
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="set_temp_password">
+            <button type="submit" class="ph-button pa-btn-secondary">Generate Temporary Password</button>
+        </form>
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="user_action" value="reset_2fa">
+            <button type="submit" class="ph-button pa-btn-secondary">Reset 2FA</button>
+        </form>
+    </div>
+
+    <h3 class="ph-subs">Edit Username / Email</h3>
+    <form method="post" class="ph-form">
+        {% csrf_token %}
+        <input type="hidden" name="user_action" value="edit_identity">
+        <div class="pa-row">
+            <label class="ph-label" for="paEditUname">Username</label>
+            <input type="text" name="username" id="paEditUname" value="{{ target_user.username }}" class="ph-field">
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paEditEmail">Email</label>
+            <input type="email" name="email" id="paEditEmail" value="{{ target_user.email }}" class="ph-field">
+        </div>
+        <button type="submit" class="ph-button">Save Identity</button>
+    </form>
+
+    <h3 class="ph-subs">Delete Account</h3>
+    <form method="post" class="ph-form">
+        {% csrf_token %}
+        <input type="hidden" name="user_action" value="delete_user">
+        <button type="submit" class="ph-button pa-btn-secondary">Delete User Permanently</button>
+    </form>
+    {% endif %}
+</section>
+
+{% elif mode == "console_apps" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Apps &amp; Access Matrix</h1>
+    <p class="pa-help">
+        Newly created accounts start with an empty row (zero implicit access). Use the Tester preset
+        for Read-only + 7 days expiry (ideal for sharing <code>utilitytracker</code> safely).
+    </p>
+
+    <form method="post" action="{% url 'projectauth:console_apps' %}" class="ph-form">
+        {% csrf_token %}
+        <h2 class="ph-subs">Grant / Revoke Access</h2>
+        <div class="pa-row">
+            <label class="ph-label" for="paMatrixUser">User</label>
+            <select name="user_ids" id="paMatrixUser" class="ph-field" multiple>
+                {% for row in matrix_rows %}
+                <option value="{{ row.user.pk }}">{{ row.user.username }} ({{ row.user.email|default:"no email" }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paMatrixApp">Protected App(s)</label>
+            <select name="app_labels" id="paMatrixApp" class="ph-field" multiple>
+                {% for app in governed_apps %}
+                <option value="{{ app.app_label }}">{{ app.name }} ({{ app.app_label }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paMatrixLevel">Access Level</label>
+            <select name="level" id="paMatrixLevel" class="ph-field">
+                <option value="full">Full</option>
+                <option value="read_only">Read-only</option>
+            </select>
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paMatrixExpires">Optional Expiry Date (UTC)</label>
+            <input type="date" name="expires_at" id="paMatrixExpires" class="ph-field">
+        </div>
+        <div class="pa-actions">
+            <button type="submit" name="matrix_action" value="grant" class="ph-button">Grant Access</button>
+            <button type="submit" name="matrix_action" value="tester_preset" class="ph-button pa-btn-secondary">Tester Preset (Read-only + 7 days)</button>
+            <button type="submit" name="matrix_action" value="revoke" class="ph-button pa-btn-secondary">Revoke Access</button>
+        </div>
+    </form>
+
+    <div class="pa-matrix-scroll">
+        <table class="ph-table pa-matrix">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    {% for app in governed_apps %}
+                    <th>{{ app.name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in matrix_rows %}
+                <tr>
+                    <td data-label="User"><a href="{% url 'projectauth:console_user_detail' row.user.pk %}" class="ph-link">{{ row.user.username }}</a></td>
+                    {% for cell in row.cells %}
+                    <td data-label="{{ cell.app.name }}">
+                        {% if row.is_admin %}
+                        <span class="pa-badge">Admin (All)</span>
+                        {% elif cell.grant %}
+                        <span class="pa-badge">{{ cell.grant.get_level_display }}</span>
+                        {% else %}
+                        <span>—</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% elif mode == "console_requests" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">App Access Requests</h1>
+    <table class="ph-table pa-table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>App</th>
+                <th>Message</th>
+                <th>Requested (UTC)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in pending_requests %}
+            <tr>
+                <td data-label="User"><a href="{% url 'projectauth:console_user_detail' req.user.pk %}" class="ph-link">{{ req.user.username }}</a></td>
+                <td data-label="App">{{ req.app.name }}</td>
+                <td data-label="Message">{{ req.message|default:"—" }}</td>
+                <td data-label="Requested">{{ req.created_at|date:"d M Y H:i" }}</td>
+                <td data-label="Actions">
+                    <form method="post" action="{% url 'projectauth:console_requests' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="request_id" value="{{ req.pk }}">
+                        <input type="hidden" name="request_action" value="approve">
+                        <input type="hidden" name="level" value="full">
+                        <button type="submit" class="ph-button">Approve (Full)</button>
+                    </form>
+                    <form method="post" action="{% url 'projectauth:console_requests' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="request_id" value="{{ req.pk }}">
+                        <input type="hidden" name="request_action" value="tester_preset">
+                        <button type="submit" class="ph-button pa-btn-secondary">Approve Tester (Read-only 7d)</button>
+                    </form>
+                    <form method="post" action="{% url 'projectauth:console_requests' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="request_id" value="{{ req.pk }}">
+                        <input type="hidden" name="request_action" value="deny">
+                        <button type="submit" class="ph-button pa-btn-secondary">Deny</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No pending access requests.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% elif mode == "console_admins" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Administrators &amp; Access Managers</h1>
+    <h2 class="ph-subs">Current Administrators</h2>
+    <ul>
+        {% for adm in admins_list %}
+        <li>
+            <strong>{{ adm.username }}</strong> ({{ adm.email|default:"—" }})
+            <form method="post" action="{% url 'projectauth:console_admins' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="admin_action" value="demote_admin">
+                <input type="hidden" name="user_id" value="{{ adm.pk }}">
+                <button type="submit" class="ph-button pa-btn-secondary">Demote</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2 class="ph-subs">Current Access Managers</h2>
+    <ul>
+        {% for mgr in access_managers %}
+        <li>
+            <strong>{{ mgr.username }}</strong> ({{ mgr.email|default:"—" }})
+            <form method="post" action="{% url 'projectauth:console_admins' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="admin_action" value="demote_access_manager">
+                <input type="hidden" name="user_id" value="{{ mgr.pk }}">
+                <button type="submit" class="ph-button pa-btn-secondary">Remove Access Manager</button>
+            </form>
+        </li>
+        {% empty %}
+        <li>No delegated Access Managers configured.</li>
+        {% endfor %}
+    </ul>
+
+    <h2 class="ph-subs">Promote Existing User</h2>
+    <form method="post" action="{% url 'projectauth:console_admins' %}" class="ph-form">
+        {% csrf_token %}
+        <div class="pa-row">
+            <label class="ph-label" for="paPromoteUser">Select User</label>
+            <select name="user_id" id="paPromoteUser" class="ph-field">
+                {% for u in eligible_users %}
+                <option value="{{ u.pk }}">{{ u.username }} ({{ u.email|default:"no email" }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pa-actions">
+            <button type="submit" name="admin_action" value="promote_admin" class="ph-button">Promote to Administrator</button>
+            <button type="submit" name="admin_action" value="promote_access_manager" class="ph-button pa-btn-secondary">Grant Access Manager Role</button>
+        </div>
+    </form>
+</section>
+
+{% elif mode == "console_invites" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Admin &amp; Access Manager Invitations</h1>
+    <form method="post" action="{% url 'projectauth:console_invites' %}" class="ph-form">
+        {% csrf_token %}
+        <input type="hidden" name="invite_action" value="create">
+        <div class="pa-row">
+            <label class="ph-label" for="paInviteEmail">Recipient Email Address</label>
+            <input type="email" name="email" id="paInviteEmail" class="ph-field" required placeholder="colleague@example.com">
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paInviteRole">Role</label>
+            <select name="role" id="paInviteRole" class="ph-field">
+                {% for code, label in role_choices %}
+                <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="ph-button">Send 72-Hour Invitation Link</button>
+    </form>
+
+    <h2 class="ph-subs">Pending Invitations</h2>
+    <ul>
+        {% for inv in pending_invites %}
+        <li>
+            {{ inv.email }} — <span class="pa-badge">{{ inv.get_role_display }}</span> (expires {{ inv.expires_at|date:"d M Y H:i" }} UTC)
+            <form method="post" action="{% url 'projectauth:console_invites' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="invite_action" value="revoke">
+                <input type="hidden" name="invite_id" value="{{ inv.pk }}">
+                <button type="submit" class="ph-button pa-btn-secondary">Revoke</button>
+            </form>
+        </li>
+        {% empty %}
+        <li>No active invitations pending.</li>
+        {% endfor %}
+    </ul>
+</section>
+
+{% elif mode == "console_audit" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Security Audit Log</h1>
+    <form method="get" action="{% url 'projectauth:console_audit' %}" class="ph-form pa-filter-bar">
+        <div class="pa-row">
+            <label class="ph-label" for="paAuditActor">Actor</label>
+            <input type="text" name="actor" id="paAuditActor" value="{{ filter_actor }}" class="ph-field">
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paAuditTarget">Target</label>
+            <input type="text" name="target" id="paAuditTarget" value="{{ filter_target }}" class="ph-field">
+        </div>
+        <div class="pa-row">
+            <label class="ph-label" for="paAuditAction">Action</label>
+            <input type="text" name="action" id="paAuditAction" value="{{ filter_action }}" class="ph-field" placeholder="e.g. login.success">
+        </div>
+        <div class="pa-actions">
+            <button type="submit" class="ph-button">Filter</button>
+            <a href="{% url 'projectauth:console_audit_export' %}?actor={{ filter_actor }}&amp;target={{ filter_target }}&amp;action={{ filter_action }}&amp;date_from={{ filter_date_from }}&amp;date_to={{ filter_date_to }}" class="ph-button pa-btn-secondary">Export CSV</a>
+        </div>
+    </form>
+
+    <table class="ph-table pa-table">
+        <thead>
+            <tr>
+                <th>Time (UTC)</th>
+                <th>Action</th>
+                <th>Actor</th>
+                <th>Target</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in audit_events %}
+            <tr>
+                <td data-label="Time (UTC)">{{ ev.created_at|date:"d M Y H:i:s" }}</td>
+                <td data-label="Action"><code>{{ ev.action }}</code></td>
+                <td data-label="Actor">{% if ev.actor %}{{ ev.actor.username }}{% else %}{{ ev.actor_label|default:"—" }}{% endif %}</td>
+                <td data-label="Target">{% if ev.target_user %}{{ ev.target_user.username }}{% else %}{{ ev.target_label|default:"—" }}{% endif %}</td>
+                <td data-label="IP">{{ ev.ip|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No matching audit events.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% elif mode == "console_settings" %}
+<section class="ph-card pa-card">
+    <h1 class="ph-heading">Authentication &amp; Security Policies</h1>
+    <p class="pa-help">Public apps locked by code configuration: <code>{{ public_apps|join:", " }}</code></p>
+    <form method="post" action="{% url 'projectauth:console_settings' %}" class="ph-form">
+        {% csrf_token %}
+        {{ settings_form.as_p }}
+        <button type="submit" class="ph-button">Save Policies</button>
+    </form>
+</section>
+{% endif %}
+

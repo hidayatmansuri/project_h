@@ -1,0 +1,10 @@
+[{{ site_name }}] Sign-up attempt for your email address
+
+{% if username %}Hello {{ username }},
+
+{% endif %}Someone just tried to register an account on {{ site_name }} using your email address. Your existing account ({{ username }}) was not modified.
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}

@@ -61,6 +61,11 @@ class PublicViewTests(TestCase):
             ingredients=["prawns", "coconut milk"], methods=["Simmer"], prep_time=10, cook_time=25,
             created_on=date(2026, 2, 12))
 
+    def setUp(self):
+        from projectauth.test_helpers import grant_test_client_app_access
+
+        grant_test_client_app_access(self.client, "recipes")
+
     def test_pages_render_and_use_british_date_format(self):
         urls = [
             reverse("recipes:index"),
@@ -104,6 +109,11 @@ class PasscodeProtectedCrudTests(TestCase):
     def setUpTestData(cls):
         cls.cat = Category.objects.create(name="Vegan")
         cls.cus = Cuisine.objects.create(name="Chinese Cuisine")
+
+    def setUp(self):
+        from projectauth.test_helpers import grant_test_client_app_access
+
+        grant_test_client_app_access(self.client, "recipes")
 
     def test_no_login_required_for_manage_and_edit_pages(self):
         self.assertEqual(self.client.get(reverse("recipes:manage")).status_code, 200)

@@ -1,0 +1,10 @@
+[{{ site_name }}] Your account has been approved
+
+{% if username %}Hello {{ username }},
+
+{% endif %}Good news! Your {{ site_name }} account ({{ username }}) has been approved. Granted apps: {{ granted_apps|default:"None yet" }}.
+
+{% if action_url %}Link: {{ action_url }}
+
+{% endif %}If this wasn't you, please ignore this email or contact the {{ site_name }} administrator immediately.
+Timestamp: {{ timestamp_utc }}
