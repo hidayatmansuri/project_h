@@ -19,6 +19,7 @@ from django.http import (
 )
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
@@ -195,10 +196,16 @@ def svg_options(request: HttpRequest, job_id) -> HttpResponse:
     has_svg = (job.workspace_path / 'output.svg').exists()
     svg_stats = job.params.get('svg_stats', {})
     palette = job.params.get('palette', [])
+    preset_key = job.params.get('preset', 'balanced')
+    adv_defaults = PRESETS.get(preset_key, PRESETS['balanced']).copy()
+    if isinstance(job.params.get('custom_params'), dict):
+        adv_defaults.update(job.params['custom_params'])
 
     context = {
         'job': job,
         'params': job.params,
+        'adv': adv_defaults,
+        'error_message': job.error_message if job.status == ImageJob.Status.FAILED else '',
         'svg_stats': svg_stats,
         'palette': palette,
         'has_svg': has_svg,
@@ -351,10 +358,12 @@ def svg_recolor(request: HttpRequest, job_id) -> JsonResponse:
         return JsonResponse({'success': False, 'error': f"Recoloring failed: {e}"}, status=500)
 
 
+@xframe_options_sameorigin
 @require_GET
 def svg_preview(request: HttpRequest, job_id) -> HttpResponse:
     """
-    Serves the pure vector SVG content with nosniff and correct MIME type.
+    Serves the pure vector SVG content with same-origin framing allowed for <object> preview,
+    nosniff, and image/svg+xml MIME type.
     """
     job = _get_owned_job_or_404(request, job_id)
     svg_path = job.workspace_path / 'output.svg'

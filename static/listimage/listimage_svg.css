@@ -231,17 +231,21 @@
     max-height: 650px;
     overflow: auto;
     display: flex;
-    align-items: center;
-    justify-content: center;
     border-radius: var(--li-radius-md, 8px);
     border: 1px solid var(--li-card-border, #cbd5e1);
     padding: 1.5rem;
+}
+
+.li-svg-viewport-wrapper > * {
+    margin: auto;
+    flex-shrink: 0;
 }
 
 .li-svg-object {
     display: block;
     max-width: 100%;
     height: auto;
+    aspect-ratio: 1 / 1;
     transition: width 0.2s ease, height 0.2s ease;
 }
 

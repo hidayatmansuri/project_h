@@ -1577,5 +1577,137 @@ class ComprehensiveSvgFeatureSpecificationTests(TestCase):
         svg_job.cleanup_files()
         svg_job.delete()
 
+    def test_spec_12_transparent_png_preserves_coordinates_no_inversion_or_black_halo(self):
+        """
+        Regression test for uploaded transparent PNGs:
+        - Ensures vtracer translate(tx, ty) transforms are baked into path coordinates (no top-left collage/crop).
+        - Ensures monochrome binary masks are not inverted into a full-canvas black rectangle.
+        - Ensures semi-transparent anti-aliased fringe does not introduce #000000 black halos or muddied colors.
+        - Ensures use_full_image=True still respects existing transparent alpha pixels.
+        """
+        import re
+        import lxml.etree as etree
+        from listimage.svg_services import trace_image_to_svg
+
+        img = Image.new('RGBA', (900, 900), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        # Anti-aliased halo fringe in semi-transparent alpha (should be de-fringed, never turned black)
+        draw.rectangle([496, 296, 704, 604], fill=(120, 120, 120, 160))
+        # Two saturated colored shapes far from (0, 0)
+        draw.rectangle([500, 300, 700, 450], fill=(220, 20, 20, 255))
+        draw.rectangle([500, 450, 700, 600], fill=(10, 90, 220, 255))
+
+        token_num = re.compile(r'[-+]?(?:\d*\.\d+|\d+)')
+
+        for color_mode in ('monochrome', 'full'):
+            for full_img_flag in (False, True):
+                svg_out, stats, palette = trace_image_to_svg(
+                    img,
+                    color_mode=color_mode,
+                    n_colors=2,
+                    color='#112233',
+                    use_full_image=full_img_flag,
+                )
+                root = etree.fromstring(svg_out.encode('utf-8'))
+                paths = root.xpath('//*[local-name()="path"]')
+                self.assertGreaterEqual(len(paths), 1, f"No paths for {color_mode}, use_full_image={full_img_flag}")
+
+                for p in paths:
+                    # Transforms must be baked directly into d
+                    self.assertIsNone(p.get('transform'))
+                    d_str = p.get('d', '')
+                    nums = [float(v) for v in token_num.findall(d_str)]
+                    xs = nums[0::2]
+                    ys = nums[1::2]
+                    # Every shape lies in x ~ [490..710], y ~ [290..610]; must not collapse near 0 or span 0..900
+                    self.assertGreater(min(xs), 450.0, f"Path shifted/inverted to left edge in {color_mode}: {d_str[:80]}")
+                    self.assertGreater(min(ys), 250.0, f"Path shifted/inverted to top edge in {color_mode}: {d_str[:80]}")
+                    self.assertLess(max(xs), 750.0)
+                    self.assertLess(max(ys), 650.0)
+
+                if color_mode == 'full':
+                    # No black halo (#000000) generated from transparent/fringe border
+                    self.assertNotIn('#000000', stats['colors'])
+
+    def test_spec_13_executor_preserves_transparent_png_without_rembg(self):
+        """Uploading an already-transparent PNG to SVG skips destructive neural rembg and preserves alpha."""
+        from listimage.executor import _run_job_worker
+
+        owner = self._get_owner(self.client_a)
+        job = ImageJob.objects.create(
+            owner=owner,
+            kind=ImageJob.Kind.SVG,
+            status=ImageJob.Status.QUEUED,
+            params={'color_mode': 'full', 'n_colors': 4, 'use_full_image': False}
+        )
+        job.workspace_path.mkdir(parents=True, exist_ok=True)
+
+        img = Image.new('RGBA', (300, 300), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        draw.ellipse([100, 100, 220, 220], fill=(10, 100, 210, 255))
+        img.save(job.workspace_path / 'original.png', format='PNG')
+
+        with patch('listimage.services.process_initial_job') as mock_rembg:
+            _run_job_worker(str(job.id))
+            mock_rembg.assert_not_called()
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, ImageJob.Status.DONE)
+        self.assertTrue((job.workspace_path / 'cutout.png').exists())
+        self.assertTrue((job.workspace_path / 'output.svg').exists())
+
+        job.cleanup_files()
+        job.delete()
+
+    def test_spec_14_svg_wizard_js_and_preset_defaults(self):
+        """Verifies listimage_svg.js has no undefined symbol calls and svg_options renders preset defaults."""
+        js_path = Path(settings.BASE_DIR) / 'static' / 'listimage' / 'listimage_svg.js'
+        js_text = js_path.read_text(encoding='utf-8')
+        self.assertNotIn('syncPreviewWithCurrentPalette', js_text)
+        self.assertIn('PRESET_SLIDERS', js_text)
+
+        owner = self._get_owner(self.client_a)
+        job = ImageJob.objects.create(
+            owner=owner,
+            kind=ImageJob.Kind.SVG,
+            status=ImageJob.Status.DONE,
+            params={'preset': 'simple', 'color_mode': 'full', 'n_colors': 6}
+        )
+        res = self.client_a.get(reverse('listimage:svg_options', args=[job.id]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'value="16"')  # simple preset filter_speckle default
+        self.assertNotContains(res, 'block extra_js')
+
+        job.cleanup_files()
+        job.delete()
+
+    def test_spec_15_svg_preview_allows_sameorigin_framing(self):
+        """svg_preview must return X-Frame-Options: SAMEORIGIN so <object type='image/svg+xml'> is not blocked by global DENY."""
+        owner = self._get_owner(self.client_a)
+        job = ImageJob.objects.create(
+            owner=owner,
+            kind=ImageJob.Kind.SVG,
+            status=ImageJob.Status.DONE,
+            params={'svg_stats': {'viewBox': '0 0 800 400'}}
+        )
+        job.workspace_path.mkdir(parents=True, exist_ok=True)
+        (job.workspace_path / 'output.svg').write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400"><path d="M0,0 L10,10 Z" fill="#000"/></svg>',
+            encoding='utf-8'
+        )
+
+        res_preview = self.client_a.get(reverse('listimage:svg_preview', args=[job.id]))
+        self.assertEqual(res_preview.status_code, 200)
+        self.assertEqual(res_preview['Content-Type'], 'image/svg+xml')
+        self.assertEqual(res_preview['X-Content-Type-Options'], 'nosniff')
+        self.assertEqual(res_preview.get('X-Frame-Options', '').upper(), 'SAMEORIGIN')
+
+        res_opts = self.client_a.get(reverse('listimage:svg_options', args=[job.id]))
+        self.assertEqual(res_opts.status_code, 200)
+        self.assertContains(res_opts, 'id="liInitialViewBox" value="0 0 800 400"')
+
+        job.cleanup_files()
+        job.delete()
+
 
 

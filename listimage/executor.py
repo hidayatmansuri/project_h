@@ -189,13 +189,31 @@ def _run_job_worker(job_id_str: str) -> None:
             elif cutout_path.exists():
                 source_path = cutout_path
             else:
-                initial_params = process_initial_job(
-                    job_id=str(job.id),
-                    workspace_dir=job.workspace_path,
-                    params=job.params
-                )
-                job.params.update(initial_params)
-                source_path = cutout_path
+                import numpy as np
+                from PIL import Image
+                import shutil
+
+                already_transparent = False
+                if original_path.exists():
+                    with Image.open(original_path) as im:
+                        if 'A' in im.getbands():
+                            alpha = np.array(im.convert('RGBA'))[:, :, 3]
+                            if alpha.size > 0 and np.any(alpha > 128):
+                                border = np.concatenate([alpha[0, :], alpha[-1, :], alpha[:, 0], alpha[:, -1]])
+                                if np.mean(border <= 10) >= 0.25 and np.mean(alpha <= 10) >= 0.05:
+                                    already_transparent = True
+
+                if already_transparent:
+                    shutil.copy2(original_path, cutout_path)
+                    source_path = cutout_path
+                else:
+                    initial_params = process_initial_job(
+                        job_id=str(job.id),
+                        workspace_dir=job.workspace_path,
+                        params=job.params
+                    )
+                    job.params.update(initial_params)
+                    source_path = cutout_path
 
             if is_job_cancelled(job_id_str):
                 return

@@ -106,8 +106,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusHeading = document.getElementById('liSvgStatusHeading');
     const errorAlert = document.getElementById('liSvgErrorAlert');
     const errorMessage = document.getElementById('liSvgErrorMessage');
-    const svgObject = document.getElementById('liSvgObject');
     const svgViewport = document.getElementById('liSvgViewport');
+    const initVbEl = document.getElementById('liInitialViewBox');
+
+    let currentViewBoxAspect = 1.0;
+    let currentZoomSize = '512';
+
+    function updateAspectFromViewBoxStr(vbStr) {
+        if (!vbStr) return;
+        const parts = vbStr.trim().split(/[\s,]+/).map(Number);
+        if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+            currentViewBoxAspect = parts[2] / parts[3];
+        }
+    }
+    if (initVbEl && initVbEl.value) {
+        updateAspectFromViewBoxStr(initVbEl.value);
+    }
+
+    function getSvgObject() {
+        return document.getElementById('liSvgObject');
+    }
+
+    function applyObjectSizing(objEl) {
+        if (!objEl) return;
+        const aspect = currentViewBoxAspect > 0 ? currentViewBoxAspect : 1.0;
+        const wrapW = (svgViewport && svgViewport.clientWidth > 80) ? (svgViewport.clientWidth - 48) : 560;
+        let targetW;
+        if (currentZoomSize === 'fit') {
+            targetW = Math.min(wrapW, Math.round(560 * aspect));
+            objEl.style.maxWidth = '100%';
+        } else {
+            const num = parseInt(currentZoomSize, 10) || 512;
+            targetW = (num === 1024) ? num : Math.min(num, wrapW);
+            objEl.style.maxWidth = (num === 1024) ? 'none' : '100%';
+        }
+        const targetH = Math.max(1, Math.round(targetW / aspect));
+        objEl.style.width = `${targetW}px`;
+        objEl.style.height = `${targetH}px`;
+        objEl.style.aspectRatio = `${aspect}`;
+    }
 
     // Stats elements
     const statPaths = document.getElementById('liStatPaths');
@@ -260,13 +297,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Preset switching
+    // Preset switching (also synchronizes Advanced sliders to preset defaults)
+    const PRESET_SLIDERS = {
+        simple: { filter_speckle: 16, corner_threshold: 60, splice_threshold: 45 },
+        balanced: { filter_speckle: 4, corner_threshold: 50, splice_threshold: 45 },
+        detailed: { filter_speckle: 1, corner_threshold: 30, splice_threshold: 40 }
+    };
+
     presetCards.forEach(card => {
         card.addEventListener('click', () => {
             presetCards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
+            const presetName = card.dataset.preset;
             if (presetInput) {
-                presetInput.value = card.dataset.preset;
+                presetInput.value = presetName;
+            }
+            const defaults = PRESET_SLIDERS[presetName];
+            if (defaults) {
+                if (filterSpeckleInput) {
+                    filterSpeckleInput.value = defaults.filter_speckle;
+                    if (filterSpeckleVal) filterSpeckleVal.textContent = `${defaults.filter_speckle} px`;
+                }
+                if (cornerThresholdInput) {
+                    cornerThresholdInput.value = defaults.corner_threshold;
+                    if (cornerThresholdVal) cornerThresholdVal.textContent = `${defaults.corner_threshold}°`;
+                }
+                if (spliceThresholdInput) {
+                    spliceThresholdInput.value = defaults.splice_threshold;
+                    if (spliceThresholdVal) spliceThresholdVal.textContent = `${defaults.splice_threshold}°`;
+                }
             }
         });
     });
@@ -277,16 +336,16 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             sizeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const sz = btn.dataset.size;
-            if (!svgObject) return;
-            if (sz === 'fit') {
-                svgObject.style.width = '100%';
-                svgObject.style.height = 'auto';
-            } else {
-                svgObject.style.width = `${sz}px`;
-                svgObject.style.height = `${sz}px`;
-            }
+            currentZoomSize = btn.dataset.size;
+            applyObjectSizing(getSvgObject());
         });
+    });
+
+    window.addEventListener('resize', () => {
+        const obj = getSvgObject();
+        if (obj && obj.style.display !== 'none') {
+            applyObjectSizing(obj);
+        }
     });
 
     // Viewport Background Switcher
@@ -307,10 +366,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
 
     function attachSvgEventListeners() {
-        if (!svgObject) return;
+        const currentObj = getSvgObject();
+        if (!currentObj) return;
         try {
-            const svgDoc = svgObject.contentDocument;
-            if (!svgDoc) return;
+            const svgDoc = currentObj.contentDocument;
+            if (!svgDoc || !svgDoc.documentElement) return;
+
+            // Match object aspect ratio cleanly to intrinsic SVG viewBox
+            const vb = svgDoc.documentElement.getAttribute('viewBox');
+            if (vb) {
+                updateAspectFromViewBoxStr(vb);
+                applyObjectSizing(currentObj);
+            }
 
             // Inject interactive style into preview SVG
             let style = svgDoc.getElementById('liPreviewInteractiveStyle');
@@ -344,23 +411,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // Re-apply any active paletteMap
-            updateSvgDomFills();
+            // Re-apply user palette edits only if any were explicitly made
+            if (Object.keys(paletteMap).length > 0) {
+                updateSvgDomFills();
+            }
         } catch (e) {
             console.warn("Could not attach click listeners to SVG object:", e);
         }
     }
 
-    if (svgObject) {
-        svgObject.addEventListener('load', attachSvgEventListeners);
-        // Try immediately in case it is already loaded
+    const initialSvgObj = getSvgObject();
+    if (initialSvgObj && initialSvgObj.getAttribute('data')) {
+        applyObjectSizing(initialSvgObj);
+        initialSvgObj.addEventListener('load', attachSvgEventListeners);
         attachSvgEventListeners();
     }
 
     function updateSvgDomFills() {
-        if (!svgObject) return;
+        const currentObj = getSvgObject();
+        if (!currentObj) return;
         try {
-            const svgDoc = svgObject.contentDocument;
+            const svgDoc = currentObj.contentDocument;
             if (!svgDoc) return;
 
             const paths = svgDoc.querySelectorAll('[data-palette-index]');
@@ -397,7 +468,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Highlight paths in SVG object
         try {
-            const svgDoc = svgObject ? svgObject.contentDocument : null;
+            const currentObj = getSvgObject();
+            const svgDoc = currentObj ? currentObj.contentDocument : null;
             if (svgDoc) {
                 const paths = svgDoc.querySelectorAll('[data-palette-index]');
                 paths.forEach(p => {
@@ -586,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reTraceBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Vectorizing...';
         }
 
-        pollInterval = setInterval(async () => {
+        async function pollOnce() {
             try {
                 const res = await fetch(statusUrl, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -605,32 +677,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         reTraceBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> Update Vector (Trace)';
                     }
 
-                    // Hide placeholder and reload SVG object
-                    const placeholder = document.getElementById('liSvgPlaceholder');
-                    if (placeholder) placeholder.style.display = 'none';
-
-                    let currentSvgObj = document.getElementById('liSvgObject');
-                    if (!currentSvgObj && svgViewport) {
-                        currentSvgObj = document.createElement('object');
-                        currentSvgObj.id = 'liSvgObject';
-                        currentSvgObj.type = 'image/svg+xml';
-                        currentSvgObj.className = 'li-svg-object';
-                        currentSvgObj.style.width = '512px';
-                        currentSvgObj.style.height = '512px';
-                        svgViewport.appendChild(currentSvgObj);
-                    }
-                    if (currentSvgObj) {
-                        currentSvgObj.style.display = 'block';
-                        const timestamp = new Date().getTime();
-                        currentSvgObj.data = `${previewUrl}?t=${timestamp}`;
-                        currentSvgObj.onload = () => {
-                            attachSvgEventListeners();
-                            syncPreviewWithCurrentPalette();
-                        };
-                    }
-
-                    // Update stats
+                    // Update stats & viewBox aspect first so sizing is exact on creation
                     const stats = data.svg_stats || {};
+                    if (stats.viewBox) {
+                        updateAspectFromViewBoxStr(stats.viewBox);
+                    }
                     if (statPaths) statPaths.textContent = stats.path_count || 0;
                     if (statColors) statColors.textContent = stats.color_count || 0;
                     if (statSize) statSize.textContent = stats.file_size_formatted || '0 KB';
@@ -641,6 +692,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Re-render palette swatches if provided
                     if (data.palette && Array.isArray(data.palette) && data.palette.length > 0) {
                         renderPaletteSwatches(data.palette);
+                    }
+
+                    // Hide placeholder and mount a fresh <object> node for reliable Chromium reload
+                    const placeholder = document.getElementById('liSvgPlaceholder');
+                    if (placeholder) placeholder.style.display = 'none';
+
+                    const basePreviewUrl = data.svg_url || previewUrl;
+                    const timestamp = new Date().getTime();
+                    const bustedUrl = `${basePreviewUrl}?t=${timestamp}`;
+
+                    if (svgViewport) {
+                        const oldObj = document.getElementById('liSvgObject');
+                        const freshObj = document.createElement('object');
+                        freshObj.id = 'liSvgObject';
+                        freshObj.type = 'image/svg+xml';
+                        freshObj.className = 'li-svg-object';
+                        freshObj.setAttribute('aria-label', 'Vector Preview');
+
+                        const fallbackImg = document.createElement('img');
+                        fallbackImg.src = bustedUrl;
+                        fallbackImg.alt = 'Vector Preview';
+                        fallbackImg.style.maxWidth = '100%';
+                        fallbackImg.style.height = 'auto';
+                        freshObj.appendChild(fallbackImg);
+
+                        applyObjectSizing(freshObj);
+                        freshObj.addEventListener('load', attachSvgEventListeners);
+                        freshObj.data = bustedUrl;
+
+                        if (oldObj) {
+                            svgViewport.replaceChild(freshObj, oldObj);
+                        } else {
+                            svgViewport.appendChild(freshObj);
+                        }
                     }
                 } else if (data.status === 'failed') {
                     clearInterval(pollInterval);
@@ -658,7 +743,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error("Status polling error:", err);
             }
-        }, 1000);
+        }
+
+        pollInterval = setInterval(pollOnce, 800);
+        setTimeout(pollOnce, 150);
     }
 
     const initialStatus = document.getElementById('liJobStatus').value;

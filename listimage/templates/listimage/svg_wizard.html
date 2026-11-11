@@ -112,9 +112,10 @@
     <input type="hidden" id="liCleanupUrl" value="{{ cleanup_url }}">
     <input type="hidden" id="liRecolorUrl" value="{{ recolor_url }}">
     <input type="hidden" id="liMaxSvgBytes" value="{{ max_svg_bytes }}">
+    <input type="hidden" id="liInitialViewBox" value="{{ svg_stats.viewBox|default:'' }}">
 
     <!-- Processing Status Banner (Visible when queued or processing) -->
-    <div id="liSvgProcessingBanner" class="li-alert li-alert-info" style="{% if job.status == 'done' %}display: none;{% endif %} margin-bottom: 1.25rem;">
+    <div id="liSvgProcessingBanner" class="li-alert li-alert-info" style="{% if job.status == 'done' or job.status == 'failed' %}display: none;{% endif %} margin-bottom: 1.25rem;">
         <i class="fa-solid fa-spinner fa-spin"></i>
         <div style="flex: 1;">
             <strong id="liSvgStatusHeading">Generating Vector Paths...</strong>
@@ -271,32 +272,32 @@
                     <div class="li-svg-field">
                         <label class="li-svg-label" for="liFilterSpeckle">
                             <span>Filter Speckles (Min Area)</span>
-                            <span id="liFilterSpeckleVal" class="li-svg-range-val">4 px</span>
+                            <span id="liFilterSpeckleVal" class="li-svg-range-val">{{ adv.filter_speckle|default:4 }} px</span>
                         </label>
-                        <input type="range" id="liFilterSpeckle" class="li-svg-range" min="1" max="64" value="4">
+                        <input type="range" id="liFilterSpeckle" class="li-svg-range" min="1" max="64" value="{{ adv.filter_speckle|default:4 }}">
                     </div>
 
                     <div class="li-svg-field">
                         <label class="li-svg-label" for="liCornerThreshold">
                             <span>Corner Sharpness</span>
-                            <span id="liCornerThresholdVal" class="li-svg-range-val">50&deg;</span>
+                            <span id="liCornerThresholdVal" class="li-svg-range-val">{{ adv.corner_threshold|default:50 }}&deg;</span>
                         </label>
-                        <input type="range" id="liCornerThreshold" class="li-svg-range" min="10" max="90" value="50">
+                        <input type="range" id="liCornerThreshold" class="li-svg-range" min="10" max="90" value="{{ adv.corner_threshold|default:50 }}">
                     </div>
 
                     <div class="li-svg-field">
                         <label class="li-svg-label" for="liSpliceThreshold">
                             <span>Splice Angle</span>
-                            <span id="liSpliceThresholdVal" class="li-svg-range-val">45&deg;</span>
+                            <span id="liSpliceThresholdVal" class="li-svg-range-val">{{ adv.splice_threshold|default:45 }}&deg;</span>
                         </label>
-                        <input type="range" id="liSpliceThreshold" class="li-svg-range" min="10" max="80" value="45">
+                        <input type="range" id="liSpliceThreshold" class="li-svg-range" min="10" max="80" value="{{ adv.splice_threshold|default:45 }}">
                     </div>
 
                     <div class="li-svg-field">
                         <label class="li-svg-label" for="liCurveMode">Path Interpolation</label>
                         <select id="liCurveMode" class="li-select" style="font-size: 0.85rem; padding: 0.35rem 0.5rem;">
-                            <option value="spline" selected>Cubic Bézier Splines (Smooth)</option>
-                            <option value="polygon">Polygon Vertices (Geometric / Sharp)</option>
+                            <option value="spline" {% if params.mode != 'polygon' %}selected{% endif %}>Cubic Bézier Splines (Smooth)</option>
+                            <option value="polygon" {% if params.mode == 'polygon' %}selected{% endif %}>Polygon Vertices (Geometric / Sharp)</option>
                         </select>
                     </div>
                 </div>
@@ -346,7 +347,7 @@
 
                 <!-- Vector Stage Viewport -->
                 <div class="li-svg-viewport-wrapper bg-checker" id="liSvgViewport">
-                    <object id="liSvgObject" type="image/svg+xml" {% if has_svg %}data="{{ preview_url }}"{% endif %} class="li-svg-object" style="width: 512px; height: 512px; {% if not has_svg %}display: none;{% endif %}" aria-label="Vector Preview"></object>
+                    <object id="liSvgObject" type="image/svg+xml" {% if has_svg %}data="{{ preview_url }}"{% endif %} class="li-svg-object" style="width: 512px; {% if not has_svg %}display: none;{% endif %}" aria-label="Vector Preview">{% if has_svg %}<img src="{{ preview_url }}" alt="Vector Preview" style="max-width: 100%; height: auto;">{% endif %}</object>
                     <div id="liSvgPlaceholder" style="{% if has_svg %}display: none;{% endif %} text-align: center; color: var(--li-muted); padding: 3rem;">
                         <i class="fa-solid fa-bezier-curve" style="font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.6;"></i>
                         <div>Vector output will appear here once tracing finishes.</div>

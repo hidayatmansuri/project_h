@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import cv2
 import numpy as np
 from PIL import Image, ImageChops, ImageFilter, ImageOps
+from scipy.ndimage import distance_transform_edt
 from django.conf import settings
 from lxml import etree
 
@@ -133,39 +134,99 @@ def extract_monochrome_mask(
 ) -> np.ndarray:
     """
     Extracts a binary 0/255 mask for monochrome tracing:
-    - 'silhouette': traces foreground alpha mask (or luminance threshold if use_full_image).
+    - 'silhouette': traces foreground alpha mask (or luminance threshold if opaque + use_full_image).
     - 'detail': extracts internal edges / luminance features inside the foreground object.
     """
     arr = np.array(rgba_image)
-    h, w = arr.shape[:2]
     alpha = arr[:, :, 3]
+    trans_mask = alpha <= 128
+    has_transparency = float(np.mean(trans_mask)) > 0.02
 
     if sub_option == 'silhouette':
-        if use_full_image:
-            # Grayscale thresholding of full image
+        if use_full_image and not has_transparency:
+            # Grayscale thresholding of opaque full image (e.g. logo on white background)
             gray = cv2.cvtColor(arr[:, :, :3], cv2.COLOR_RGB2GRAY)
             _, binary = cv2.threshold(gray, detail_threshold, 255, cv2.THRESH_BINARY_INV)
         else:
-            # Alpha silhouette of the cutout
+            # Alpha silhouette of the cutout or transparent PNG
             _, binary = cv2.threshold(alpha, 128, 255, cv2.THRESH_BINARY)
         return binary
 
     # 'detail' mode: inner shapes and lines
     gray = cv2.cvtColor(arr[:, :, :3], cv2.COLOR_RGB2GRAY)
-    
-    if use_full_image:
-        thresh_type = cv2.THRESH_BINARY if invert_detail else cv2.THRESH_BINARY_INV
-        _, binary = cv2.threshold(gray, detail_threshold, 255, thresh_type)
-        return binary
-
-    # Only include pixels that are inside the foreground mask
-    foreground_mask = alpha > 128
     thresh_type = cv2.THRESH_BINARY if invert_detail else cv2.THRESH_BINARY_INV
     _, binary = cv2.threshold(gray, detail_threshold, 255, thresh_type)
-    
-    # Mask out transparent background completely
-    binary[~foreground_mask] = 0
+
+    # Always mask out transparent background completely (even in use_full_image mode)
+    if not use_full_image or np.any(trans_mask):
+        binary[trans_mask] = 0
     return binary
+
+
+_SVG_TOKEN_RE = re.compile(r'[A-Za-z]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?')
+_TRANSLATE_RE = re.compile(r'^\s*translate\(\s*([-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?)\s*(?:[,\s]\s*([-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?))?\s*\)\s*$')
+
+
+def _parse_svg_translate(transform_str: str) -> Optional[Tuple[float, float]]:
+    """Extracts (tx, ty) if transform_str is a pure translate(...) expression."""
+    if not transform_str:
+        return None
+    m = _TRANSLATE_RE.match(transform_str)
+    if not m:
+        return None
+    tx = float(m.group(1))
+    ty = float(m.group(2)) if m.group(2) is not None else 0.0
+    return (tx, ty)
+
+
+def translate_svg_path_data(
+    d_str: str,
+    tx: float,
+    ty: float,
+    precision: int = 4
+) -> str:
+    """
+    Bakes a 2D translation (tx, ty) directly into absolute SVG path commands
+    so paths sit in true canvas coordinates without relying on per-path transforms.
+    """
+    if not d_str or (abs(tx) < 1e-9 and abs(ty) < 1e-9):
+        return d_str
+
+    tokens = _SVG_TOKEN_RE.findall(d_str)
+    out: List[str] = []
+    cmd = ''
+    arg_i = 0
+
+    def fmt(val: float) -> str:
+        s = f"{val:.{precision}f}".rstrip('0').rstrip('.')
+        return '0' if (s == '' or s == '-0') else s
+
+    for tok in tokens:
+        if tok.isalpha():
+            cmd = tok
+            arg_i = 0
+            out.append(cmd)
+            continue
+        val = float(tok)
+        c_upper = cmd.upper()
+        if cmd.islower():
+            # Only an initial relative 'm' in a path acts as absolute M for its first pair
+            if cmd == 'm' and len(out) <= 2 and arg_i < 2:
+                val += tx if (arg_i % 2 == 0) else ty
+            out.append(fmt(val))
+        else:
+            if c_upper == 'H':
+                out.append(fmt(val + tx))
+            elif c_upper == 'V':
+                out.append(fmt(val + ty))
+            elif c_upper == 'A':
+                mod = arg_i % 7
+                out.append(fmt(val + (tx if mod == 5 else (ty if mod == 6 else 0.0))))
+            else:
+                out.append(fmt(val + (tx if (arg_i % 2 == 0) else ty)))
+        arg_i += 1
+
+    return ' '.join(out)
 
 
 def points_to_svg_path_data(
@@ -311,9 +372,9 @@ def trace_binary_mask_to_paths(
         if area < filter_speckle:
             continue
 
-        # Simplify outer contour
+        # Simplify outer contour (cap epsilon in px so large shapes retain sharp corners)
         arc_len = cv2.arcLength(contour, True)
-        epsilon = max(0.5, arc_len * epsilon_factor)
+        epsilon = min(2.5, max(0.5, arc_len * epsilon_factor))
         approx_outer = cv2.approxPolyDP(contour, epsilon, True).reshape(-1, 2)
         if len(approx_outer) < 3:
             continue
@@ -328,7 +389,7 @@ def trace_binary_mask_to_paths(
             child_area = cv2.contourArea(child_contour)
             if child_area >= filter_speckle // 2:
                 child_len = cv2.arcLength(child_contour, True)
-                child_eps = max(0.5, child_len * epsilon_factor)
+                child_eps = min(2.0, max(0.5, child_len * epsilon_factor))
                 approx_child = cv2.approxPolyDP(child_contour, child_eps, True).reshape(-1, 2)
                 if len(approx_child) >= 3:
                     d_child = points_to_svg_path_data(approx_child, mode=mode, precision=precision)
@@ -471,6 +532,8 @@ def build_svg_document(
             path_el.attrib['fill-rule'] = p['fill_rule']
         if p.get('palette_index') is not None:
             path_el.attrib['data-palette-index'] = str(p['palette_index'])
+        if p.get('transform'):
+            path_el.attrib['transform'] = p['transform']
 
     raw_svg = etree.tostring(root, encoding='utf-8', pretty_print=True).decode('utf-8')
     return sanitize_svg(raw_svg)
@@ -517,6 +580,90 @@ def get_svg_stats(svg_content: str) -> Dict[str, Any]:
         }
 
 
+def _run_vtracer_and_extract_paths(
+    rgba_array: np.ndarray,
+    colormode: str,
+    preset: str = 'balanced',
+    mode: str = 'spline',
+    hierarchical: str = 'stacked',
+    custom_params: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Runs vtracer on an in-memory RGBA numpy array, cleans up temp files, bakes
+    per-path translate(tx, ty) transforms directly into canvas coordinates,
+    and returns extracted path dictionaries.
+    """
+    import tempfile
+    import vtracer
+
+    preset_params = PRESETS.get(preset, PRESETS['balanced']).copy()
+    if custom_params:
+        preset_params.update({k: v for k, v in custom_params.items() if v is not None})
+
+    precision = int(preset_params.get('path_precision', 4))
+    tmp_in_path = None
+    tmp_out_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_in:
+            tmp_in_path = tmp_in.name
+            Image.fromarray(rgba_array, mode='RGBA').save(tmp_in_path, format='PNG')
+
+        with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as tmp_out:
+            tmp_out_path = tmp_out.name
+
+        vtracer.convert_image_to_svg_py(
+            image_path=tmp_in_path,
+            out_path=tmp_out_path,
+            colormode=colormode,
+            hierarchical=hierarchical,
+            mode=mode,
+            filter_speckle=int(preset_params.get('filter_speckle', 4)),
+            color_precision=int(preset_params.get('color_precision', 6)),
+            layer_difference=int(preset_params.get('layer_difference', 16)),
+            corner_threshold=int(preset_params.get('corner_threshold', 50)),
+            length_threshold=float(preset_params.get('length_threshold', 4.0)),
+            splice_threshold=int(preset_params.get('splice_threshold', 45)),
+            path_precision=precision,
+        )
+
+        with open(tmp_out_path, 'r', encoding='utf-8') as f:
+            vtracer_svg = f.read()
+    finally:
+        if tmp_in_path:
+            Path(tmp_in_path).unlink(missing_ok=True)
+        if tmp_out_path:
+            Path(tmp_out_path).unlink(missing_ok=True)
+
+    parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False, no_network=True)
+    vroot = etree.fromstring(vtracer_svg.encode('utf-8'), parser=parser)
+    extracted: List[Dict[str, Any]] = []
+
+    for p_el in vroot.iter(f"{{{SVG_NS}}}path"):
+        d_val = p_el.attrib.get('d', '').strip()
+        f_val = p_el.attrib.get('fill', '').strip()
+        if not d_val:
+            continue
+
+        raw_transform = p_el.attrib.get('transform', '').strip()
+        parsed_translate = _parse_svg_translate(raw_transform)
+        remaining_transform = ''
+        if parsed_translate is not None:
+            d_val = translate_svg_path_data(d_val, parsed_translate[0], parsed_translate[1], precision=precision)
+        elif raw_transform:
+            remaining_transform = raw_transform
+
+        p_item: Dict[str, Any] = {
+            'd': d_val,
+            'fill': f_val,
+            'fill_rule': p_el.attrib.get('fill-rule', 'evenodd'),
+        }
+        if remaining_transform:
+            p_item['transform'] = remaining_transform
+        extracted.append(p_item)
+
+    return extracted
+
+
 def trace_monochrome(
     image_input: Union[Path, str, Image.Image],
     sub_option: str = 'silhouette',
@@ -540,7 +687,7 @@ def trace_monochrome(
     prep_img = prepare_trace_source(image_input, max_dim=MAX_TRACE_PX)
     w, h = prep_img.size
 
-    # 2. Extract monochrome binary mask
+    # 2. Extract monochrome binary mask (255 = foreground, 0 = background)
     binary_mask = extract_monochrome_mask(
         prep_img,
         sub_option=sub_option,
@@ -548,71 +695,37 @@ def trace_monochrome(
         use_full_image=use_full_image
     )
 
-    # 3. Vectorize paths
+    # 3. Vectorize paths (only if foreground pixels exist)
     paths: List[Dict[str, Any]] = []
+    fg_bool = binary_mask > 127
 
-    # Check if vtracer is loadable
-    if is_vtracer_available():
+    if np.any(fg_bool) and is_vtracer_available():
         try:
-            import tempfile
-            import vtracer
+            # vtracer(colormode='binary') traces black foreground on white background
+            bin_rgba = np.empty((h, w, 4), dtype=np.uint8)
+            bin_rgba[fg_bool] = [0, 0, 0, 255]
+            bin_rgba[~fg_bool] = [255, 255, 255, 255]
 
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_in:
-                tmp_in_path = tmp_in.name
-                # Save binary mask as RGBA for vtracer
-                mask_rgba = Image.fromarray(binary_mask).convert('RGBA')
-                # Make white transparent so vtracer traces only the black foreground
-                mask_rgba.save(tmp_in_path, format='PNG')
-
-            with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as tmp_out:
-                tmp_out_path = tmp_out.name
-
-            preset_params = PRESETS.get(preset, PRESETS['balanced']).copy()
-            if custom_params:
-                preset_params.update(custom_params)
-
-            vtracer.convert_image_to_svg_py(
-                image_path=tmp_in_path,
-                out_path=tmp_out_path,
+            raw_paths = _run_vtracer_and_extract_paths(
+                rgba_array=bin_rgba,
                 colormode='binary',
-                hierarchical=hierarchical,
+                preset=preset,
                 mode=mode,
-                filter_speckle=preset_params.get('filter_speckle', 4),
-                color_precision=preset_params.get('color_precision', 6),
-                layer_difference=preset_params.get('layer_difference', 16),
-                corner_threshold=preset_params.get('corner_threshold', 50),
-                length_threshold=preset_params.get('length_threshold', 4.0),
-                splice_threshold=preset_params.get('splice_threshold', 45),
-                path_precision=preset_params.get('path_precision', 4),
+                hierarchical=hierarchical,
+                custom_params=custom_params,
             )
-
-            with open(tmp_out_path, 'r', encoding='utf-8') as f:
-                vtracer_svg = f.read()
-
-            Path(tmp_in_path).unlink(missing_ok=True)
-            Path(tmp_out_path).unlink(missing_ok=True)
-
-            # Parse vtracer paths and recolor
-            parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False, no_network=True)
-            vroot = etree.fromstring(vtracer_svg.encode('utf-8'), parser=parser)
-            for p_el in vroot.iter(f"{{{SVG_NS}}}path"):
-                d_val = p_el.attrib.get('d', '')
-                f_val = p_el.attrib.get('fill', '').lower()
-                # Exclude background box if traced
+            for p_item in raw_paths:
+                f_val = p_item.get('fill', '').lower()
                 if f_val in ('#ffffff', 'white', 'rgb(255,255,255)'):
                     continue
-                if d_val:
-                    paths.append({
-                        'd': d_val,
-                        'fill': color,
-                        'fill_rule': p_el.attrib.get('fill-rule', 'evenodd'),
-                    })
+                p_item['fill'] = color
+                paths.append(p_item)
         except Exception as e:
             logger.warning("vtracer execution failed (%s), falling back to OpenCV Bézier vectorizer", e)
             paths = []
 
-    # If vtracer was unavailable or returned no paths, use OpenCV Bézier vectorizer
-    if not paths:
+    # Fallback to OpenCV Bézier vectorizer if needed
+    if np.any(fg_bool) and not paths:
         paths = trace_binary_mask_to_paths(
             binary_mask=binary_mask,
             mode=mode,
@@ -642,7 +755,9 @@ def quantize_palette_kmeans(
     use_full_image: bool = False
 ) -> Tuple[np.ndarray, List[str], np.ndarray]:
     """
-    Quantizes foreground colors into n_colors (2 to 16) using OpenCV K-Means clustering.
+    Quantizes foreground colors into n_colors (2 to 16) using OpenCV K-Means clustering:
+    - Always respects existing transparent pixels (alpha <= 128) so background never becomes black.
+    - De-fringes semi-transparent anti-aliased borders from pure interior pixels to eliminate halo artifacts.
     Returns:
     - quantized_indices: 2D np.ndarray (H, W) with palette indices (0 to K-1) or -1 for background.
     - palette: List of hex color strings (e.g. ['#112233', ...]) ordered by frequency (most dominant first).
@@ -653,21 +768,45 @@ def quantize_palette_kmeans(
     h, w = arr.shape[:2]
     alpha = arr[:, :, 3]
 
-    if use_full_image:
+    has_transparency = np.any(alpha <= 128)
+    if use_full_image and not has_transparency:
         fg_mask = np.ones((h, w), dtype=bool)
     else:
         fg_mask = alpha > 128
 
-    fg_pixels = arr[fg_mask, :3]
-    if len(fg_pixels) == 0:
+    if not np.any(fg_mask):
         palette = ['#000000']
         indices = np.full((h, w), -1, dtype=np.int32)
         quant_rgb = np.zeros((h, w, 3), dtype=np.uint8)
         return indices, palette, quant_rgb
 
-    unique_pixels = np.unique(fg_pixels, axis=0)
-    if len(unique_pixels) == 1:
-        c = unique_pixels[0]
+    # Identify pure core interior pixels free of anti-aliased edge blending
+    core_mask = fg_mask & (alpha >= 248)
+    if np.any(core_mask):
+        eroded = cv2.erode(
+            core_mask.astype(np.uint8),
+            cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+        ) > 0
+        if eroded.sum() >= max(100, int(fg_mask.sum() * 0.25)):
+            sample_mask = eroded
+        elif core_mask.sum() >= max(50, int(fg_mask.sum() * 0.1)):
+            sample_mask = core_mask
+        else:
+            sample_mask = fg_mask
+    else:
+        sample_mask = fg_mask
+
+    # Propagate nearest core interior pixel RGB outward onto anti-aliased fringe & thin tips
+    clean_rgb = arr[:, :, :3].copy()
+    fringe = fg_mask & ~sample_mask
+    if np.any(fringe) and np.any(sample_mask):
+        nearest_yx = distance_transform_edt(~sample_mask, return_distances=False, return_indices=True)
+        clean_rgb[fringe] = arr[nearest_yx[0][fringe], nearest_yx[1][fringe], :3]
+
+    core_pixels = clean_rgb[sample_mask]
+    unique_core = np.unique(core_pixels, axis=0)
+    if len(unique_core) == 1:
+        c = unique_core[0]
         palette = [rgb_to_hex(c[0], c[1], c[2])]
         quantized_indices = np.full((h, w), -1, dtype=np.int32)
         quantized_indices[fg_mask] = 0
@@ -675,44 +814,67 @@ def quantize_palette_kmeans(
         quantized_rgb[fg_mask] = c
         return quantized_indices, palette, quantized_rgb
 
-    actual_k = min(n_colors, len(unique_pixels))
-    data = fg_pixels.astype(np.float32)
+    # Gently smooth compression/gradient grain before clustering when colors exceed palette slots
+    if len(unique_core) > n_colors:
+        clean_rgb = cv2.bilateralFilter(clean_rgb, d=9, sigmaColor=18, sigmaSpace=9)
+        core_pixels = clean_rgb[sample_mask]
+        unique_core = np.unique(core_pixels, axis=0)
 
-    # Use OpenCV kmeans
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.5)
-    compactness, labels, centers = cv2.kmeans(
-        data,
+    actual_k = min(n_colors, len(unique_core))
+    if len(core_pixels) > 250000:
+        # Subsample deterministically for fast K-Means convergence on ultra-large images
+        step = max(1, len(core_pixels) // 250000)
+        kmeans_input = core_pixels[::step].astype(np.float32)
+    else:
+        kmeans_input = core_pixels.astype(np.float32)
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 25, 0.5)
+    _, _, centers = cv2.kmeans(
+        kmeans_input,
         actual_k,
         None,
         criteria,
         10,
         cv2.KMEANS_PP_CENTERS
     )
+    centers_f32 = centers.astype(np.float32)
+    centers_u8 = np.uint8(np.clip(centers_f32, 0, 255))
 
-    labels = labels.flatten()
-    centers = np.uint8(np.clip(centers, 0, 255))
+    # Map all foreground pixels to their nearest centroid
+    all_fg = clean_rgb[fg_mask].astype(np.float32)
+    nearest_raw = ((all_fg[:, None, :] - centers_f32[None, :, :]) ** 2).sum(axis=2).argmin(axis=1)
 
-    # Calculate cluster sizes to sort colors by frequency/dominance
-    counts = np.bincount(labels, minlength=actual_k)
-    sorted_order = np.argsort(-counts)
+    # Interior-only 5x5 median pass suppresses single-pixel speckles along gradients without blunting thin tips
+    if len(unique_core) > n_colors:
+        q_rgb_tmp = np.zeros((h, w, 3), dtype=np.uint8)
+        q_rgb_tmp[fg_mask] = centers_u8[nearest_raw]
+        med_rgb = cv2.medianBlur(q_rgb_tmp, 5)
+        inner_safe = cv2.erode(fg_mask.astype(np.uint8), np.ones((5, 5), dtype=np.uint8)) > 0
+        q_rgb_tmp[inner_safe] = med_rgb[inner_safe]
+        all_fg_final = q_rgb_tmp[fg_mask].astype(np.float32)
+        nearest_final = ((all_fg_final[:, None, :] - centers_f32[None, :, :]) ** 2).sum(axis=2).argmin(axis=1)
+    else:
+        nearest_final = nearest_raw
 
-    # Remap old labels to sorted indices
-    label_remap = np.zeros(actual_k, dtype=np.int32)
+    # Sort palette descending by pixel dominance in foreground
+    counts = np.bincount(nearest_final, minlength=actual_k)
+    sorted_order = [i for i in np.argsort(-counts) if counts[i] > 0]
+    if not sorted_order:
+        sorted_order = list(range(actual_k))
+
+    label_remap = np.full(actual_k, 0, dtype=np.int32)
     palette: List[str] = []
     for new_idx, old_idx in enumerate(sorted_order):
         label_remap[old_idx] = new_idx
-        c = centers[old_idx]
+        c = centers_u8[old_idx]
         palette.append(rgb_to_hex(c[0], c[1], c[2]))
 
-    # Construct quantized indexed map and RGB
     quantized_indices = np.full((h, w), -1, dtype=np.int32)
-    remapped_fg_labels = label_remap[labels]
-    quantized_indices[fg_mask] = remapped_fg_labels
+    quantized_indices[fg_mask] = label_remap[nearest_final]
 
     quantized_rgb = np.zeros((h, w, 3), dtype=np.uint8)
     for idx, hex_color in enumerate(palette):
-        color_mask = quantized_indices == idx
-        quantized_rgb[color_mask] = hex_to_rgb(hex_color)
+        quantized_rgb[quantized_indices == idx] = hex_to_rgb(hex_color)
 
     return quantized_indices, palette, quantized_rgb
 
@@ -805,68 +967,38 @@ def trace_full_color(
     )
 
     paths: List[Dict[str, Any]] = []
+    fg_mask = quant_indices >= 0
 
-    if is_vtracer_available():
+    if np.any(fg_mask) and is_vtracer_available():
         try:
-            import tempfile
-            import vtracer
+            # Build crisp-alpha RGBA input (transparent bg with white fill so zero black fringe occurs)
+            q_rgba = np.empty((h, w, 4), dtype=np.uint8)
+            q_rgba[~fg_mask] = [255, 255, 255, 0]
+            q_rgba[fg_mask, :3] = quant_rgb[fg_mask]
+            q_rgba[fg_mask, 3] = 255
 
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_in:
-                tmp_in_path = tmp_in.name
-                alpha_channel = np.array(prep_img)[:, :, 3] if not use_full_image else np.full((h, w), 255, dtype=np.uint8)
-                quant_rgba = Image.fromarray(np.dstack([quant_rgb, alpha_channel]), mode='RGBA')
-                quant_rgba.save(tmp_in_path, format='PNG')
-
-            with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as tmp_out:
-                tmp_out_path = tmp_out.name
-
-            preset_params = PRESETS.get(preset, PRESETS['balanced']).copy()
-            if custom_params:
-                preset_params.update(custom_params)
-
-            vtracer.convert_image_to_svg_py(
-                image_path=tmp_in_path,
-                out_path=tmp_out_path,
+            raw_paths = _run_vtracer_and_extract_paths(
+                rgba_array=q_rgba,
                 colormode='color',
-                hierarchical=hierarchical,
+                preset=preset,
                 mode=mode,
-                filter_speckle=preset_params.get('filter_speckle', 4),
-                color_precision=preset_params.get('color_precision', 6),
-                layer_difference=preset_params.get('layer_difference', 16),
-                corner_threshold=preset_params.get('corner_threshold', 50),
-                length_threshold=preset_params.get('length_threshold', 4.0),
-                splice_threshold=preset_params.get('splice_threshold', 45),
-                path_precision=preset_params.get('path_precision', 4),
+                hierarchical=hierarchical,
+                custom_params=custom_params,
             )
-
-            with open(tmp_out_path, 'r', encoding='utf-8') as f:
-                vtracer_svg = f.read()
-
-            Path(tmp_in_path).unlink(missing_ok=True)
-            Path(tmp_out_path).unlink(missing_ok=True)
-
-            # Parse vtracer paths and assign data-palette-index
-            parser = etree.XMLParser(remove_blank_text=True, resolve_entities=False, no_network=True)
-            vroot = etree.fromstring(vtracer_svg.encode('utf-8'), parser=parser)
-            for p_el in vroot.iter(f"{{{SVG_NS}}}path"):
-                d_val = p_el.attrib.get('d', '')
-                f_val = p_el.attrib.get('fill', '').strip()
-                if not d_val or not f_val or f_val.lower() in ('none', 'transparent'):
+            for p_item in raw_paths:
+                f_val = p_item.get('fill', '').strip()
+                if not f_val or f_val.lower() in ('none', 'transparent'):
                     continue
-
                 p_idx = closest_palette_index(f_val, palette)
-                paths.append({
-                    'd': d_val,
-                    'fill': palette[p_idx],
-                    'palette_index': p_idx,
-                    'fill_rule': p_el.attrib.get('fill-rule', 'evenodd'),
-                })
+                p_item['fill'] = palette[p_idx]
+                p_item['palette_index'] = p_idx
+                paths.append(p_item)
         except Exception as e:
             logger.warning("vtracer full-color trace failed (%s), falling back to OpenCV vectorizer", e)
             paths = []
 
     # OpenCV fallback: trace each palette layer
-    if not paths:
+    if np.any(fg_mask) and not paths:
         for idx in range(len(palette)):
             layer_mask = (quant_indices == idx).astype(np.uint8) * 255
             layer_paths = trace_binary_mask_to_paths(
