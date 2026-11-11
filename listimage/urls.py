@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, svg_views
 
 app_name = 'listimage'
 
@@ -21,4 +21,14 @@ urlpatterns = [
     path('batch/download/<uuid:batch_id>/', views.batch_download_zip, name='batch_download'),
     path('batch/cleanup/<uuid:batch_id>/', views.batch_cleanup, name='batch_cleanup'),
     path('batch/cancel/<uuid:batch_id>/', views.batch_cancel, name='batch_cancel'),
+    # SVG Vectorization endpoints
+    path('svg/', svg_views.svg_start, name='svg_start'),
+    path('svg/from-job/<uuid:job_id>/', svg_views.svg_from_raster, name='svg_from_raster'),
+    path('svg/<uuid:job_id>/options/', svg_views.svg_options, name='svg_options'),
+    path('svg/<uuid:job_id>/render/', svg_views.svg_render, name='svg_render'),
+    path('svg/<uuid:job_id>/status/', views.job_status, name='svg_status'),
+    path('svg/<uuid:job_id>/preview.svg', svg_views.svg_preview, name='svg_preview'),
+    path('svg/<uuid:job_id>/download/', svg_views.svg_download, name='svg_download'),
+    path('svg/<uuid:job_id>/cancel/', svg_views.svg_cancel, name='svg_cancel'),
+    path('svg/<uuid:job_id>/recolor/', svg_views.svg_recolor, name='svg_recolor'),
 ]

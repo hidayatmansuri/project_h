@@ -59,6 +59,10 @@ class ImageJob(models.Model):
     and timestamps. Can belong to an optional BatchJob.
     """
 
+    class Kind(models.TextChoices):
+        RASTER = 'raster', 'Raster'
+        SVG = 'svg', 'SVG'
+
     class Status(models.TextChoices):
         QUEUED = 'queued', 'Queued'
         PROCESSING = 'processing', 'Processing'
@@ -67,6 +71,13 @@ class ImageJob(models.Model):
         DOWNLOADED = 'downloaded', 'Downloaded'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    kind = models.CharField(
+        max_length=20,
+        choices=Kind.choices,
+        default=Kind.RASTER,
+        db_index=True,
+        help_text="Pipeline kind: raster 2000x2000 or SVG vector",
+    )
     batch = models.ForeignKey(
         BatchJob,
         null=True,
@@ -94,6 +105,7 @@ class ImageJob(models.Model):
             models.Index(fields=['owner', 'status']),
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['batch', 'status']),
+            models.Index(fields=['owner', 'kind', 'status']),
         ]
 
     def __str__(self) -> str:

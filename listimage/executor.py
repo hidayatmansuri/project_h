@@ -129,6 +129,18 @@ def get_queue_position(job) -> Tuple[int, str]:
     return ahead, f"Queued, {ahead} jobs ahead"
 
 
+def is_job_cancelled(job_id_str: str) -> bool:
+    """
+    Checks if a job has been cancelled or deleted by the user during background processing.
+    Used by background workers between stages for cooperative cancellation.
+    """
+    from .models import ImageJob
+    try:
+        return not ImageJob.objects.filter(id=job_id_str).exclude(status=ImageJob.Status.FAILED).exists()
+    except Exception:
+        return True
+
+
 def _run_job_worker(job_id_str: str) -> None:
     """
     Worker function executed in the background thread.
@@ -161,6 +173,68 @@ def _run_job_worker(job_id_str: str) -> None:
             _update_batch_progress(job.batch_id)
 
         logger.info("Worker started processing job %s", job_id_str)
+
+        if job.kind == ImageJob.Kind.SVG:
+            if is_job_cancelled(job_id_str):
+                return
+
+            from .svg_services import trace_image_to_svg
+
+            use_full_image = job.params.get('use_full_image', False)
+            cutout_path = job.workspace_path / 'cutout.png'
+            original_path = job.workspace_path / 'original.png'
+
+            if use_full_image:
+                source_path = original_path
+            elif cutout_path.exists():
+                source_path = cutout_path
+            else:
+                initial_params = process_initial_job(
+                    job_id=str(job.id),
+                    workspace_dir=job.workspace_path,
+                    params=job.params
+                )
+                job.params.update(initial_params)
+                source_path = cutout_path
+
+            if is_job_cancelled(job_id_str):
+                return
+
+            svg_xml, stats, palette = trace_image_to_svg(
+                image_input=source_path,
+                color_mode=job.params.get('color_mode', 'monochrome'),
+                sub_option=job.params.get('sub_option', 'silhouette'),
+                color=job.params.get('color', '#000000'),
+                detail_threshold=int(job.params.get('detail_threshold', 128)),
+                n_colors=int(job.params.get('n_colors', 8)),
+                kept_indices=job.params.get('kept_indices'),
+                monochrome_color=job.params.get('monochrome_color', '#000000'),
+                palette_map=job.params.get('palette_map'),
+                remove_near_white=bool(job.params.get('remove_near_white', False)),
+                preset=job.params.get('preset', 'balanced'),
+                mode=job.params.get('mode', 'spline'),
+                hierarchical=job.params.get('hierarchical', 'stacked'),
+                use_full_image=use_full_image,
+                square_canvas=bool(job.params.get('square_canvas', False)),
+                bg_color=job.params.get('bg_color', 'transparent'),
+                custom_params=job.params.get('custom_params'),
+            )
+
+            if is_job_cancelled(job_id_str):
+                return
+
+            svg_out_path = job.workspace_path / 'output.svg'
+            svg_out_path.write_text(svg_xml, encoding='utf-8')
+
+            job.params['svg_stats'] = stats
+            job.params['palette'] = palette
+            job.params['svg_generated'] = True
+            job.status = ImageJob.Status.DONE
+            job.error_message = ''
+            job.save(update_fields=['params', 'status', 'error_message', 'updated_at'])
+            logger.info("SVG Worker successfully completed job %s", job_id_str)
+            return
+
         updated_params = process_initial_job(
             job_id=str(job.id),
             workspace_dir=job.workspace_path,

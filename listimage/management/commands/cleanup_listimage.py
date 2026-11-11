@@ -28,6 +28,13 @@ class Command(BaseCommand):
             help="Maximum age in minutes for jobs before deletion (default: 60)."
         )
         parser.add_argument(
+            '--kind',
+            type=str,
+            choices=['all', 'raster', 'svg'],
+            default='all',
+            help="Filter jobs to clean by kind ('all', 'raster', 'svg'). Default: all."
+        )
+        parser.add_argument(
             '--dry-run',
             action='store_true',
             help="Simulates cleanup without deleting database rows or files."
@@ -36,6 +43,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         max_age_minutes = options['max_age_minutes']
         dry_run = options['dry_run']
+        kind = options.get('kind', 'all')
 
         workspace_dir = getattr(
             settings,
@@ -77,7 +85,10 @@ class Command(BaseCommand):
             self.stdout.write(f"Running ListImage cleanup (cutoff: jobs before {cutoff.isoformat()}, dry_run={dry_run})...")
 
             # 1. Clean expired jobs
-            expired_jobs = ImageJob.objects.filter(created_at__lt=cutoff)
+            job_filter = {'created_at__lt': cutoff}
+            if kind != 'all':
+                job_filter['kind'] = kind
+            expired_jobs = ImageJob.objects.filter(**job_filter)
             expired_count = expired_jobs.count()
             self.stdout.write(f"Found {expired_count} expired job(s) older than {max_age_minutes} minutes.")
 

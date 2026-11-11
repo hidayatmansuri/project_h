@@ -968,3 +968,40 @@ def export_rendered_image(workspace_dir: Path, format: str = 'PNG') -> io.BytesI
     del img
     gc.collect()
     return buffer
+
+
+def fork_job_for_svg(source_job, owner_identifier: str):
+    """
+    Option A: Forks a raster ImageJob to create an independent SVG ImageJob.
+    Copies cutout.png, original.png, and current_mask.png (if present),
+    and initializes SVG pipeline parameters.
+    Returns the new ImageJob.
+    """
+    from .models import ImageJob
+
+    svg_job = ImageJob.objects.create(
+        kind=ImageJob.Kind.SVG,
+        owner=owner_identifier,
+        original_filename=source_job.original_filename,
+        status=ImageJob.Status.DONE,  # Cutout is already prepared from the source job
+        params={
+            'source_job_id': str(source_job.id),
+            'original_dimensions': source_job.params.get('original_dimensions', []),
+            'model': source_job.params.get('model', 'isnet-general-use'),
+            'alpha_matting': source_job.params.get('alpha_matting', False),
+            'edge_smoothing': source_job.params.get('edge_smoothing', False),
+            'keep_largest': source_job.params.get('keep_largest', False),
+            'detected_objects': source_job.params.get('detected_objects', []),
+        }
+    )
+
+    src_ws = source_job.workspace_path
+    dst_ws = svg_job.workspace_path
+    dst_ws.mkdir(parents=True, exist_ok=True)
+
+    for fname in ('cutout.png', 'original.png', 'current_mask.png'):
+        fpath = src_ws / fname
+        if fpath.exists():
+            shutil.copy2(fpath, dst_ws / fname)
+
+    return svg_job

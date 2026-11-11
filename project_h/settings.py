@@ -187,6 +187,8 @@ LISTIMAGE_MAX_CONCURRENT_JOBS = int(os.getenv('LISTIMAGE_MAX_CONCURRENT_JOBS', '
 LISTIMAGE_MAX_QUEUE = int(os.getenv('LISTIMAGE_MAX_QUEUE', '10'))
 LISTIMAGE_MAX_AGE_MINUTES = int(os.getenv('LISTIMAGE_MAX_AGE_MINUTES', '60'))
 LISTIMAGE_WORKSPACE_DIR = BASE_DIR / 'listimage' / 'workspace'
+LISTIMAGE_SVG_MAX_TRACE_PX = int(os.getenv('LISTIMAGE_SVG_MAX_TRACE_PX', '2000'))
+LISTIMAGE_SVG_MAX_BYTES = int(os.getenv('LISTIMAGE_SVG_MAX_BYTES', str(3 * 1024 * 1024)))
 
 
 # --- projectauth & security configuration (Section 7 & 10) ---

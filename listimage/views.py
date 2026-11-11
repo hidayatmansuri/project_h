@@ -96,10 +96,11 @@ def index(request: HttpRequest) -> HttpResponse:
     """
     owner = _get_request_owner(request)
 
-    # Check if the user has an active or recent single job
+    # Check if the user has an active or recent single raster job
     latest_job = ImageJob.objects.filter(
         owner=owner,
         batch__isnull=True,
+        kind=ImageJob.Kind.RASTER,
         status__in=[ImageJob.Status.QUEUED, ImageJob.Status.PROCESSING, ImageJob.Status.DONE]
     ).order_by('-created_at').first()
 
@@ -219,15 +220,24 @@ def job_status(request: HttpRequest, job_id) -> JsonResponse:
     }
 
     if job.status == ImageJob.Status.DONE:
-        data.update({
-            'preview_url': reverse('listimage:preview', args=[job.id]),
-            'preview_trans_url': reverse('listimage:preview', args=[job.id]) + '?bg=transparent',
-            'cutout_url': reverse('listimage:cutout_preview', args=[job.id]),
-            'download_url': reverse('listimage:download', args=[job.id]),
-            'warn_white_edges': job.params.get('warn_white_edges', False),
-            'detected_objects': job.params.get('detected_objects', []),
-            'metrics': job.params.get('metrics', {}),
-        })
+        if job.kind == ImageJob.Kind.SVG:
+            data.update({
+                'svg_url': reverse('listimage:svg_preview', args=[job.id]),
+                'download_url': reverse('listimage:svg_download', args=[job.id]),
+                'options_url': reverse('listimage:svg_options', args=[job.id]),
+                'svg_stats': job.params.get('svg_stats', {}),
+                'palette': job.params.get('palette', []),
+            })
+        else:
+            data.update({
+                'preview_url': reverse('listimage:preview', args=[job.id]),
+                'preview_trans_url': reverse('listimage:preview', args=[job.id]) + '?bg=transparent',
+                'cutout_url': reverse('listimage:cutout_preview', args=[job.id]),
+                'download_url': reverse('listimage:download', args=[job.id]),
+                'warn_white_edges': job.params.get('warn_white_edges', False),
+                'detected_objects': job.params.get('detected_objects', []),
+                'metrics': job.params.get('metrics', {}),
+            })
 
     return JsonResponse(data)
 

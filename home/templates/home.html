@@ -44,7 +44,8 @@
             </div>
             <div class="nav-separator">|</div>
             <div class="home-nav-label dropdown">
-                <a class="nav-link ph-hover dropdown-toggle" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                <a class="nav-link ph-hover dropdown-toggle" href="#" role="button" aria-haspopup="true"
+                    aria-expanded="false">
                     <i class="fa-solid fa-screwdriver-wrench"></i>
                     <span>Tools</span>
                     <i class="fa-solid fa-caret-down dropdown-caret"></i>
@@ -54,8 +55,8 @@
                             class="fa-solid fa-star-of-life"></i> <span>Password</span></a>
                     <a class="nav-link ph-hover menu-item" href="{% url 'utility' %}"><i
                             class="fa-solid fa-fire-flame-curved"></i> <span>Utility</span></a>
-                    <a class="nav-link ph-hover menu-item" href="{% url 'shades' %}"><i
-                            class="fa-solid fa-palette"></i> <span>Shades</span></a>
+                    <a class="nav-link ph-hover menu-item" href="{% url 'shades' %}"><i class="fa-solid fa-palette"></i>
+                        <span>Shades</span></a>
                     <a class="nav-link ph-hover menu-item" href="{% url 'docedit' %}"><i
                             class="fa-solid fa-file-pen"></i> <span>DocEdit</span></a>
                     <a class="nav-link ph-hover menu-item" href="{% url 'listimage:index' %}"><i
@@ -78,7 +79,14 @@
     <main>
         {% block content %}
         <div class="welcome-body">
-            <div class="ph-welcome">project-h</div>
+            <div class="ph-welcome">
+                <img src="{% static 'images/project-h-flowing-ph-transparent.svg' %}"
+                     alt="project-h"
+                     width="1380"
+                     height="1296"
+                     loading="eager"
+                     decoding="async">
+            </div>
             <div class="welcome-cards">
                 <a href="{% url 'cv' %}" class="ph-card floating-card">
                     <div class="floating-top">

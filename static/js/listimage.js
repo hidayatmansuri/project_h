@@ -634,6 +634,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Download & Automatic Cleanup Flow ---
+  const makeSvgBtn = document.getElementById('liMakeSvgBtn');
+  if (makeSvgBtn) {
+    makeSvgBtn.addEventListener('click', async () => {
+      if (!currentJobId) return;
+      makeSvgBtn.disabled = true;
+      makeSvgBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparing SVG...';
+      try {
+        const response = await fetch(`/listimage/svg/from-job/${currentJobId}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        const data = await response.json();
+        if (data.success && data.redirect_url) {
+          window.location.href = data.redirect_url;
+        } else {
+          alert(data.error || 'Failed to prepare SVG workspace.');
+          makeSvgBtn.disabled = false;
+          makeSvgBtn.innerHTML = '<i class="fa-solid fa-bezier-curve"></i> Make SVG from this';
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error connecting to server.');
+        makeSvgBtn.disabled = false;
+        makeSvgBtn.innerHTML = '<i class="fa-solid fa-bezier-curve"></i> Make SVG from this';
+      }
+    });
+  }
+
   if (downloadBtn && downloadModal) {
     downloadBtn.addEventListener('click', () => {
       downloadModal.classList.add('active');

@@ -40,6 +40,9 @@
         <button type="button" class="li-tab-btn" id="liModeBatch" role="tab" aria-selected="false">
             <i class="fa-solid fa-images"></i> Batch Mode <span class="li-batch-badge">Up to {{ max_batch_size }}</span>
         </button>
+        <a href="{% url 'listimage:svg_start' %}" class="li-tab-btn" id="liModeSvg" role="tab" style="text-decoration: none; color: inherit;">
+            <i class="fa-solid fa-bezier-curve"></i> Convert to SVG
+        </a>
     </div>
 
     <!-- 1. Upload & Options Section -->
@@ -317,9 +320,12 @@
         </div>
 
         <!-- Bottom Action Bar -->
-        <div class="li-toolbar" style="justify-content: space-between;">
+        <div class="li-toolbar" style="justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
             <button type="button" id="liRestartBtn" class="li-tool-btn" style="color: var(--li-danger);">
                 <i class="fa-solid fa-trash-can"></i> Discard & Start Over
+            </button>
+            <button type="button" id="liMakeSvgBtn" class="li-tool-btn" style="background: var(--li-surface); border: 1px solid var(--li-accent); color: var(--li-accent); font-weight: 600;">
+                <i class="fa-solid fa-bezier-curve"></i> Make SVG from this
             </button>
             <div style="font-size: 0.85rem; color: var(--li-muted);">
                 Exact 2000&times;2000 px &bull; 10 px padding &bull; Pure white canvas
