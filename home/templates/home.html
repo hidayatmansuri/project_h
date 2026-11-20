@@ -23,9 +23,10 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
     <header class="ph-header">
-        <a href="{% url 'home' %}">
+        <a href="{% url 'home' %}" aria-label="project-h home">
             <div class="ph-logo ph-hover">
-                ph
+                <span class="ph-logo-mark" role="img" aria-label="project-h logo"
+                    style="--ph-logo-src: url('{% static 'images/project_h_transparent.svg' %}');"></span>
             </div>
         </a>
         <button class="menu-toggle" id="menuToggle" aria-label="Open Menu">
@@ -80,7 +81,7 @@
         {% block content %}
         <div class="welcome-body">
             <div class="ph-welcome">
-                <img src="{% static 'images/project-h_transparent.png' %}" alt="project-h" width="1380" height="1296"
+                <img src="{% static 'images/project_h_transparent.png' %}" alt="project-h" width="1380" height="1296"
                     loading="eager" decoding="async">
             </div>
             <div class="welcome-cards">

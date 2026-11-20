@@ -1065,10 +1065,10 @@ ul.collapsible {
 }
 
 .recipe-card-title {
-  font-family: var(--font-display);
+  font-family: Gotu;
   font-size: 21px;
   font-weight: 700;
-  color: #ffffff;
+  color: #D3D9D4 !important;
   margin: 0;
   line-height: 1.28;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
@@ -2707,7 +2707,7 @@ ul.dropdown-content.select-dropdown li.disabled>span {
 }
 
 .recipe-sidebar-actions-card {
-  background: var(--card-bg);
+  background: var(--bg-color);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   padding: 22px;

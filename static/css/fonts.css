@@ -3,7 +3,8 @@
     src: url('../fonts/Peignot.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
-    font-display: swap; /* show fallback text immediately on slow mobile connections */
+    font-display: swap;
+    /* show fallback text immediately on slow mobile connections */
 }
 
 @font-face {
@@ -11,7 +12,8 @@
     src: url('../fonts/Gotu-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
-    font-display: swap; /* show fallback text immediately on slow mobile connections */
+    font-display: swap;
+    /* show fallback text immediately on slow mobile connections */
 }
 
 @font-face {
@@ -19,7 +21,8 @@
     src: url('../fonts/Asap-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
-    font-display: swap; /* show fallback text immediately on slow mobile connections */
+    font-display: swap;
+    /* show fallback text immediately on slow mobile connections */
 }
 
 @font-face {
@@ -27,7 +30,8 @@
     src: url('../fonts/PlayfairDisplay-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
-    font-display: swap; /* show fallback text immediately on slow mobile connections */
+    font-display: swap;
+    /* show fallback text immediately on slow mobile connections */
 }
 
 @font-face {
@@ -35,5 +39,6 @@
     src: url('../fonts/SourceSerifPro-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
-    font-display: swap; /* show fallback text immediately on slow mobile connections */
+    font-display: swap;
+    /* show fallback text immediately on slow mobile connections */
 }

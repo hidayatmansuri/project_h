@@ -19,6 +19,12 @@ const gasUsage = payload.gas_usage || [];
 const elecBal = payload.elec_balance || [];
 const gasBal = payload.gas_balance || [];
 const topups = payload.topup_points || [];
+const monthlyDates = payload.monthly_dates || [];
+const monthlyElecUsage = payload.monthly_elec_usage || [];
+const monthlyGasUsage = payload.monthly_gas_usage || [];
+const yearlyDates = payload.yearly_dates || [];
+const yearlyElecUsage = payload.yearly_elec_usage || [];
+const yearlyGasUsage = payload.yearly_gas_usage || [];
 const elecTopup30 = topups
   .filter(t => t.meter === 'electricity' && new Date(t.date) >= cutoff)
   .map(t => ({ x: t.date, y: t.amount }));
@@ -132,6 +138,35 @@ const balanceChart = new Chart(ctxB, {
 
 
 // ------------------ TOGGLES ------------------
+function updateConsumptionView(mode) {
+  if (mode === 'monthly') {
+    consumptionChart.data.labels = monthlyDates;
+    consumptionChart.data.datasets[0].data = monthlyElecUsage;
+    consumptionChart.data.datasets[1].data = monthlyGasUsage;
+  } else if (mode === 'yearly') {
+    consumptionChart.data.labels = yearlyDates;
+    consumptionChart.data.datasets[0].data = yearlyElecUsage;
+    consumptionChart.data.datasets[1].data = yearlyGasUsage;
+  } else {
+    consumptionChart.data.labels = datesTrimmed;
+    consumptionChart.data.datasets[0].data = elecUsageTrimmed;
+    consumptionChart.data.datasets[1].data = gasUsageTrimmed;
+  }
+  consumptionChart.update();
+}
+
+document.querySelectorAll('input[name="viewMode"]').forEach((radio) => {
+  radio.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      updateConsumptionView(e.target.value);
+    }
+  });
+});
+
+const initialViewMode = document.querySelector('input[name="viewMode"]:checked');
+if (initialViewMode && initialViewMode.value !== 'daily') {
+  updateConsumptionView(initialViewMode.value);
+}
 
 
 document.getElementById('showBalance').addEventListener('change', (e) => {
