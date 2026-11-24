@@ -482,22 +482,30 @@ class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
             self.assertFalse(cleaned.endswith("-"), f"Cleaned name has trailing hyphen: {cleaned}")
 
     def test_find_nearest_match_categorization_never_stuck_with_garamond_for_sans_or_mono(self):
-        # Sans-serif should match a sans-serif (Calibri/Arial), NEVER EB Garamond
+        # Sans-serif should match a sans-serif font, NEVER EB Garamond
+        sans_candidates = [
+            "Calibri", "Arial", "Roboto", "Segoe UI", "Asap",
+            "DejaVu Sans", "Liberation Sans", "Noto Sans", "Ubuntu",
+        ]
         sub_aptos = font_catalog.find_nearest_match("Aptos")
         self.assertEqual(sub_aptos["category"], "sans-serif")
         self.assertNotEqual(sub_aptos["nearest_match"], "EB Garamond")
-        self.assertIn(sub_aptos["nearest_match"], ["Calibri", "Arial", "Roboto", "Segoe UI"])
+        self.assertIn(sub_aptos["nearest_match"], sans_candidates)
 
         sub_custom_sans = font_catalog.find_nearest_match("Acme Modern Grotesk Sans")
         self.assertEqual(sub_custom_sans["category"], "sans-serif")
         self.assertNotEqual(sub_custom_sans["nearest_match"], "EB Garamond")
-        self.assertIn(sub_custom_sans["nearest_match"], ["Calibri", "Arial", "Roboto", "Segoe UI"])
+        self.assertIn(sub_custom_sans["nearest_match"], sans_candidates)
 
         # Monospace should match a monospace font, NEVER EB Garamond
+        mono_candidates = [
+            "Consolas", "Courier New", "Cousine", "Inconsolata",
+            "DejaVu Sans Mono", "Liberation Mono", "Ubuntu Mono",
+        ]
         sub_monaco = font_catalog.find_nearest_match("Monaco Typewriter")
         self.assertEqual(sub_monaco["category"], "monospace")
         self.assertNotEqual(sub_monaco["nearest_match"], "EB Garamond")
-        self.assertIn(sub_monaco["nearest_match"], ["Consolas", "Courier New", "Cousine", "Inconsolata"])
+        self.assertIn(sub_monaco["nearest_match"], mono_candidates)
 
         # Script fonts
         sub_hin = font_catalog.find_nearest_match("Aparajita Devanagari")
@@ -513,30 +521,37 @@ class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
         self.assertIn(sub_ara["nearest_match"], ["Traditional Arabic", "Simplified Arabic", "Amiri"])
 
     def test_resolve_document_font_preserves_system_font(self):
-        res_calibri = font_catalog.resolve_document_font("Calibri")
-        self.assertEqual(res_calibri["name"], "Calibri")
-        self.assertTrue(res_calibri["is_system"])
-        self.assertFalse(res_calibri["is_alternative"])
+        # Cross-platform bundled project font must always resolve cleanly
+        res_asap = font_catalog.resolve_document_font("Asap")
+        self.assertEqual(res_asap["name"], "Asap")
+        self.assertFalse(res_asap["is_alternative"])
 
-        res_times = font_catalog.resolve_document_font("Times New Roman")
-        self.assertEqual(res_times["name"], "Times New Roman")
-        self.assertTrue(res_times["is_system"])
+        # Windows system fonts check (not preinstalled on Linux CI runners)
+        if os.name == "nt":
+            res_calibri = font_catalog.resolve_document_font("Calibri")
+            self.assertEqual(res_calibri["name"], "Calibri")
+            self.assertTrue(res_calibri["is_system"])
+            self.assertFalse(res_calibri["is_alternative"])
+
+            res_times = font_catalog.resolve_document_font("Times New Roman")
+            self.assertEqual(res_times["name"], "Times New Roman")
+            self.assertTrue(res_times["is_system"])
 
     def test_change_font_api_with_font_and_size(self):
         with override_settings(DOCEDIT_WORK_DIR=self.test_dir):
-            sid = storage.create_session("sample.txt", b"Hello typography testing.")
+            sid = storage.create_session("sample.pdf", _make_sample_pdf_bytes("Hello typography testing."))
             url = reverse("docedit_change_font", args=[sid])
-            payload = {"font_name": "Calibri", "size_pt": 14.5}
+            payload = {"font_name": "Asap", "size_pt": 14.5}
             resp = self.client.post(url, json.dumps(payload), content_type="application/json")
             self.assertEqual(resp.status_code, 200)
             data = resp.json()
             self.assertTrue(data["success"])
-            self.assertEqual(data["font_info"]["name"], "Calibri")
+            self.assertEqual(data["font_info"]["name"], "Asap")
             self.assertEqual(data["font_info"]["size_pt"], 14.5)
 
             meta = storage.get_session_meta(sid)
             self.assertEqual(meta["font_info"]["size_pt"], 14.5)
-            self.assertEqual(meta["font_info"]["name"], "Calibri")
+            self.assertEqual(meta["font_info"]["name"], "Asap")
 
 
     def test_font_variant_resolution(self):

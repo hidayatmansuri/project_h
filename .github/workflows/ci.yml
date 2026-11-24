@@ -24,10 +24,10 @@ jobs:
           cache: "pip"
           cache-dependency-path: requirements.txt
 
-      - name: Install system dependencies (Tesseract OCR)
+      - name: Install system dependencies (Tesseract OCR & Fonts)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq tesseract-ocr
+          sudo apt-get install -y -qq tesseract-ocr fonts-dejavu-core
 
       - name: Install Python dependencies
         run: |

@@ -242,10 +242,10 @@ class PasscodeProtectedCrudTests(TestCase):
 class ImportCommandTests(TestCase):
     def test_import_bundled_data_is_repeatable(self):
         from pathlib import Path
-        from django.conf import settings
 
-        images_src = str(Path(settings.BASE_DIR) / "media" / "recipes" / "library")
-        with tempfile.TemporaryDirectory() as media:
+        with tempfile.TemporaryDirectory() as media, tempfile.TemporaryDirectory() as images_src:
+            # Self-contained test image so CI (where gitignored media/ is absent) passes cleanly
+            (Path(images_src) / "Chicken Biryani.jpg").write_bytes(TINY_GIF)
             with override_settings(MEDIA_ROOT=media):
                 call_command("import_recipes", images=images_src, verbosity=0)
                 first = (Recipe.objects.count(), Category.objects.count(), Cuisine.objects.count())
