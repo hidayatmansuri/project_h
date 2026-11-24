@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-projecthdb}
+      POSTGRES_USER: ${DB_USER:-projecth}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-projecth} -d ${DB_NAME:-projecthdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      SECURE_PROXY_SSL: ${SECURE_PROXY_SSL:-True}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - media_data:/app/media
+      - rembg_models:/home/appuser/.u2net
+
+volumes:
+  postgres_data:
+  media_data:
+  rembg_models:

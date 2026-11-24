@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -109,6 +110,22 @@ if os.getenv('USE_SQLITE', 'False').lower() in ('true', '1', 'yes'):
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+elif os.getenv('DATABASE_URL'):
+    _db_url = urlparse(os.getenv('DATABASE_URL'))
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': _db_url.path.lstrip('/'),
+            'USER': unquote(_db_url.username or ''),
+            'PASSWORD': unquote(_db_url.password or ''),
+            'HOST': _db_url.hostname or '127.0.0.1',
+            'PORT': str(_db_url.port or 5432),
+            'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+            'OPTIONS': {
+                'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '5')),
+            },
         }
     }
 else:
