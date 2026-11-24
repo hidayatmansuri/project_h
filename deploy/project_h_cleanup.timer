@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Project H Periodic Cleanup Every 30 Minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,564 @@
+/* ============================================================================
+ * CV App Styling — project-h
+ * Strictly Gotu font for CV content (Peignot stays on navbar only).
+ * Mobile-first (min-width: 768px, min-width: 1200px). Reuses home-style.css tokens.
+ * ============================================================================ */
+
+.cv-app,
+.cv-app button,
+.cv-app input,
+.cv-app select,
+.cv-app textarea {
+    font-family: 'Gotu', sans-serif;
+}
+
+.cv-app {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 1rem 3rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    color: var(--text-color);
+}
+
+/* Section headers */
+.cv-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    scroll-margin-top: 5.5rem;
+}
+
+.cv-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    border-bottom: 2px solid var(--button-color);
+    padding-bottom: 0.5rem;
+}
+
+.cv-section-title {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-color);
+}
+
+.cv-section-title i {
+    color: var(--button-color);
+}
+
+.cv-section-subtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Hero Card */
+.cv-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.cv-hero-top {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cv-hero-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.cv-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.cv-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid var(--button-color);
+    color: var(--button-color);
+    background: transparent;
+}
+
+.cv-hero-name {
+    margin: 0;
+    font-size: 1.9rem;
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.cv-hero-tagline {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.65;
+    opacity: 0.92;
+    text-align: left;
+}
+
+.cv-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.cv-nav-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: var(--text-color);
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    transition: all 0.2s ease;
+}
+
+.cv-nav-pill:hover {
+    border-color: var(--button-color);
+    color: var(--hover-color);
+    transform: translateY(-2px);
+}
+
+.cv-print-btn {
+    margin: 0;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background-color: var(--button-color);
+    color: var(--bg-color);
+    border: 1px solid var(--button-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cv-print-btn:hover {
+    background-color: var(--hover-color);
+    border-color: var(--hover-color);
+}
+
+/* KPI Metrics Strip */
+.cv-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.cv-kpi-card {
+    border-radius: 12px;
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: center;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+}
+
+.cv-kpi-icon {
+    font-size: 1.25rem;
+    color: var(--button-color);
+}
+
+.cv-kpi-value {
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.cv-kpi-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Analytics Charts Grid */
+.cv-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+}
+
+.cv-chart-card {
+    border-radius: 14px;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.cv-chart-title {
+    margin: 0;
+    font-size: 1.08rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cv-chart-title i {
+    color: var(--button-color);
+}
+
+.cv-chart-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 260px;
+}
+
+.cv-chart-wrap-tall {
+    min-height: 300px;
+}
+
+/* Interactive Skill Filter Pills & Bars */
+.cv-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.cv-filter-btn {
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    background: transparent;
+    color: var(--text-color);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cv-filter-btn:hover {
+    border-color: var(--button-color);
+    color: var(--hover-color);
+}
+
+.cv-filter-btn.active {
+    background-color: var(--button-color);
+    border-color: var(--button-color);
+    color: var(--bg-color);
+    font-weight: 600;
+}
+
+.cv-skills-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+}
+
+.cv-skill-item {
+    border-radius: 10px;
+    padding: 0.9rem 1.05rem;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.cv-skill-item.is-hidden {
+    display: none;
+}
+
+.cv-skill-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.cv-skill-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.cv-skill-meta {
+    font-size: 0.78rem;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+
+.cv-progress-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background-color: rgba(128, 128, 128, 0.22);
+    overflow: hidden;
+}
+
+.cv-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--button-color), var(--warning-color));
+    transition: width 0.45s ease;
+}
+
+/* Project H Showcase Grid */
+.cv-projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+}
+
+.cv-project-card {
+    border-radius: 14px;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.85rem;
+    text-decoration: none;
+    color: var(--text-color);
+}
+
+.cv-project-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.cv-project-icon-title {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.cv-project-icon {
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--button-color);
+    color: var(--bg-color);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.cv-project-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.cv-project-highlight {
+    font-size: 0.76rem;
+    opacity: 0.8;
+}
+
+.cv-project-desc {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    opacity: 0.9;
+}
+
+.cv-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.cv-tag {
+    font-size: 0.74rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    opacity: 0.9;
+}
+
+/* Experience Vertical Timeline */
+.cv-timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-left: 1.5rem;
+}
+
+.cv-timeline::before {
+    content: "";
+    position: absolute;
+    left: 0.45rem;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    background-color: var(--button-color);
+    opacity: 0.55;
+}
+
+.cv-timeline-item {
+    position: relative;
+    border-radius: 14px;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.cv-timeline-dot {
+    position: absolute;
+    left: -1.45rem;
+    top: 1.4rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    background-color: var(--button-color);
+    border: 2px solid var(--bg-color);
+    box-shadow: 0 0 0 2px var(--button-color);
+}
+
+.cv-exp-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.cv-exp-title {
+    margin: 0;
+    font-size: 1.12rem;
+    font-weight: 700;
+}
+
+.cv-exp-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    font-size: 0.85rem;
+    opacity: 0.88;
+}
+
+.cv-exp-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+}
+
+.cv-exp-meta i {
+    color: var(--button-color);
+}
+
+.cv-exp-desc {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.65;
+}
+
+/* Qualifications Grid */
+.cv-qlf-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+}
+
+.cv-qlf-card {
+    border-radius: 14px;
+    border: 1px solid rgba(128, 128, 128, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.cv-empty-note {
+    font-size: 0.85rem;
+    opacity: 0.78;
+    font-style: italic;
+}
+
+/* ============================================================================
+ * Responsive Tiers (Mobile-First: 768px tablet, 1200px desktop)
+ * ============================================================================ */
+
+@media (min-width: 768px) {
+    .cv-app {
+        padding: 1.5rem 2rem 3.5rem;
+    }
+
+    .cv-hero-name {
+        font-size: 2.35rem;
+    }
+
+    .cv-kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cv-charts-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cv-skills-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cv-projects-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cv-qlf-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cv-exp-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+}
+
+@media (min-width: 1200px) {
+    .cv-projects-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cv-skills-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* Print-friendly Resume Layout */
+@media print {
+    .ph-header,
+    .ph-footer,
+    #backToTop,
+    .cv-hero-actions,
+    .cv-filter-bar {
+        display: none !important;
+    }
+
+    .cv-app {
+        max-width: 100%;
+        padding: 0;
+        gap: 1rem;
+    }
+
+    .ph-card {
+        box-shadow: none !important;
+        border: 1px solid #cccccc !important;
+        break-inside: avoid;
+    }
+}

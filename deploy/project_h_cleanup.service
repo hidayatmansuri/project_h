@@ -1,0 +1,11 @@
+[Unit]
+Description=Project H Periodic Workspace & Auth Cleanup
+After=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/project_h
+EnvironmentFile=/srv/project_h/.env
+ExecStart=/bin/sh -c '/srv/project-env/bin/python manage.py cleanup_listimage --max-age-minutes=60 && /srv/project-env/bin/python manage.py docedit_cleanup && /srv/project-env/bin/python manage.py projectauth_cleanup'

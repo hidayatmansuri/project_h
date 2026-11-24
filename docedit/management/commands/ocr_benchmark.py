@@ -270,6 +270,12 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f"  Error on {p_key} PSM {psm_val}: {e}"))
 
         # Determine best combination based on Lowest CER (or Highest Confidence)
+        if not results:
+            self.stdout.write(self.style.WARNING(
+                "No OCR benchmark results were produced (check that Tesseract is installed and on PATH)."
+            ))
+            return
+
         if ground_truth:
             sorted_results = sorted(results, key=lambda x: (x["cer"] if x["cer"] is not None else 999, -x["mean_conf"]))
         else:

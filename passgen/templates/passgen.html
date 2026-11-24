@@ -10,7 +10,7 @@ Password Generator
         <div class="ph-heading">Requirements:</div>
         <span class="passgen-left-req">Password length should be between 8 and 32 characters for security
             reasons.</span>
-        <span class="passgen-left-req">Considered Special Charatcers: "! £ $ % ^ & * + # ~ @ ?"</span>
+        <span class="passgen-left-req">Considered Special Characters: "! £ $ % ^ & * + # ~ @"</span>
     </div>
     <div class="passgen-right">
         <div class="ph-heading">Password Generator</div>
@@ -51,7 +51,7 @@ Password Generator
 
             <label class="ph-label">Desired Password:</label>
             <div class="ph-space">
-                <input class="ph-field" type="text" name="desired" min="6" max="32"
+                <input class="ph-field" type="text" name="desired" minlength="1" maxlength="128"
                     placeholder="Enter a word (optional)" value="{{ desired }}">
             </div>
             <br>
@@ -60,7 +60,7 @@ Password Generator
         {% if password %}
         <div class="ph-label">Your Password:</div>
         <div class="ph-space">
-            <input class="ph-field" type="text" id="password" min="6" max="32" value="{{ password }}" readonly>
+            <input class="ph-field" type="text" id="password" value="{{ password }}" readonly>
             <i class="fa-regular fa-copy ph-hover" onclick="copyPassword()"></i>
             <span id="copyMsg" class="copy-tooltip">Copied!</span>
         </div>

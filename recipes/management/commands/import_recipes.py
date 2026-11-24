@@ -9,6 +9,7 @@ Flask users and their password hashes are intentionally NOT imported.
 """
 from pathlib import Path
 
+from django.conf import settings
 from django.core.files import File
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -25,8 +26,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--sqlite", default=str(APP_DIR / "legacy" / "recipes.db"),
                             help="Path to the Flask recipes.db file")
-        parser.add_argument("--images", default=str(APP_DIR / "legacy" / "img"),
-                            help="Folder holding the Flask static/img files")
+        parser.add_argument("--images", default=str(Path(settings.MEDIA_ROOT) / "recipes" / "library"),
+                            help="Folder holding the recipe image files (defaults to media/recipes/library)")
         parser.add_argument("--dry-run", action="store_true",
                             help="Read and report only; write nothing")
 
@@ -109,8 +110,12 @@ class Command(BaseCommand):
                 continue
             source = images_dir / filename
             if not source.is_file():
-                self.stdout.write(self.style.WARNING(f"  Image file missing, skipped: {filename}"))
-                continue
+                underscored = images_dir / filename.replace(" ", "_")
+                if underscored.is_file():
+                    source = underscored
+                else:
+                    self.stdout.write(self.style.WARNING(f"  Image file missing, skipped: {filename}"))
+                    continue
             title = Path(filename).stem[:150]
             existing = RecipeImage.objects.filter(title=title).first()
             if existing:

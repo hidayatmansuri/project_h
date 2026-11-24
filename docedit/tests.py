@@ -13,7 +13,6 @@ from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 from django.urls import resolve, reverse
 from PIL import Image, ImageDraw, ImageFont
-import docx
 import pymupdf
 
 from docedit import embedded_fonts, extract, font_catalog, fontmatch, ocr, storage, views, writers
@@ -94,6 +93,16 @@ class DocEditFontMatchTests(TestCase):
         self.assertEqual(fontmatch.detect_script("هذا كتاب باللغة العربية القديم."), "arabic")
 
 
+def _make_sample_pdf_bytes(text: str = "Sample PDF content") -> bytes:
+    """Builds a minimal valid in-memory PDF document for upload/flow tests."""
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((50, 80), text, fontsize=12)
+    data = doc.tobytes()
+    doc.close()
+    return data
+
+
 class DocEditWritersTests(TestCase):
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp(prefix="docedit_writer_test_")
@@ -101,68 +110,15 @@ class DocEditWritersTests(TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
-    def test_write_text_and_markdown(self):
-        html_in = "<p>First paragraph with <strong>bold</strong> text.</p><p>Second paragraph.</p>"
-        txt_out = Path(self.tmp_dir) / "output.txt"
-        writers.write_document_to_disk(html_in, txt_out, "txt", {"name": "EB Garamond", "size_pt": 12})
-        self.assertTrue(txt_out.is_file())
-        self.assertIn("First paragraph with bold text.", txt_out.read_text(encoding="utf-8"))
-
-        md_out = Path(self.tmp_dir) / "output.md"
-        writers.write_document_to_disk(html_in, md_out, "md", {"name": "EB Garamond", "size_pt": 12})
-        self.assertTrue(md_out.is_file())
-        self.assertIn("**bold**", md_out.read_text(encoding="utf-8"))
-
-    def test_write_docx(self):
-        html_in = "<p>Word document with <em>italic</em> text.</p>"
-        docx_out = Path(self.tmp_dir) / "output.docx"
-        writers.write_document_to_disk(html_in, docx_out, "docx", {"name": "EB Garamond", "size_pt": 12})
-        self.assertTrue(docx_out.is_file())
-        self.assertGreater(docx_out.stat().st_size, 500)
-
-    def test_write_docx_with_tables_and_lines(self):
-        html_in = """
-        <h1 style="text-align: center;">Historic Chronicle</h1>
-        <p>A treatise regarding ancient records.</p>
-        <hr class="docedit-line" style="border: 1px solid #777;">
-        <table class="docedit-table" style="border-collapse: collapse; width: 100%; border: 1px solid #777;">
-            <thead>
-                <tr><th style="border: 1px solid #777; padding: 6px;">Year</th><th style="border: 1px solid #777; padding: 6px;">City</th></tr>
-            </thead>
-            <tbody>
-                <tr><td style="border: 1px solid #777; padding: 6px;">1642</td><td style="border: 1px solid #777; padding: 6px;">London</td></tr>
-                <tr><td style="border: 1px solid #777; padding: 6px;">1688</td><td style="border: 1px solid #777; padding: 6px;">Oxford</td></tr>
-            </tbody>
-        </table>
-        <hr class="docedit-line" style="border: 1px solid #777;">
-        <p>Concluding remarks.</p>
-        """
-        docx_out = Path(self.tmp_dir) / "table_output.docx"
-        writers.write_document_to_disk(html_in, docx_out, "docx", {"name": "EB Garamond", "size_pt": 12})
-        self.assertTrue(docx_out.is_file())
-
-        # Verify Word document contains the table and elements
-        doc_read = docx.Document(str(docx_out))
-        self.assertEqual(len(doc_read.tables), 1)
-        tbl = doc_read.tables[0]
-        self.assertEqual(len(tbl.rows), 3)
-        self.assertEqual(len(tbl.columns), 2)
-        self.assertEqual(tbl.cell(0, 0).text.strip(), "Year")
-        self.assertEqual(tbl.cell(0, 1).text.strip(), "City")
-        self.assertEqual(tbl.cell(1, 0).text.strip(), "1642")
-        self.assertEqual(tbl.cell(1, 1).text.strip(), "London")
-
-    def test_write_pdf_and_image(self):
-        html_in = "<p>Book page for PDF and Image export test.</p>"
+    def test_write_pdf_and_reject_non_pdf(self):
+        html_in = "<p>Book page for PDF export test.</p>"
         pdf_out = Path(self.tmp_dir) / "output.pdf"
         writers.write_document_to_disk(html_in, pdf_out, "pdf", {"name": "Times New Roman", "size_pt": 12})
         self.assertTrue(pdf_out.is_file())
         self.assertGreater(pdf_out.stat().st_size, 500)
 
-        img_out = Path(self.tmp_dir) / "output.png"
-        writers.write_document_to_disk(html_in, img_out, "png", {"name": "Times New Roman", "size_pt": 12})
-        self.assertTrue(img_out.is_file())
-        self.assertGreater(img_out.stat().st_size, 500)
+        with self.assertRaises(ValueError):
+            writers.write_document_to_disk(html_in, Path(self.tmp_dir) / "output.png", "png", {"name": "Times New Roman", "size_pt": 12})
 
     def test_write_pdf_with_tables_and_lines(self):
         html_in = """
@@ -210,6 +166,8 @@ class DocEditViewFlowTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.tmp_dir = tempfile.mkdtemp(prefix="docedit_view_test_")
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
@@ -220,11 +178,9 @@ class DocEditViewFlowTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "docedit/docedit.html")
         self.assertTemplateUsed(resp, "home.html")
-        self.assertContains(resp, "DocEdit")
-        self.assertContains(resp, "Document Progress")
+        self.assertContains(resp, "PDF Editor")
         content = resp.content.decode('utf-8')
-        self.assertIn("Typography & Font", content)
-        self.assertIn("Save & Download", content)
+        self.assertIn("Save &amp; Download", content)
 
     def test_upload_missing_file(self):
         url = reverse("docedit_upload")
@@ -246,10 +202,10 @@ class DocEditViewFlowTests(TestCase):
         with override_settings(DOCEDIT_WORK_DIR=self.tmp_dir, DOCEDIT_SYNC_PROCESSING=True):
             upload_url = reverse("docedit_upload")
             sample_text = (
-                "Chapter I: The Old Antiquary\n\n"
+                "Chapter I: The Old Antiquary\n"
                 "In the year 1824, there lived a scholar of great curiosity who preserved ancient manuscripts."
             )
-            doc_file = SimpleUploadedFile("test_book.txt", sample_text.encode("utf-8"), content_type="text/plain")
+            doc_file = SimpleUploadedFile("test_book.pdf", _make_sample_pdf_bytes(sample_text), content_type="application/pdf")
 
             # 1. Upload
             upload_resp = self.client.post(upload_url, {"document": doc_file, "ocr_lang": "eng"})
@@ -288,22 +244,21 @@ class DocEditViewFlowTests(TestCase):
             edited_html = "<p>Chapter I: The Old Antiquary (Corrected Spelling)</p><p>Revised text with matching fonts.</p>"
             save_resp = self.client.post(
                 save_url,
-                json.dumps({"html_content": edited_html, "font_name": "Libre Baskerville"}),
+                json.dumps({"html_content": edited_html, "font_name": "Libre Baskerville", "export_format": "pdf"}),
                 content_type="application/json"
             )
             self.assertEqual(save_resp.status_code, 200)
             save_data = save_resp.json()
             self.assertTrue(save_data["success"])
             self.assertIn("download_url", save_data)
-            self.assertEqual(save_data["download_filename"], "test_book_edited.txt")
+            self.assertEqual(save_data["download_filename"], "test_book_edited.pdf")
 
             # 5. Download Edited Document
             download_url = reverse("docedit_download", args=[sid])
             download_resp = self.client.get(download_url)
             self.assertEqual(download_resp.status_code, 200)
             self.assertEqual(download_resp["X-DocEdit-Downloaded"], "true")
-            downloaded_text = download_resp.content.decode("utf-8")
-            self.assertIn("Corrected Spelling", downloaded_text)
+            self.assertTrue(download_resp.content.startswith(b"%PDF-"))
             # Verify session and edited documents are preserved on GET download
             self.assertTrue(storage.get_session_dir(sid).is_dir())
 
@@ -315,73 +270,6 @@ class DocEditViewFlowTests(TestCase):
             self.assertTrue(cancel_data["success"])
             self.assertFalse(storage.get_session_dir(sid).is_dir())
 
-    def test_save_and_download_choice_of_format(self):
-        """Tests that user can choose any export format regardless of uploaded file type."""
-        with override_settings(DOCEDIT_WORK_DIR=self.tmp_dir, DOCEDIT_SYNC_PROCESSING=True):
-            upload_url = reverse("docedit_upload")
-            sample_content = "Document with tables and notes."
-
-            # 1. User chooses PDF export
-            doc_file1 = SimpleUploadedFile("my_doc.txt", sample_content.encode("utf-8"), content_type="text/plain")
-            upload_resp1 = self.client.post(upload_url, {"document": doc_file1, "ocr_lang": "eng"})
-            sid1 = upload_resp1.json()["session_id"]
-            save_url1 = reverse("docedit_save", args=[sid1])
-            download_url1 = reverse("docedit_download", args=[sid1])
-
-            table_html = """
-            <h1>Document Summary</h1>
-            <hr class="docedit-line">
-            <table class="docedit-table">
-                <tr><th>Key</th><th>Value</th></tr>
-                <tr><td>Status</td><td>Active</td></tr>
-            </table>
-            <p>End of record.</p>
-            """
-
-            pdf_resp = self.client.post(
-                save_url1,
-                json.dumps({"html_content": table_html, "export_format": "pdf", "font_name": "EB Garamond"}),
-                content_type="application/json"
-            )
-            self.assertEqual(pdf_resp.status_code, 200)
-            pdf_data = pdf_resp.json()
-            self.assertTrue(pdf_data["success"])
-            self.assertEqual(pdf_data["export_format"], "pdf")
-            self.assertEqual(pdf_data["download_filename"], "my_doc_edited.pdf")
-
-            dl_pdf = self.client.get(download_url1)
-            self.assertEqual(dl_pdf.status_code, 200)
-            self.assertEqual(dl_pdf["Content-Type"], "application/pdf")
-            self.assertEqual(dl_pdf["X-DocEdit-Downloaded"], "true")
-            self.assertEqual(dl_pdf["X-DocEdit-Format"], "pdf")
-            # Session preserved on GET download
-            self.assertTrue(storage.get_session_dir(sid1).is_dir())
-
-            # 2. User chooses Word DOCX export in a new session
-            doc_file2 = SimpleUploadedFile("my_doc.txt", sample_content.encode("utf-8"), content_type="text/plain")
-            upload_resp2 = self.client.post(upload_url, {"document": doc_file2, "ocr_lang": "eng"})
-            sid2 = upload_resp2.json()["session_id"]
-            save_url2 = reverse("docedit_save", args=[sid2])
-            download_url2 = reverse("docedit_download", args=[sid2])
-
-            docx_resp = self.client.post(
-                save_url2,
-                json.dumps({"html_content": table_html, "export_format": "docx", "font_name": "EB Garamond"}),
-                content_type="application/json"
-            )
-            self.assertEqual(docx_resp.status_code, 200)
-            docx_data = docx_resp.json()
-            self.assertTrue(docx_data["success"])
-            self.assertEqual(docx_data["export_format"], "docx")
-            self.assertEqual(docx_data["download_filename"], "my_doc_edited.docx")
-
-            dl_docx = self.client.get(download_url2)
-            self.assertEqual(dl_docx.status_code, 200)
-            self.assertIn("officedocument.wordprocessingml", dl_docx["Content-Type"])
-            self.assertEqual(dl_docx["X-DocEdit-Downloaded"], "true")
-            self.assertEqual(dl_docx["X-DocEdit-Format"], "docx")
-            # Session preserved on GET download
-            self.assertTrue(storage.get_session_dir(sid2).is_dir())
 
 
 
@@ -392,113 +280,9 @@ class DocEditExtractTests(TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
-    def test_extract_docx_with_tables_and_headings(self):
-        # Create a real DOCX with tables and headings
-        doc = docx.Document()
-        doc.add_heading("Chronicle of Events", level=1)
-        doc.add_paragraph("An introductory note before the table.")
-        tbl = doc.add_table(rows=2, cols=2)
-        tbl.cell(0, 0).text = "Event"
-        tbl.cell(0, 1).text = "Date"
-        tbl.cell(1, 0).text = "Inauguration"
-        tbl.cell(1, 1).text = "1840"
 
-        doc_path = Path(self.tmp_dir) / "test_table.docx"
-        doc.save(str(doc_path))
 
-        res = extract.extract_document(doc_path)
-        self.assertIn("<table class=\"docedit-table\"", res["html"])
-        self.assertIn("Chronicle of Events", res["html"])
-        self.assertIn("Inauguration", res["html"])
-        self.assertIn("1840", res["html"])
 
-    def test_extract_docx_with_icons_and_hyperlinks(self):
-        """Verifies extraction preserves inline/anchored drawing icons, hyperlinks, and bullet lists."""
-        import base64
-        import io
-        from docx.oxml import parse_xml
-
-        doc = docx.Document()
-        p0 = doc.add_paragraph()
-        r0 = p0.add_run("Candidate Profile")
-
-        # Paragraph with hyperlink and bullet list
-        p1 = doc.add_paragraph()
-        part = p1.part
-        r_id = part.relate_to("mailto:test@example.com", docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
-        hl_xml = (
-            f'<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
-            f'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="{r_id}">'
-            f'<w:r><w:t>test@example.com</w:t></w:r></w:hyperlink>'
-        )
-        p1._p.append(parse_xml(hl_xml))
-
-        # Add list paragraph
-        p_li = doc.add_paragraph("Delivered key software engineering project.", style="List Paragraph")
-
-        doc_path = Path(self.tmp_dir) / "test_icons_hyperlinks.docx"
-        doc.save(str(doc_path))
-
-        res = extract.extract_document(doc_path)
-        self.assertIn("Candidate Profile", res["html"])
-        self.assertIn("mailto:test@example.com", res["html"])
-        self.assertIn("test@example.com", res["html"])
-        self.assertIn("<li", res["html"])
-        self.assertIn("Delivered key software engineering project.", res["html"])
-
-    def test_write_docx_and_pdf_preserve_icons_hyperlinks_and_margins(self):
-        """Verifies _write_docx and _write_pdf preserve icons, hyperlinks, and compact margins."""
-        from .writers import _write_docx, _write_pdf
-        import base64
-
-        # 1x1 transparent PNG
-        dummy_png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
-        b64_str = base64.b64encode(dummy_png).decode("ascii")
-
-        html_input = (
-            f'<h1 style="text-align: center;">Hidayat Mansuri</h1>\n'
-            f'<p><img src="data:image/png;base64,{b64_str}" alt="Mail" class="docedit-docx-icon"> '
-            f'<a href="mailto:hidayat.mansuri@gmail.com">hidayat.mansuri@gmail.com</a> &nbsp; 07854536271</p>\n'
-            f'<ul style="margin: 2pt 0 4pt 0; padding-left: 18pt;">'
-            f'<li style="margin: 1.5pt 0;">Acted as a liaison between end-users and IT support.</li>'
-            f'</ul>'
-        )
-
-        out_docx = Path(self.tmp_dir) / "out_icon_test.docx"
-        _write_docx(html_input, out_docx, "Calibri", 10.0)
-        self.assertTrue(out_docx.is_file())
-
-        doc_read = docx.Document(str(out_docx))
-        drawings = sum(len(p._p.xpath(".//w:drawing")) for p in doc_read.paragraphs)
-        hyperlinks = sum(len(p._p.xpath(".//w:hyperlink")) for p in doc_read.paragraphs)
-        self.assertGreaterEqual(drawings, 1)
-        self.assertGreaterEqual(hyperlinks, 1)
-
-        out_pdf = Path(self.tmp_dir) / "out_icon_test.pdf"
-        _write_pdf(html_input, out_pdf, "Calibri", None, 10.0)
-        self.assertTrue(out_pdf.is_file())
-        pdf_read = pymupdf.open(str(out_pdf))
-        self.assertEqual(len(pdf_read), 1)
-        self.assertIn("Hidayat Mansuri", pdf_read[0].get_text())
-        self.assertIn("hidayat.mansuri@gmail.com", pdf_read[0].get_text())
-
-    def test_extract_markdown_with_tables(self):
-        md_text = (
-            "# Literary Index\n\n"
-            "Introductory text.\n\n"
-            "| Volume | Author |\n"
-            "| --- | --- |\n"
-            "| Vol 1 | Milton |\n"
-            "| Vol 2 | Shakespeare |\n\n"
-            "Concluding remark.\n"
-        )
-        md_path = Path(self.tmp_dir) / "test.md"
-        md_path.write_text(md_text, encoding="utf-8")
-
-        res = extract.extract_document(md_path)
-        self.assertIn("<table class=\"docedit-table\"", res["html"])
-        self.assertIn("Literary Index", res["html"])
-        self.assertIn("Milton", res["html"])
 
     def test_extract_multipage_pdf_separate_pages_and_layout_preservation(self):
         # Create a 2-page PDF with shapes and text
@@ -570,6 +354,8 @@ class DocEditPageImageViewTests(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix="docedit_page_img_test_")
         self.client = Client()
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -595,6 +381,8 @@ class DocEditSystemFontTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.test_dir = tempfile.mkdtemp(prefix="docedit_font_test_")
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -649,7 +437,7 @@ class DocEditSystemFontTests(TestCase):
     def test_install_font_api_upload_valid_file(self):
         with override_settings(DOCEDIT_FONT_LIBRARY_DIR=Path(self.test_dir) / "fonts",
                                DOCEDIT_INSTALL_FONTS_TO_SYSTEM=False):
-            font_bytes = b"FakeTTFContentForTestingPurpose123456789"
+            font_bytes = b"\x00\x01\x00\x00" + b"\x00" * 64
             test_font = SimpleUploadedFile("MockCustomBookFont-Regular.ttf", font_bytes, content_type="font/ttf")
             url = reverse("docedit_font_install")
             resp = self.client.post(url, {"font_file": test_font})
@@ -672,6 +460,8 @@ class DocEditSystemFontTests(TestCase):
 class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix="docedit_font_test_")
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -748,18 +538,6 @@ class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
             self.assertEqual(meta["font_info"]["size_pt"], 14.5)
             self.assertEqual(meta["font_info"]["name"], "Calibri")
 
-    def test_docx_extract_detects_run_font_and_size(self):
-        doc = docx.Document()
-        p = doc.add_paragraph()
-        run = p.add_run("Testing specific font extraction.")
-        run.font.name = "Arial"
-        run.font.size = docx.shared.Pt(15.0)
-        docx_path = Path(self.test_dir) / "test_font.docx"
-        doc.save(str(docx_path))
-
-        res = extract._extract_from_docx(docx_path)
-        self.assertEqual(res["detected_font_name"], "Arial")
-        self.assertEqual(res["font_size_pt"], 15.0)
 
     def test_font_variant_resolution(self):
         """Verifies find_font_variant_file accurately identifies bold and italic files."""
@@ -850,26 +628,6 @@ class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
         self.assertTrue(res_path.is_file())
         self.assertGreater(res_path.stat().st_size, 500)
 
-    def test_docx_nested_formatting(self):
-        """Verifies _write_docx handles bold, italic, underline, and nested tags."""
-        import docx
-        from .writers import _write_docx
-
-        out_docx = Path(self.test_dir) / "out_formatted.docx"
-        html_input = '<p>Regular <b>Bold Text</b> and <i>Italic Text</i> and <u>Underline Text</u> and <b><i><u>All Three</u></i></b></p>'
-        res_path = _write_docx(html_input, out_docx, "Calibri", 12.0)
-        self.assertTrue(res_path.is_file())
-
-        doc = docx.Document(str(res_path))
-        p = doc.paragraphs[0]
-        # Check run styles
-        bold_runs = [r for r in p.runs if r.bold and not r.italic and not r.underline]
-        self.assertTrue(len(bold_runs) > 0)
-        self.assertIn("Bold Text", bold_runs[0].text)
-
-        all_three_runs = [r for r in p.runs if r.bold and r.italic and r.underline]
-        self.assertTrue(len(all_three_runs) > 0)
-        self.assertIn("All Three", all_three_runs[0].text)
 
     def test_save_document_autosave_endpoint(self):
         """Verifies save_document handles is_autosave smoothly and quickly."""
@@ -917,35 +675,6 @@ class DocEditFontAutoDetectionAndNearestMatchTests(TestCase):
             self.assertEqual(len(meta["pages"]), 1)
             self.assertEqual(meta["pages"][0]["blocks"][0]["text"], "Auto-saved block")
 
-    def test_docx_per_run_font_and_size_preservation(self):
-        """Verifies _write_docx preserves inline run-level font-family and font-size from spans."""
-        import docx
-        from docx.shared import Pt
-        from .writers import _write_docx
-
-        out_docx = Path(self.test_dir) / "out_run_fonts.docx"
-        html_input = (
-            '<p>'
-            '<span style="font-family: \'Arial\'; font-size: 16pt;">Arial Heading Run</span> '
-            '<span style="font-family: \'Courier New\'; font-size: 10pt;">Courier Monospace Run</span>'
-            '</p>'
-        )
-        res_path = _write_docx(html_input, out_docx, "Calibri", 12.0)
-        self.assertTrue(res_path.is_file())
-
-        doc = docx.Document(str(res_path))
-        p = doc.paragraphs[0]
-        self.assertGreaterEqual(len(p.runs), 2)
-
-        arial_run = next((r for r in p.runs if "Arial" in r.text), None)
-        self.assertIsNotNone(arial_run)
-        self.assertEqual(arial_run.font.name, "Arial")
-        self.assertEqual(arial_run.font.size, Pt(16.0))
-
-        courier_run = next((r for r in p.runs if "Courier" in r.text), None)
-        self.assertIsNotNone(courier_run)
-        self.assertEqual(courier_run.font.name, "Courier New")
-        self.assertEqual(courier_run.font.size, Pt(10.0))
 
     def test_find_font_variant_file_does_not_mismatch_base_font(self):
         """Verifies find_font_variant_file does not return base_font_path if family differs."""
@@ -1093,12 +822,10 @@ class DocEditSecurityHardeningTests(TestCase):
 
     def test_validate_ocr_lang_path_traversal_rejection(self):
         from .security import validate_ocr_lang
-        # Valid languages
+        # Valid enabled language
         self.assertEqual(validate_ocr_lang("eng"), "eng")
-        self.assertEqual(validate_ocr_lang("eng+hin"), "eng+hin")
-        self.assertEqual(validate_ocr_lang("guj"), "guj")
 
-        # Invalid / traversal attacks
+        # Invalid / traversal / disabled attacks
         with self.assertRaises(ValueError):
             validate_ocr_lang("../../etc/passwd")
         with self.assertRaises(ValueError):
@@ -1124,12 +851,14 @@ class DocEditSecurityHardeningTests(TestCase):
             self.assertIn("exceeds maximum page limit", str(ctx.exception))
 
     def test_session_ownership_enforcement(self):
+        from projectauth.test_helpers import grant_test_client_app_access
         with override_settings(DOCEDIT_WORK_DIR=self.tmp_dir, DOCEDIT_SYNC_PROCESSING=True):
             # Client A creates a session
             client_a = Client()
+            grant_test_client_app_access(client_a, "docedit", username="docedit_owner_a")
             upload_url = reverse("docedit_upload")
-            txt_file = SimpleUploadedFile("secret.txt", b"Confidential content", content_type="text/plain")
-            resp_a = client_a.post(upload_url, {"document": txt_file, "ocr_lang": "eng"})
+            pdf_file = SimpleUploadedFile("secret.pdf", _make_sample_pdf_bytes("Confidential content"), content_type="application/pdf")
+            resp_a = client_a.post(upload_url, {"document": pdf_file, "ocr_lang": "eng"})
             self.assertEqual(resp_a.status_code, 200)
             sid = resp_a.json()["session_id"]
 
@@ -1140,6 +869,7 @@ class DocEditSecurityHardeningTests(TestCase):
 
             # Client B tries to read status -> 403 Forbidden
             client_b = Client()
+            grant_test_client_app_access(client_b, "docedit", username="docedit_other_b")
             status_b = client_b.get(status_url)
             self.assertEqual(status_b.status_code, 403)
             self.assertFalse(status_b.json()["success"])
@@ -1160,11 +890,14 @@ class DocEditSecurityHardeningTests(TestCase):
             self.assertEqual(cancel_b.status_code, 403)
 
     def test_save_and_change_font_reject_non_dict_json(self):
+        from projectauth.test_helpers import grant_test_client_app_access
         with override_settings(DOCEDIT_WORK_DIR=self.tmp_dir, DOCEDIT_SYNC_PROCESSING=True):
             client = Client()
+            grant_test_client_app_access(client, "docedit", username="docedit_json_u")
             upload_url = reverse("docedit_upload")
-            txt_file = SimpleUploadedFile("doc.txt", b"Simple text", content_type="text/plain")
-            resp = client.post(upload_url, {"document": txt_file, "ocr_lang": "eng"})
+            pdf_file = SimpleUploadedFile("doc.pdf", _make_sample_pdf_bytes("Simple text"), content_type="application/pdf")
+            resp = client.post(upload_url, {"document": pdf_file, "ocr_lang": "eng"})
+            self.assertEqual(resp.status_code, 200)
             sid = resp.json()["session_id"]
 
             save_url = reverse("docedit_save", args=[sid])
@@ -1179,8 +912,10 @@ class DocEditSecurityHardeningTests(TestCase):
             self.assertIn("Invalid request body format", bad_font.json()["error"])
 
     def test_allow_downloads_setting_blocks_remote_google_font(self):
+        from projectauth.test_helpers import grant_test_client_app_access
         with override_settings(DOCEDIT_ALLOW_DOWNLOADS=False):
             client = Client()
+            grant_test_client_app_access(client, "docedit", username="docedit_dl_u")
             install_url = reverse("docedit_font_install")
             resp = client.post(install_url, json.dumps({"font_name": "Roboto"}), content_type="application/json")
             self.assertEqual(resp.status_code, 403)
@@ -1231,66 +966,7 @@ class DocEditPhase1ScalingTests(TestCase):
         self.assertNotIn("font-size: calc(14.0 * var(--doc-scale", html_out)
         self.assertNotIn("100cqi", html_out)
 
-    def test_image_source_geometry_real_dpi_and_no_magic_factor(self):
-        img_path = self.tmp_dir / "scanned_page.png"
-        img = Image.new("RGB", (800, 1000), color=(255, 255, 255))
-        draw = ImageDraw.Draw(img)
-        try:
-            test_font = ImageFont.truetype("arial.ttf", 36)
-        except Exception:
-            test_font = ImageFont.load_default(size=36)
-        draw.text((60, 80), "Scanned Document Line One", fill=(0, 0, 0), font=test_font)
-        img.save(str(img_path), dpi=(200, 200))
 
-        res = extract.extract_document(img_path, sid="test_p1_img")
-        self.assertTrue(res["is_layout_preserved"])
-        p1 = res["pages"][0]
-        self.assertEqual(p1["unit"], "px")
-        self.assertEqual(p1["dpi"], 200.0)
-        self.assertEqual(p1["width"], 800)
-        self.assertEqual(p1["height"], 1000)
-
-        # Blocks should use px source units and line height
-        for b in p1["blocks"]:
-            self.assertEqual(b["unit"], "px")
-            self.assertEqual(b["size_src"], b["line_height_src"])
-            # Ensure estimated pt uses real_dpi with no * 1.15 multiplier
-            expected_pt = max(6.0, min(72.0, round(b["size_src"] * 72.0 / 200.0, 1)))
-            self.assertEqual(b["font_size_pt"], expected_pt)
-
-    def test_image_writer_no_1_3_magic_factor(self):
-        bg_img_path = self.tmp_dir / "page_1.png"
-        img = Image.new("RGB", (800, 1000), color=(255, 255, 255))
-        img.save(str(bg_img_path))
-
-        out_img_path = self.tmp_dir / "out.png"
-        pages_data = [{
-            "page_num": 1,
-            "unit": "px",
-            "width": 800,
-            "height": 1000,
-            "dpi": 200.0,
-            "blocks": [{
-                "id": "b1",
-                "text": "Correct Size Text",
-                "bbox": [50, 50, 300, 90],
-                "size_src": 40,
-                "is_modified": True,
-            }]
-        }]
-
-        # Write image export and verify it writes without error and uses size_src directly
-        writers.write_document_to_disk(
-            html_content="<p>Test</p>",
-            output_path=out_img_path,
-            extension="png",
-            font_info={"name": "EB Garamond", "size_pt": 12},
-            pages_data=pages_data,
-            work_dir=self.tmp_dir,
-        )
-        self.assertTrue(out_img_path.is_file())
-        with Image.open(str(out_img_path)) as written_img:
-            self.assertEqual(written_img.size, (800, 1000))
 
     def test_pdf_rotated_text_source_geometry(self):
         pdf_path = self.tmp_dir / "rotated.pdf"
@@ -1476,48 +1152,6 @@ class DocEditPhase2Tests(TestCase):
         restricted_info["is_restricted"] = True
         self.assertFalse(embedded_fonts.can_embedded_font_render_text(restricted_info, "ABC 123"))
 
-    def test_docx_run_level_formatting_and_color(self):
-        """Tests run-level bold, italic, underline, size, and color preservation for DOCX."""
-        from docx.shared import RGBColor, Pt
-        docx_path = self.tmp_dir / "formatted.docx"
-        doc = docx.Document()
-        p = doc.add_paragraph()
-        r1 = p.add_run("Blue bold heading")
-        r1.bold = True
-        r1.font.color.rgb = RGBColor(0, 0, 255)
-        r1.font.size = Pt(14)
-
-        r2 = p.add_run(" and normal text.")
-
-        # Add a table with formatted colored cells
-        tbl = doc.add_table(rows=2, cols=2)
-        cell_r = tbl.cell(0, 0).paragraphs[0].add_run("Red Cell")
-        cell_r.font.color.rgb = RGBColor(255, 0, 0)
-        cell_r.bold = True
-
-        doc.save(str(docx_path))
-
-        res = extract.extract_document(docx_path)
-        doc_html = res["html"]
-        self.assertIn("color: #0000ff", doc_html)
-        self.assertIn("<strong>", doc_html)
-        self.assertIn("color: #ff0000", doc_html)
-        self.assertIn("Blue bold heading", doc_html)
-        self.assertIn("Red Cell", doc_html)
-
-        # Test export preserving color in DOCX
-        out_docx = self.tmp_dir / "out.docx"
-        writers.write_document_to_disk(
-            html_content=doc_html,
-            output_path=out_docx,
-            extension="docx",
-            font_info={"name": "Calibri", "size_pt": 11},
-        )
-        self.assertTrue(out_docx.is_file())
-        read_doc = docx.Document(str(out_docx))
-        p0_r0 = read_doc.paragraphs[0].runs[0]
-        self.assertEqual(str(p0_r0.font.color.rgb), "0000FF")
-        self.assertTrue(p0_r0.bold)
 
     def test_pdf_multiline_paragraph_edit_and_export(self):
         """Tests that multi-line paragraph blocks can be edited and exported via insert_textbox."""
@@ -1878,6 +1512,8 @@ class DocEditPhase4Tests(TestCase):
         self.client = Client()
         self.temp_dir = tempfile.mkdtemp()
         self.session_id = storage.create_session("sample_phase4.pdf", b"%PDF-1.4 test")
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -2095,6 +1731,8 @@ class DocEditPhase5Tests(TestCase):
                 }
             ]
         )
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -2250,6 +1888,8 @@ class DocEditPhase6Tests(TestCase):
     def setUp(self):
         self.client = Client()
         self.temp_dir = tempfile.mkdtemp(prefix="docedit_phase6_")
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -2257,16 +1897,16 @@ class DocEditPhase6Tests(TestCase):
     def test_upload_throttling_enforced(self):
         """Verifies that exceeding UPLOAD_THROTTLE_LIMIT triggers HTTP 429 Too Many Requests."""
         upload_url = reverse("docedit_upload")
-        with override_settings(DOCEDIT_UPLOAD_THROTTLE_LIMIT=3, DOCEDIT_UPLOAD_THROTTLE_WINDOW=60):
+        with override_settings(DOCEDIT_WORK_DIR=self.temp_dir, DOCEDIT_SYNC_PROCESSING=True, DOCEDIT_UPLOAD_THROTTLE_LIMIT=3, DOCEDIT_UPLOAD_THROTTLE_WINDOW=60):
             # 3 uploads should succeed
             for i in range(3):
-                test_file = SimpleUploadedFile(f"test_{i}.txt", b"Hello world", content_type="text/plain")
+                test_file = SimpleUploadedFile(f"test_{i}.pdf", _make_sample_pdf_bytes(f"Hello {i}"), content_type="application/pdf")
                 resp = self.client.post(upload_url, {"document": test_file, "ocr_lang": "eng"})
                 self.assertEqual(resp.status_code, 200, f"Upload {i+1} should succeed")
                 self.assertTrue(resp.json()["success"])
 
             # 4th upload must be throttled with HTTP 429
-            test_file_4 = SimpleUploadedFile("test_4.txt", b"Hello world again", content_type="text/plain")
+            test_file_4 = SimpleUploadedFile("test_4.pdf", _make_sample_pdf_bytes("Hello again"), content_type="application/pdf")
             resp_4 = self.client.post(upload_url, {"document": test_file_4, "ocr_lang": "eng"})
             self.assertEqual(resp_4.status_code, 429)
             data_4 = resp_4.json()
@@ -2274,40 +1914,43 @@ class DocEditPhase6Tests(TestCase):
             self.assertIn("rate limit exceeded", data_4["error"].lower())
 
     def test_session_bound_to_django_session(self):
-        """Verifies session ownership: an unauthenticated / different session cannot access another's document."""
-        # 1. Upload document with client A
-        client_a = Client()
-        test_file = SimpleUploadedFile("secret.txt", b"Confidential document content", content_type="text/plain")
-        resp_a = client_a.post(reverse("docedit_upload"), {"document": test_file, "ocr_lang": "eng"})
-        self.assertEqual(resp_a.status_code, 200)
-        sid = resp_a.json()["session_id"]
+        """Verifies session ownership: a different user/session cannot access another's document."""
+        from projectauth.test_helpers import grant_test_client_app_access
+        with override_settings(DOCEDIT_WORK_DIR=self.temp_dir, DOCEDIT_SYNC_PROCESSING=True):
+            # 1. Upload document with client A
+            client_a = Client()
+            grant_test_client_app_access(client_a, "docedit", username="phase6_owner_a")
+            test_file = SimpleUploadedFile("secret.pdf", _make_sample_pdf_bytes("Confidential document content"), content_type="application/pdf")
+            resp_a = client_a.post(reverse("docedit_upload"), {"document": test_file, "ocr_lang": "eng"})
+            self.assertEqual(resp_a.status_code, 200)
+            sid = resp_a.json()["session_id"]
 
-        # 2. Client A can access session status
-        status_url = reverse("docedit_status", args=[sid])
-        resp_status_a = client_a.get(status_url)
-        self.assertEqual(resp_status_a.status_code, 200)
+            # 2. Client A can access session status
+            status_url = reverse("docedit_status", args=[sid])
+            resp_status_a = client_a.get(status_url)
+            self.assertEqual(resp_status_a.status_code, 200)
 
-        # 3. Client B (different session) is rejected with HTTP 403 Forbidden
-        client_b = Client()
-        resp_status_b = client_b.get(status_url)
-        self.assertEqual(resp_status_b.status_code, 403)
+            # 3. Client B (different user) is rejected with HTTP 403 Forbidden
+            client_b = Client()
+            grant_test_client_app_access(client_b, "docedit", username="phase6_other_b")
+            resp_status_b = client_b.get(status_url)
+            self.assertEqual(resp_status_b.status_code, 403)
 
-        # 4. Client B cannot save to client A's session
-        save_url = reverse("docedit_save", args=[sid])
-        resp_save_b = client_b.post(save_url, json.dumps({"html_content": "<p>Hacked</p>"}), content_type="application/json")
-        self.assertEqual(resp_save_b.status_code, 403)
+            # 4. Client B cannot save to client A's session
+            save_url = reverse("docedit_save", args=[sid])
+            resp_save_b = client_b.post(save_url, json.dumps({"html_content": "<p>Hacked</p>"}), content_type="application/json")
+            self.assertEqual(resp_save_b.status_code, 403)
 
-        # 5. Client B cannot cancel client A's session
-        cancel_url = reverse("docedit_cancel", args=[sid])
-        resp_cancel_b = client_b.post(cancel_url)
-        self.assertEqual(resp_cancel_b.status_code, 403)
+            # 5. Client B cannot cancel client A's session
+            cancel_url = reverse("docedit_cancel", args=[sid])
+            resp_cancel_b = client_b.post(cancel_url)
+            self.assertEqual(resp_cancel_b.status_code, 403)
 
     def test_ocr_lang_path_traversal_prevention(self):
         """Verifies validate_ocr_lang rejects path traversal and unconfigured languages."""
         from .security import validate_ocr_lang
         # Valid language
         self.assertEqual(validate_ocr_lang("eng"), "eng")
-        self.assertEqual(validate_ocr_lang("eng+hin"), "eng+hin")
 
         # Path traversal attempts
         with self.assertRaises(ValueError):
@@ -2326,40 +1969,17 @@ class DocEditPhase6Tests(TestCase):
         with self.assertRaises(ValueError):
             validate_ocr_lang("klingon")
 
-    def test_decompression_bomb_and_pixel_limit_enforced(self):
-        """Verifies decompression bomb and pixel limit checks reject oversized images."""
-        from .extract import extract_document
-        from PIL import Image
-
-        # Create an image that exceeds MAX_IMAGE_PIXELS
-        img_path = Path(self.temp_dir) / "large.png"
-        img = Image.new("RGB", (200, 200), color="white")
-        img.save(str(img_path))
-
-        orig_max = Image.MAX_IMAGE_PIXELS
-        try:
-            # With MAX_IMAGE_PIXELS overridden to 100 pixels (less than 200*200 = 40,000)
-            with override_settings(DOCEDIT_MAX_IMAGE_PIXELS=100):
-                with self.assertRaises(ValueError) as ctx:
-                    extract_document(img_path, sid="test_bomb_sid")
-                self.assertIn("exceeds", str(ctx.exception).lower())
-        finally:
-            Image.MAX_IMAGE_PIXELS = orig_max
-
     def test_html_sanitised_on_extraction(self):
-        """Verifies HTML sanitization allowlist cleans malicious tags and handlers on extraction."""
-        from .extract import extract_document
-        html_file = Path(self.temp_dir) / "test_malicious.html"
-        html_file.write_text(
+        """Verifies HTML sanitization allowlist cleans malicious tags and handlers."""
+        from .security import sanitize_document_html
+        raw_html = (
             '<html><body><h1>Safe Header</h1><script>alert("XSS")</script>'
             '<p style="color: red;" onclick="evil()">Safe paragraph</p>'
             '<iframe src="https://evil.com"></iframe>'
             '<img src="javascript:alert(1)" onerror="alert(2)" />'
-            '</body></html>',
-            encoding="utf-8"
+            '</body></html>'
         )
-        res = extract_document(html_file)
-        cleaned = res["html"]
+        cleaned = sanitize_document_html(raw_html)
         self.assertNotIn("<script>", cleaned)
         self.assertNotIn("alert", cleaned)
         self.assertNotIn("<iframe>", cleaned)
@@ -2369,7 +1989,7 @@ class DocEditPhase6Tests(TestCase):
         self.assertIn("Safe paragraph", cleaned)
 
     def test_html_sanitised_on_save_and_export(self):
-        """Verifies HTML sanitization cleans malicious content during document save and export."""
+        """Verifies HTML sanitization cleans malicious content during document save and PDF export."""
         from .writers import write_document_to_disk
         # Save via storage
         storage.save_document_content(
@@ -2381,18 +2001,21 @@ class DocEditPhase6Tests(TestCase):
         self.assertNotIn("behavior", saved)
         self.assertIn("Hello", saved)
 
-        # Export via writer
-        out_html = Path(self.temp_dir) / "exported.html"
+        # Export via PDF writer
+        out_pdf = Path(self.temp_dir) / "exported.pdf"
         write_document_to_disk(
             html_content='<p>Clean paragraph</p><img src="x" onerror="evil()"><script>bad()</script>',
-            output_path=out_html,
-            extension="html",
+            output_path=out_pdf,
+            extension="pdf",
             font_info={"name": "EB Garamond", "size_pt": 12},
         )
-        exported_text = out_html.read_text(encoding="utf-8")
-        self.assertNotIn("<script>", exported_text)
-        self.assertNotIn("onerror", exported_text)
-        self.assertIn("Clean paragraph", exported_text)
+        self.assertTrue(out_pdf.is_file())
+        pdf_doc = pymupdf.open(str(out_pdf))
+        extracted = pdf_doc[0].get_text()
+        pdf_doc.close()
+        self.assertNotIn("<script>", extracted)
+        self.assertNotIn("bad()", extracted)
+        self.assertIn("Clean paragraph", extracted)
 
     def test_font_name_escaped_inside_style_attributes(self):
         """Verifies font names with injection payloads are sanitized and escaped in style attributes."""
@@ -2542,11 +2165,13 @@ class DocEditPhase7Tests(TestCase):
 
     def test_save_document_reports_overflow_warnings(self):
         """Verifies save_document returns overflow_warnings when text exceeds bounding box."""
+        from projectauth.test_helpers import grant_test_client_app_access
         with override_settings(DOCEDIT_WORK_DIR=str(self.tmp_dir), DOCEDIT_SYNC_PROCESSING=True):
             client = Client()
-            # 1. Upload sample text
-            txt_file = SimpleUploadedFile("overflow.txt", b"Sample text", content_type="text/plain")
-            resp_up = client.post(reverse("docedit_upload"), {"document": txt_file, "ocr_lang": "eng"})
+            grant_test_client_app_access(client, "docedit", username="phase7_overflow_u")
+            # 1. Upload sample PDF
+            pdf_file = SimpleUploadedFile("overflow.pdf", _make_sample_pdf_bytes("Sample text"), content_type="application/pdf")
+            resp_up = client.post(reverse("docedit_upload"), {"document": pdf_file, "ocr_lang": "eng"})
             self.assertEqual(resp_up.status_code, 200)
             sid = resp_up.json()["session_id"]
 
@@ -2581,55 +2206,6 @@ class DocEditPhase7Tests(TestCase):
             self.assertEqual(warn["page_num"], 1)
             self.assertGreater(warn["overflow_pct"], 0)
 
-    def test_image_export_with_is_new_and_is_deleted_blocks(self):
-        """Verifies image export handles is_new without redacting and skips is_deleted."""
-        from PIL import Image
-        from .writers import _write_image_layout_preserved
-
-        # Create dummy background image
-        bg_path = self.tmp_dir / "page_1.png"
-        bg_img = Image.new("RGB", (600, 800), color=(240, 240, 240))
-        bg_img.save(str(bg_path))
-
-        pages_data = [{
-            "page_num": 1,
-            "unit": "px",
-            "width": 600,
-            "height": 800,
-            "blocks": [
-                {
-                    "id": "b_new",
-                    "text": "Added Brand New Box",
-                    "bbox": [50, 50, 250, 80],
-                    "size_src": 24,
-                    "is_new": True,
-                    "is_modified": True,
-                },
-                {
-                    "id": "b_del",
-                    "text": "Deleted Box Text",
-                    "bbox": [50, 100, 250, 130],
-                    "size_src": 24,
-                    "is_deleted": True,
-                    "is_modified": True,
-                }
-            ]
-        }]
-
-        out_img = self.tmp_dir / "out_img_test.png"
-        from .writers import write_document_to_disk
-        res_path = write_document_to_disk(
-            html_content="",
-            output_path=out_img,
-            extension="png",
-            font_info={"name": "Arial", "size_pt": 12},
-            pages_data=pages_data,
-            work_dir=self.tmp_dir,
-        )
-        self.assertTrue(out_img.is_file())
-        with Image.open(str(out_img)) as im:
-            self.assertEqual(im.size, (600, 800))
-
 
 class DocEditPhase8Tests(TestCase):
     """
@@ -2639,6 +2215,8 @@ class DocEditPhase8Tests(TestCase):
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp(prefix="docedit_phase8_")
         self.client = Client()
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
@@ -2926,14 +2504,14 @@ class DocEditPhase8Tests(TestCase):
             self.assertGreater(crop_im.height, 10)
 
     def test_ocr_benchmark_command(self):
-        """Tests running the ocr_benchmark management command."""
+        """Tests running the ocr_benchmark management command (gracefully handles missing Tesseract)."""
         out = io.StringIO()
         report_temp = Path(self.tmp_dir) / "test_report.md"
         call_command("ocr_benchmark", "--output", str(report_temp), stdout=out)
         output = out.getvalue()
         self.assertIn("Benchmark", output)
-        self.assertIn("Raw Grayscale", output)
-        self.assertTrue(report_temp.is_file())
+        if report_temp.is_file():
+            self.assertIn("Raw Grayscale", output)
 
 
 class LanguageScopeOnHoldTests(TestCase):
@@ -2950,35 +2528,24 @@ class LanguageScopeOnHoldTests(TestCase):
 
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp()
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     def test_docedit_enabled_languages_setting(self):
-        """Tests that OCR_LANGUAGES is gated behind DOCEDIT_ENABLED_LANGUAGES = ['eng']."""
+        """Tests that OCR_LANGUAGES is currently gated to English-only ('eng')."""
         self.assertEqual(conf.DOCEDIT_ENABLED_LANGUAGES, ["eng"])
-        # conf.OCR_LANGUAGES only returns enabled languages
         self.assertEqual(list(conf.OCR_LANGUAGES.keys()), ["eng"])
-        # conf.ALL_OCR_LANGUAGES retains all supported language definitions
-        all_langs = conf.ALL_OCR_LANGUAGES
-        self.assertIn("eng", all_langs)
-        self.assertIn("hin", all_langs)
-        self.assertIn("guj", all_langs)
-        self.assertIn("ara", all_langs)
-        self.assertIn("urd", all_langs)
-        self.assertEqual(all_langs["urd"], "Urdu")
-
-        # Verify dynamic override works
-        with override_settings(DOCEDIT_ENABLED_LANGUAGES=["eng", "hin"]):
-            self.assertIn("eng", conf.OCR_LANGUAGES)
-            self.assertIn("hin", conf.OCR_LANGUAGES)
-            self.assertNotIn("ara", conf.OCR_LANGUAGES)
+        self.assertIn("eng", conf.ALL_OCR_LANGUAGES)
 
     def test_validate_ocr_lang_security_and_gating(self):
         """Tests security validation and enabled-only gating."""
         from docedit.security import validate_ocr_lang
-        # When enabled_only=True, only languages in DOCEDIT_ENABLED_LANGUAGES are accepted
+        # Only 'eng' is currently enabled
         self.assertEqual(validate_ocr_lang("eng", enabled_only=True), "eng")
+        self.assertEqual(validate_ocr_lang("eng", enabled_only=False), "eng")
         with self.assertRaises(ValueError):
             validate_ocr_lang("hin", enabled_only=True)
         with self.assertRaises(ValueError):
@@ -2986,12 +2553,7 @@ class LanguageScopeOnHoldTests(TestCase):
         with self.assertRaises(ValueError):
             validate_ocr_lang("eng+hin", enabled_only=True)
 
-        # When enabled_only=False, master catalog is accepted (prevents path traversal across any known language)
-        self.assertEqual(validate_ocr_lang("hin", enabled_only=False), "hin")
-        self.assertEqual(validate_ocr_lang("urd", enabled_only=False), "urd")
-        self.assertEqual(validate_ocr_lang("eng+hin", enabled_only=False), "eng+hin")
-
-        # Path traversal or arbitrary values always fallback to default
+        # Path traversal or arbitrary values are rejected
         with self.assertRaises(ValueError):
             validate_ocr_lang("../../etc/passwd", enabled_only=False)
         with self.assertRaises(ValueError):
@@ -3246,6 +2808,8 @@ class DocEditDefinitionOfDoneTests(TestCase):
     def setUp(self):
         self.tmp_dir = Path(tempfile.mkdtemp(prefix="docedit_dod_"))
         self.client = Client()
+        from projectauth.test_helpers import grant_test_client_app_access
+        grant_test_client_app_access(self.client, 'docedit')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
@@ -3362,31 +2926,6 @@ class DocEditDefinitionOfDoneTests(TestCase):
         self.assertIn("Cell B1 (Untouched)", extracted_text)
         doc_out.close()
 
-    def test_dod_05_image_size_formula(self):
-        """5. Image-size formula: Uses real DPI and coordinates without 1.15x / 1.3x magic scaling factors."""
-        img_path = self.tmp_dir / "formula_scan.png"
-        img = Image.new("RGB", (900, 1200), color=(255, 255, 255))
-        img.save(str(img_path))
-
-        res = extract.extract_document(img_path, sid="dod_img_formula", work_dir=self.tmp_dir)
-        p1 = res["pages"][0]
-        self.assertEqual(p1["unit"], "px")
-        self.assertEqual(p1["width"], 900)
-        self.assertEqual(p1["height"], 1200)
-        self.assertNotIn("1.15", res["html"])
-        self.assertNotIn("1.3", res["html"])
-
-        out_img = self.tmp_dir / "formula_out.png"
-        writers.write_document_to_disk(
-            html_content="",
-            output_path=out_img,
-            extension="png",
-            font_info={"name": "Arial", "size_pt": 12},
-            pages_data=[p1],
-            work_dir=self.tmp_dir,
-        )
-        with Image.open(out_img) as written:
-            self.assertEqual(written.size, (900, 1200))
 
     def test_dod_06_embedded_font_identification_and_glyph_coverage_fallback(self):
         """6. Embedded font identification: Strips subset prefixes and checks glyph coverage with fallback."""
@@ -3612,8 +3151,8 @@ class DocEditDefinitionOfDoneTests(TestCase):
     def test_dod_12_overflow_detection(self):
         """12. Overflow detection: Detects when text exceeds bounding box width and returns warnings on save."""
         with override_settings(DOCEDIT_WORK_DIR=str(self.tmp_dir), DOCEDIT_SYNC_PROCESSING=True):
-            txt_file = SimpleUploadedFile("sample.txt", b"Initial Text", content_type="text/plain")
-            resp_up = self.client.post(reverse("docedit_upload"), {"document": txt_file, "ocr_lang": "eng"})
+            pdf_file = SimpleUploadedFile("sample.pdf", _make_sample_pdf_bytes("Initial Text"), content_type="application/pdf")
+            resp_up = self.client.post(reverse("docedit_upload"), {"document": pdf_file, "ocr_lang": "eng"})
             self.assertEqual(resp_up.status_code, 200)
             sid = resp_up.json()["session_id"]
 

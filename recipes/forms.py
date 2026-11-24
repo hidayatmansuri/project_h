@@ -1,12 +1,9 @@
 from django import forms
-from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
 from django.core.validators import FileExtensionValidator
 
 from .models import (
     ALLOWED_IMAGE_EXTENSIONS,
     Category,
-    ChatMessage,
     Cuisine,
     Recipe,
     RecipeImage,
@@ -168,34 +165,3 @@ class ImageUploadForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
-
-
-class SignUpForm(UserCreationForm):
-    email = forms.EmailField(required=True)
-
-    class Meta(UserCreationForm.Meta):
-        model = get_user_model()
-        fields = ("username", "email")
-
-
-class ContactForm(forms.Form):
-    name = forms.CharField(max_length=100)
-    email = forms.EmailField()
-    phone = forms.CharField(max_length=30, required=False)
-    message = forms.CharField(max_length=2000)
-
-
-class ChatNameForm(forms.Form):
-    chatname = forms.CharField(max_length=40)
-
-    def clean_chatname(self):
-        return self.cleaned_data["chatname"].strip()
-
-
-class ChatMessageForm(forms.ModelForm):
-    class Meta:
-        model = ChatMessage
-        fields = ["message"]
-
-    def clean_message(self):
-        return self.cleaned_data["message"].strip()

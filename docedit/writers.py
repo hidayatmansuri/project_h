@@ -1,14 +1,11 @@
 """
-Document exporters.
+PDF document exporters.
 
-Writes edited document content preserving all layout, formatting, tables, lines,
-and typography to the user's choice of output format:
-- PDF: generated with embedded matching font, tables, borders, and lines via PyMuPDF Story.
-- Word DOCX: generated with python-docx preserving native tables, header shading, borders, lines, alignments, and typography.
-- Images (PNG, JPG, TIFF, BMP, WEBP): rendered via PyMuPDF with matching font, tables, and rules.
-- Markdown: exported with markdown tables, divider rules, and headers.
-- HTML: exported with clean embedded responsive CSS for tables, lines, and typography.
-- Plain text: formatted with ASCII tables, divider lines, and text structure.
+Writes edited PDF content preserving layout, formatting, tables, lines,
+and typography:
+- Layout-preserved PDF: in-place redaction + redraw over original PDF pages.
+- Searchable PDF: scanned page background with invisible selectable text layer.
+- Story PDF: generated with embedded matching font, tables, borders, and lines via PyMuPDF Story.
 """
 import base64
 import html
@@ -16,7 +13,6 @@ import io
 import logging
 import re
 import unicodedata
-from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -177,186 +173,6 @@ def get_median_background_color_ring(img: Image.Image, bbox: Any, ring_thickness
     median_rgb = np.median(ring_pixels, axis=0).astype(int)
     return tuple(int(c) for c in median_rgb[:3])
 
-
-
-class DocumentHtmlBlockParser(HTMLParser):
-    """
-    Parses editor HTML into structured block elements preserving exact order:
-    - headings (h1, h2, h3)
-    - paragraphs (p)
-    - divider lines / rules (hr)
-    - tables (table with rows, cells, and headers)
-    - list items (li)
-    """
-    def __init__(self):
-        super().__init__()
-        self.blocks = []
-        self.in_table = False
-        self.table_rows = []
-        self.current_row = []
-        self.current_cell_tag = None
-        self.current_block_tag = None
-        self.current_block_attrs = {}
-        self.text_buf = []
-
-    def handle_starttag(self, tag, attrs):
-        t = tag.lower()
-        attrs_dict = dict(attrs)
-
-        if t == "table":
-            self._flush_block()
-            self.in_table = True
-            self.table_rows = []
-        elif self.in_table:
-            if t == "tr":
-                self.current_row = []
-            elif t in ("td", "th"):
-                self.current_cell_tag = t
-                self.text_buf = []
-            elif t == "a":
-                href = attrs_dict.get("href", "")
-                style_val = attrs_dict.get("style", "")
-                self.text_buf.append(f'<a href="{html.escape(href)}" style="{html.escape(style_val)}">')
-            elif t == "img":
-                src = attrs_dict.get("src", "")
-                alt = attrs_dict.get("alt", "")
-                style_val = attrs_dict.get("style", "")
-                self.text_buf.append(f'<img src="{src}" alt="{html.escape(alt)}" style="{html.escape(style_val)}"/>')
-            elif t == "span":
-                style_val = attrs_dict.get("style", "")
-                if style_val:
-                    self.text_buf.append(f'<span style="{style_val}">')
-                else:
-                    self.text_buf.append('<span>')
-            elif t in ("b", "strong"):
-                self.text_buf.append("<strong>")
-            elif t in ("i", "em"):
-                self.text_buf.append("<em>")
-            elif t == "u":
-                self.text_buf.append("<u>")
-            elif t == "br":
-                self.text_buf.append("<br/>")
-        elif t in ("h1", "h2", "h3", "p", "li", "blockquote"):
-            self._flush_block()
-            self.current_block_tag = t
-            self.current_block_attrs = attrs_dict
-            self.text_buf = []
-        elif t == "hr":
-            self._flush_block()
-            self.blocks.append({"type": "hr"})
-        elif t == "a":
-            href = attrs_dict.get("href", "")
-            style_val = attrs_dict.get("style", "")
-            self.text_buf.append(f'<a href="{html.escape(href)}" style="{html.escape(style_val)}">')
-        elif t == "img":
-            src = attrs_dict.get("src", "")
-            alt = attrs_dict.get("alt", "")
-            style_val = attrs_dict.get("style", "")
-            self.text_buf.append(f'<img src="{src}" alt="{html.escape(alt)}" style="{html.escape(style_val)}"/>')
-        elif t == "span":
-            style_val = attrs_dict.get("style", "")
-            if style_val:
-                self.text_buf.append(f'<span style="{style_val}">')
-            else:
-                self.text_buf.append('<span>')
-        elif t in ("b", "strong"):
-            self.text_buf.append("<strong>")
-        elif t in ("i", "em"):
-            self.text_buf.append("<em>")
-        elif t == "u":
-            self.text_buf.append("<u>")
-        elif t == "br":
-            self.text_buf.append("<br/>")
-
-    def handle_endtag(self, tag):
-        t = tag.lower()
-        if t == "table":
-            self.in_table = False
-            if self.table_rows:
-                self.blocks.append({"type": "table", "rows": self.table_rows})
-            self.table_rows = []
-        elif self.in_table:
-            if t in ("td", "th"):
-                cell_html = "".join(self.text_buf).strip()
-                is_hdr = (self.current_cell_tag == "th")
-                self.current_row.append({"is_header": is_hdr, "html": cell_html})
-                self.text_buf = []
-                self.current_cell_tag = None
-            elif t == "tr":
-                if self.current_row:
-                    self.table_rows.append(self.current_row)
-                    self.current_row = []
-            elif t == "a":
-                self.text_buf.append("</a>")
-            elif t == "span":
-                self.text_buf.append("</span>")
-            elif t in ("b", "strong"):
-                self.text_buf.append("</strong>")
-            elif t in ("i", "em"):
-                self.text_buf.append("</em>")
-            elif t == "u":
-                self.text_buf.append("</u>")
-        elif t in ("h1", "h2", "h3", "p", "li", "blockquote"):
-            self._flush_block()
-        elif t == "a":
-            self.text_buf.append("</a>")
-        elif t == "span":
-            self.text_buf.append("</span>")
-        elif t in ("b", "strong"):
-            self.text_buf.append("</strong>")
-        elif t in ("i", "em"):
-            self.text_buf.append("</em>")
-        elif t == "u":
-            self.text_buf.append("</u>")
-
-    def handle_data(self, data):
-        self.text_buf.append(data)
-
-    def _flush_block(self):
-        if self.current_block_tag:
-            content = "".join(self.text_buf).strip()
-            if content:
-                style_str = self.current_block_attrs.get("style", "").lower()
-                align = None
-                if "text-align: center" in style_str:
-                    align = "center"
-                elif "text-align: right" in style_str:
-                    align = "right"
-                elif "text-align: justify" in style_str:
-                    align = "justify"
-                elif "text-align: left" in style_str:
-                    align = "left"
-
-                font_match = re.search(r'font-family:\s*[\'"]?([^\'";]+)[\'"]?', style_str, re.IGNORECASE)
-                b_font_name = font_match.group(1).split(",")[0].strip().strip("'\"") if font_match else None
-                size_match = re.search(r'font-size:\s*([\d\.]+)pt', style_str, re.IGNORECASE)
-                b_font_size = float(size_match.group(1)) if size_match else None
-
-                self.blocks.append({
-                    "type": self.current_block_tag,
-                    "html": content,
-                    "align": align,
-                    "font_name": b_font_name,
-                    "font_size_pt": b_font_size,
-                })
-            self.current_block_tag = None
-            self.current_block_attrs = {}
-            self.text_buf = []
-
-    def close(self):
-        super().close()
-        self._flush_block()
-
-
-def parse_html_blocks(html_content: str) -> List[Dict[str, Any]]:
-    """Strips editor artifacts and parses HTML into structured block elements."""
-    # Clean fuzzy highlights
-    clean_html = re.sub(r'<span[^>]*class="[^"]*docedit-fuzzy[^"]*"[^>]*>(.*?)</span>', r'\1', html_content)
-    clean_html = re.sub(r'data-[a-zA-Z0-9_\-]+="[^"]*"', '', clean_html)
-    parser = DocumentHtmlBlockParser()
-    parser.feed(clean_html)
-    parser.close()
-    return parser.blocks
 
 
 def _write_pdf_layout_preserved(
@@ -1155,6 +971,7 @@ def _write_searchable_pdf(
     return output_path
 
 
+
 def write_document_to_disk(
     html_content: str,
     output_path: Path,
@@ -1165,17 +982,20 @@ def write_document_to_disk(
     work_dir: Optional[Path] = None,
 ) -> Path:
     """
-    Exports the edited document to output_path matching the chosen extension.
+    Exports the edited PDF document to output_path (standard PDF or Searchable PDF).
     If pages_data is present, exports in layout-preserved mode so tables, lines,
-    borders, graphics, and separate pages are 100% maintained.
+    borders, graphics, and separate pages are maintained.
     """
     html_content = sanitize_document_html(html_content) if html_content else ""
     ext = extension.lstrip(".").lower()
-    kind = EXTENSION_KINDS.get(ext, "text")
+    kind = EXTENSION_KINDS.get(ext, "unknown")
 
     font_name = font_info.get("name", "EB Garamond")
     font_path = font_info.get("font_path")
     font_size_pt = float(font_info.get("size_pt", 12.0))
+
+    if kind not in ("pdf", "searchable_pdf") and ext != "searchable_pdf":
+        raise ValueError(f"Unsupported export format '.{ext}'. DocEdit supports PDF export only.")
 
     # If layout-preserved mode with pages_data
     if pages_data and len(pages_data) > 0:
@@ -1189,40 +1009,24 @@ def write_document_to_disk(
                 font_path=font_path,
                 font_size_pt=font_size_pt,
             )
-        elif kind == "pdf":
-            return _write_pdf_layout_preserved(
-                pages_data=pages_data,
-                original_file_path=original_file_path,
-                output_path=output_path,
-                font_name=font_name,
-                font_path=font_path,
-                font_size_pt=font_size_pt,
-                work_dir=work_dir,
-            )
-        elif kind == "image":
-            return _write_image_layout_preserved(
-                pages_data=pages_data,
-                work_dir=work_dir,
-                output_path=output_path,
-                image_ext=ext,
-                font_name=font_name,
-                font_path=font_path,
-                font_size_pt=font_size_pt,
-            )
+        return _write_pdf_layout_preserved(
+            pages_data=pages_data,
+            original_file_path=original_file_path,
+            output_path=output_path,
+            font_name=font_name,
+            font_path=font_path,
+            font_size_pt=font_size_pt,
+            work_dir=work_dir,
+        )
 
-    if kind in ("pdf", "searchable_pdf") or ext == "searchable_pdf":
-        return _write_pdf(html_content, output_path, font_name, font_path, font_size_pt, original_file_path=original_file_path)
-    elif kind == "image":
-        return _write_image(html_content, output_path, ext, font_name, font_path, font_size_pt)
-    elif kind == "docx":
-        return _write_docx(html_content, output_path, font_name, font_size_pt, original_file_path=original_file_path)
-    elif kind == "markdown":
-        return _write_markdown(html_content, output_path)
-    elif kind == "html":
-        return _write_html(html_content, output_path, font_name, font_size_pt)
-    else:  # Text default
-        return _write_text(html_content, output_path)
-
+    return _write_pdf(
+        html_content,
+        output_path,
+        font_name,
+        font_path,
+        font_size_pt,
+        original_file_path=original_file_path,
+    )
 
 
 def _prepare_clean_html_for_story(raw_html: str, font_name: str, font_size_pt: float) -> str:
@@ -1336,480 +1140,3 @@ def _write_pdf(
     output_path.write_bytes(buf.getvalue())
     return output_path
 
-
-def _write_image(
-    html_content: str,
-    output_path: Path,
-    image_ext: str,
-    font_name: str,
-    font_path: Optional[str],
-    font_size_pt: float
-) -> Path:
-    """Renders the edited document with tables & lines to an image using PyMuPDF pixmap."""
-    import pymupdf
-    from PIL import Image
-
-    pdf_tmp = output_path.with_suffix(".tmp.pdf")
-    _write_pdf(html_content, pdf_tmp, font_name, font_path, font_size_pt)
-
-    doc = pymupdf.open(str(pdf_tmp))
-    if len(doc) == 0:
-        pdf_tmp.unlink(missing_ok=True)
-        return output_path
-
-    fmt_map = {
-        "jpg": "JPEG",
-        "jpeg": "JPEG",
-        "png": "PNG",
-        "tif": "TIFF",
-        "tiff": "TIFF",
-        "bmp": "BMP",
-        "webp": "WEBP",
-    }
-    save_fmt = fmt_map.get(image_ext.lower(), "PNG")
-
-    pix = doc[0].get_pixmap(dpi=conf.OCR_DPI)
-    Image.MAX_IMAGE_PIXELS = getattr(conf, "MAX_IMAGE_PIXELS", 50_000_000)
-    img = Image.open(io.BytesIO(pix.tobytes("png")))
-
-    if save_fmt == "JPEG" and img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
-
-    if save_fmt == "TIFF" and len(doc) > 1:
-        other_frames = []
-        for p_idx in range(1, len(doc)):
-            p_pix = doc[p_idx].get_pixmap(dpi=conf.OCR_DPI)
-            p_img = Image.open(io.BytesIO(p_pix.tobytes("png")))
-            other_frames.append(p_img)
-        img.save(str(output_path), format=save_fmt, save_all=True, append_images=other_frames, dpi=(conf.OCR_DPI, conf.OCR_DPI))
-    else:
-        img.save(str(output_path), format=save_fmt, dpi=(conf.OCR_DPI, conf.OCR_DPI))
-
-    doc.close()
-    pdf_tmp.unlink(missing_ok=True)
-    return output_path
-
-
-def _write_docx(
-    html_content: str,
-    output_path: Path,
-    font_name: str,
-    font_size_pt: float,
-    original_file_path: Optional[Path] = None,
-) -> Path:
-    """
-    Generates Word DOCX preserving full table structures, header shading,
-    borders, divider lines, headings, alignments, matching typography, inline icons,
-    and hyperlinks.
-    """
-    import base64
-    import docx
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml import parse_xml
-    from docx.oxml.ns import nsdecls
-    from docx.shared import Inches, Pt
-
-    blocks = parse_html_blocks(html_content)
-
-    doc = docx.Document()
-
-    # Set normal style typography
-    style = doc.styles["Normal"]
-    font = style.font
-    font.name = font_name
-    font.size = Pt(font_size_pt)
-    try:
-        rPr_norm = style.element.get_or_add_rPr()
-        rFonts_norm = parse_xml(r'<w:rFonts {} w:ascii="{}" w:hAnsi="{}" w:cs="{}"/>'.format(nsdecls('w'), font_name, font_name, font_name))
-        rPr_norm.append(rFonts_norm)
-    except Exception:
-        pass
-
-    # Section margins: match original DOCX if available, else default to compact 0.55in/0.6in margins
-    if original_file_path and Path(original_file_path).is_file() and str(original_file_path).lower().endswith(".docx"):
-        try:
-            orig_doc = docx.Document(str(original_file_path))
-            if orig_doc.sections:
-                orig_sec = orig_doc.sections[0]
-                for section in doc.sections:
-                    section.top_margin = orig_sec.top_margin
-                    section.bottom_margin = orig_sec.bottom_margin
-                    section.left_margin = orig_sec.left_margin
-                    section.right_margin = orig_sec.right_margin
-                    section.page_width = orig_sec.page_width
-                    section.page_height = orig_sec.page_height
-        except Exception as e:
-            logger.debug("Failed copying original docx section margins: %s", e)
-    else:
-        for section in doc.sections:
-            section.top_margin = Inches(0.55)
-            section.bottom_margin = Inches(0.55)
-            section.left_margin = Inches(0.6)
-            section.right_margin = Inches(0.6)
-
-    align_map = {
-        "center": WD_ALIGN_PARAGRAPH.CENTER,
-        "right": WD_ALIGN_PARAGRAPH.RIGHT,
-        "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
-        "left": WD_ALIGN_PARAGRAPH.LEFT,
-    }
-
-    def add_formatted_runs(p, raw_text, base_size=font_size_pt, default_run_font=font_name):
-        from docx.shared import RGBColor
-        tokens = re.split(r'(<[^>]+>)', raw_text)
-        bold = False
-        italic = False
-        underline = False
-        font_stack: List[Optional[str]] = []
-        size_stack: List[Optional[float]] = []
-        color_stack: List[Optional[RGBColor]] = []
-        active_url: Optional[str] = None
-
-        for tok in tokens:
-            if not tok:
-                continue
-            lower_tok = tok.lower()
-            if lower_tok in ('<b>', '<strong>'):
-                bold = True
-            elif lower_tok in ('</b>', '</strong>'):
-                bold = False
-            elif lower_tok in ('<i>', '<em>'):
-                italic = True
-            elif lower_tok in ('</i>', '</em>'):
-                italic = False
-            elif lower_tok == '<u>':
-                underline = True
-            elif lower_tok == '</u>':
-                underline = False
-            elif lower_tok in ('<br>', '<br/>', '<br />'):
-                p.add_run('\n')
-            elif lower_tok.startswith("<img") and lower_tok.endswith(">"):
-                src_m = re.search(r'src=["\']([^"\']+)["\']', tok, re.IGNORECASE)
-                if src_m:
-                    src_val = src_m.group(1)
-                    try:
-                        raw_img = None
-                        if src_val.startswith("data:image/"):
-                            raw_img = base64.b64decode(src_val.split(",", 1)[1])
-                        elif Path(src_val).is_file():
-                            raw_img = Path(src_val).read_bytes()
-                        if raw_img:
-                            r_img = p.add_run()
-                            # Determine dimensions (default icon ~11pt)
-                            w_match = re.search(r'width:\s*([\d\.]+)px', tok, re.I)
-                            h_match = re.search(r'height:\s*([\d\.]+)px', tok, re.I)
-                            w_pt = float(w_match.group(1)) * 0.75 if w_match else 11.0
-                            h_pt = float(h_match.group(1)) * 0.75 if h_match else 11.0
-                            r_img.add_picture(io.BytesIO(raw_img), width=Pt(w_pt), height=Pt(h_pt))
-                    except Exception as e:
-                        logger.debug("Failed adding picture to docx run: %s", e)
-            elif lower_tok.startswith("<a ") and lower_tok.endswith(">"):
-                href_m = re.search(r'href=["\']([^"\']+)["\']', tok, re.IGNORECASE)
-                if href_m:
-                    active_url = href_m.group(1)
-            elif lower_tok == "</a>":
-                active_url = None
-            elif lower_tok.startswith('<span') and lower_tok.endswith('>'):
-                f_match = re.search(r'font-family:\s*[\'"]?([^\'";]+)[\'"]?', tok, re.IGNORECASE)
-                s_match = re.search(r'font-size:\s*([\d\.]+)pt', tok, re.IGNORECASE)
-                c_match = re.search(r'color:\s*#([0-9a-fA-F]{6})', tok, re.IGNORECASE)
-                cur_f = f_match.group(1).split(",")[0].strip().strip("'\"") if f_match else None
-                cur_s = float(s_match.group(1)) if s_match else None
-                cur_c = None
-                if c_match:
-                    h_val = c_match.group(1)
-                    cur_c = RGBColor(int(h_val[0:2], 16), int(h_val[2:4], 16), int(h_val[4:6], 16))
-                font_stack.append(cur_f)
-                size_stack.append(cur_s)
-                color_stack.append(cur_c)
-            elif lower_tok == '</span>':
-                if font_stack:
-                    font_stack.pop()
-                if size_stack:
-                    size_stack.pop()
-                if color_stack:
-                    color_stack.pop()
-            elif tok.startswith('<') and tok.endswith('>'):
-                pass  # Ignore other structural tags in run text
-            else:
-                clean = html.unescape(tok)
-                if clean:
-                    active_font = next((f for f in reversed(font_stack) if f), default_run_font)
-                    active_size = next((s for s in reversed(size_stack) if s is not None), base_size)
-                    active_color = next((c for c in reversed(color_stack) if c is not None), None)
-
-                    if active_url:
-                        try:
-                            part = p.part
-                            r_id = part.relate_to(active_url, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
-                            safe_txt = html.escape(clean)
-                            c_val = "0563C1"
-                            if active_color:
-                                c_val = f"{active_color[0]:02x}{active_color[1]:02x}{active_color[2]:02x}"
-                            hl_xml = (
-                                f'<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
-                                f'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="{r_id}">'
-                                f'<w:r><w:rPr><w:rFonts w:ascii="{active_font}" w:hAnsi="{active_font}"/>'
-                                f'<w:sz w:val="{int(active_size * 2)}"/><w:u w:val="single"/><w:color w:val="{c_val}"/></w:rPr>'
-                                f'<w:t>{safe_txt}</w:t></w:r></w:hyperlink>'
-                            )
-                            p._p.append(parse_xml(hl_xml))
-                        except Exception:
-                            r = p.add_run(clean)
-                            r.font.name = active_font
-                            r.font.size = Pt(active_size)
-                            r.underline = True
-                    else:
-                        r = p.add_run(clean)
-                        r.font.name = active_font
-                        try:
-                            rPr = r._r.get_or_add_rPr()
-                            rFonts = parse_xml(r'<w:rFonts {} w:ascii="{}" w:hAnsi="{}" w:cs="{}"/>'.format(nsdecls('w'), active_font, active_font, active_font))
-                            rPr.append(rFonts)
-                        except Exception:
-                            pass
-                        r.font.size = Pt(active_size)
-                        if active_color:
-                            r.font.color.rgb = active_color
-                        r.bold = bold
-                        r.italic = italic
-                        r.underline = underline
-
-    for block in blocks:
-        b_type = block["type"]
-
-        if b_type == "hr":
-            # Native divider line in Word via border
-            p_hr = doc.add_paragraph()
-            p_hr.paragraph_format.space_before = Pt(6)
-            p_hr.paragraph_format.space_after = Pt(6)
-            pPr = p_hr._p.get_or_add_pPr()
-            pBdr = parse_xml(r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:bottom w:val="single" w:sz="8" w:space="1" w:color="777777"/></w:pBdr>')
-            pPr.append(pBdr)
-
-        elif b_type in ("h1", "h2", "h3"):
-            level = int(b_type[1])
-            p_h = doc.add_heading(level=level)
-            p_h.paragraph_format.space_before = Pt(6)
-            p_h.paragraph_format.space_after = Pt(2)
-            align = block.get("align")
-            if align in align_map:
-                p_h.alignment = align_map[align]
-            h_size = block.get("font_size_pt") or (font_size_pt + (6 - level * 2))
-            b_font = block.get("font_name") or font_name
-            add_formatted_runs(p_h, block["html"], base_size=h_size, default_run_font=b_font)
-
-        elif b_type == "table":
-            rows = block["rows"]
-            if not rows:
-                continue
-            col_count = max(len(r) for r in rows)
-            table = doc.add_table(rows=len(rows), cols=col_count)
-            table.style = "Table Grid"
-
-            for r_idx, row in enumerate(rows):
-                for c_idx, cell_data in enumerate(row):
-                    if c_idx >= col_count:
-                        break
-                    cell = table.cell(r_idx, c_idx)
-                    p_cell = cell.paragraphs[0]
-                    p_cell.paragraph_format.space_after = Pt(2)
-                    p_cell.paragraph_format.space_before = Pt(2)
-
-                    is_hdr = cell_data.get("is_header", False)
-                    if is_hdr:
-                        shd = parse_xml(r'<w:shd {} w:fill="EAEAEA"/>'.format(nsdecls('w')))
-                        cell._tc.get_or_add_tcPr().append(shd)
-
-                    cell_html = cell_data.get("html", "")
-                    if is_hdr:
-                        cell_html = f"<strong>{cell_html}</strong>"
-                    add_formatted_runs(p_cell, cell_html, base_size=max(9.0, font_size_pt - 1.5))
-
-            # Add breathing room after table
-            p_spacer = doc.add_paragraph()
-            p_spacer.paragraph_format.space_before = Pt(3)
-            p_spacer.paragraph_format.space_after = Pt(3)
-
-        elif b_type == "li":
-            p_li = doc.add_paragraph(style="List Bullet")
-            p_li.paragraph_format.space_before = Pt(0)
-            p_li.paragraph_format.space_after = Pt(1.5)
-            p_li.paragraph_format.line_spacing = 1.1
-            b_size = block.get("font_size_pt") or font_size_pt
-            b_font = block.get("font_name") or font_name
-            add_formatted_runs(p_li, block["html"], base_size=b_size, default_run_font=b_font)
-
-        else:  # Paragraph 'p' or blockquote
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(2.5)
-            p.paragraph_format.line_spacing = 1.15
-            align = block.get("align")
-            if align in align_map:
-                p.alignment = align_map[align]
-            b_size = block.get("font_size_pt") or font_size_pt
-            b_font = block.get("font_name") or font_name
-            add_formatted_runs(p, block["html"], base_size=b_size, default_run_font=b_font)
-
-    doc.save(str(output_path))
-    return output_path
-
-
-def _write_markdown(html_content: str, output_path: Path) -> Path:
-    """Converts HTML blocks to clean markdown preserving tables and divider lines."""
-    blocks = parse_html_blocks(html_content)
-    md_lines = []
-
-    for block in blocks:
-        b_type = block["type"]
-        if b_type == "hr":
-            md_lines.append("\n---\n")
-        elif b_type == "h1":
-            text = html.unescape(re.sub(r'<[^>]+>', '', block["html"]))
-            md_lines.append(f"# {text}\n")
-        elif b_type == "h2":
-            text = html.unescape(re.sub(r'<[^>]+>', '', block["html"]))
-            md_lines.append(f"## {text}\n")
-        elif b_type == "h3":
-            text = html.unescape(re.sub(r'<[^>]+>', '', block["html"]))
-            md_lines.append(f"### {text}\n")
-        elif b_type == "li":
-            text = html.unescape(re.sub(r'<[^>]+>', '', block["html"]))
-            md_lines.append(f"- {text}")
-        elif b_type == "table":
-            rows = block["rows"]
-            if not rows:
-                continue
-            col_count = max(len(r) for r in rows)
-            table_md = []
-            # Header row
-            header_cells = [html.unescape(re.sub(r'<[^>]+>', '', cell.get("html", ""))) for cell in rows[0]]
-            while len(header_cells) < col_count:
-                header_cells.append("")
-            table_md.append("| " + " | ".join(header_cells) + " |")
-            table_md.append("| " + " | ".join(["---"] * col_count) + " |")
-
-            for row in rows[1:]:
-                cells = [html.unescape(re.sub(r'<[^>]+>', '', cell.get("html", ""))) for cell in row]
-                while len(cells) < col_count:
-                    cells.append("")
-                table_md.append("| " + " | ".join(cells) + " |")
-
-            md_lines.append("\n" + "\n".join(table_md) + "\n")
-        else:  # Paragraph 'p'
-            text = block["html"]
-            text = re.sub(r'<strong>(.*?)</strong>', r'**\1**', text, flags=re.IGNORECASE)
-            text = re.sub(r'<em>(.*?)</em>', r'*\1*', text, flags=re.IGNORECASE)
-            text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
-            clean = html.unescape(re.sub(r'<[^>]+>', '', text)).strip()
-            if clean:
-                md_lines.append(f"{clean}\n")
-
-    output_path.write_text("\n".join(md_lines).strip() + "\n", encoding="utf-8")
-    return output_path
-
-
-def _write_html(html_content: str, output_path: Path, font_name: str, font_size_pt: float) -> Path:
-    """Wraps HTML in clean HTML5 document with embedded styling for tables, lines & typography."""
-    safe_font = sanitize_font_name(font_name)
-    cleaned = sanitize_document_html(html_content)
-    cleaned = re.sub(r'<span[^>]*class="[^"]*docedit-fuzzy[^"]*"[^>]*>(.*?)</span>', r'\1', cleaned)
-    full_html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edited Document</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family={safe_font.replace(' ', '+')}:wght@400;700&display=swap">
-<style>
-body {{
-    font-family: '{safe_font}', serif;
-    font-size: {font_size_pt}pt;
-    line-height: 1.6;
-    color: #212529;
-    max-width: 860px;
-    margin: 2.5rem auto;
-    padding: 0 1.5rem;
-}}
-table, .docedit-table {{
-    border-collapse: collapse;
-    width: 100%;
-    margin: 1.5rem 0;
-    border: 1px solid #777777;
-}}
-th, td {{
-    border: 1px solid #777777;
-    padding: 8px 12px;
-    text-align: left;
-}}
-th {{
-    font-weight: bold;
-    background-color: #f2f2f2;
-}}
-hr, .docedit-line {{
-    border: none;
-    border-top: 1px solid #777777;
-    margin: 1.5rem 0;
-}}
-h1, h2, h3 {{ margin-top: 1.5rem; margin-bottom: 0.6rem; }}
-p {{ margin-bottom: 1.2rem; text-align: justify; }}
-</style>
-</head>
-<body>
-{cleaned}
-</body>
-</html>
-"""
-    output_path.write_text(full_html, encoding="utf-8")
-    return output_path
-
-
-def _write_text(html_content: str, output_path: Path) -> Path:
-    """Formats HTML to clean plain text with structured ASCII tables and divider rules."""
-    blocks = parse_html_blocks(html_content)
-    text_lines = []
-
-    for block in blocks:
-        b_type = block["type"]
-        if b_type == "hr":
-            text_lines.append("-" * 60)
-        elif b_type in ("h1", "h2", "h3"):
-            txt = html.unescape(re.sub(r'<[^>]+>', '', block["html"])).strip()
-            text_lines.append(txt)
-            text_lines.append("=" * min(len(txt), 60) if b_type == "h1" else "-" * min(len(txt), 60))
-        elif b_type == "li":
-            txt = html.unescape(re.sub(r'<[^>]+>', '', block["html"])).strip()
-            text_lines.append(f"  * {txt}")
-        elif b_type == "table":
-            rows = block["rows"]
-            if not rows:
-                continue
-            # Format as clean ASCII table
-            table_matrix = []
-            col_count = max(len(r) for r in rows)
-            for row in rows:
-                row_vals = [html.unescape(re.sub(r'<[^>]+>', '', c.get("html", ""))).strip() for c in row]
-                while len(row_vals) < col_count:
-                    row_vals.append("")
-                table_matrix.append(row_vals)
-
-            col_widths = [max(len(table_matrix[r][c]) for r in range(len(table_matrix))) for c in range(col_count)]
-            col_widths = [max(w, 4) for w in col_widths]
-
-            # Render rows
-            for r_idx, row in enumerate(table_matrix):
-                cells_str = [row[c].ljust(col_widths[c]) for c in range(col_count)]
-                text_lines.append(" | ".join(cells_str))
-                if r_idx == 0:
-                    text_lines.append("-+-".join("-" * col_widths[c] for c in range(col_count)))
-            text_lines.append("")
-        else:  # Paragraph
-            raw = re.sub(r'<br\s*/?>', '\n', block["html"], flags=re.IGNORECASE)
-            txt = html.unescape(re.sub(r'<[^>]+>', '', raw)).strip()
-            if txt:
-                text_lines.append(txt)
-                text_lines.append("")
-
-    output_path.write_text("\n".join(text_lines).strip() + "\n", encoding="utf-8")
-    return output_path

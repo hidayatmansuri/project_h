@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Category, ChatMessage, Cuisine, Recipe, RecipeImage
+from .models import Category, Cuisine, Recipe, RecipeImage
 
 User = get_user_model()
 
@@ -229,14 +229,27 @@ class PasscodeProtectedCrudTests(TestCase):
         self.assertRedirects(response, next_target)
         self.assertTrue(Category.objects.filter(name="Keto").exists())
 
+    def test_open_redirect_blocked_on_external_next(self):
+        response = self.client.post(reverse("recipes:category_create"), {
+            "name": "SafeRedirectCat",
+            "passcode": "000000",
+            "next": "https://evil.example.com/phish",
+        })
+        self.assertRedirects(response, reverse("recipes:manage"))
+        self.assertTrue(Category.objects.filter(name="SafeRedirectCat").exists())
+
 
 class ImportCommandTests(TestCase):
     def test_import_bundled_data_is_repeatable(self):
+        from pathlib import Path
+        from django.conf import settings
+
+        images_src = str(Path(settings.BASE_DIR) / "media" / "recipes" / "library")
         with tempfile.TemporaryDirectory() as media:
             with override_settings(MEDIA_ROOT=media):
-                call_command("import_recipes", verbosity=0)
+                call_command("import_recipes", images=images_src, verbosity=0)
                 first = (Recipe.objects.count(), Category.objects.count(), Cuisine.objects.count())
-                call_command("import_recipes", verbosity=0)
+                call_command("import_recipes", images=images_src, verbosity=0)
                 second = (Recipe.objects.count(), Category.objects.count(), Cuisine.objects.count())
         self.assertEqual(first, second)
         self.assertEqual(first[0], 9)

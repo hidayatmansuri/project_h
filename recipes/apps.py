@@ -6,12 +6,5 @@ class RecipesConfig(AppConfig):
     name = "recipes"
     verbose_name = "Recipes"
 
-    def ready(self):
-        from .models import ensure_images_in_static_img
-        try:
-            ensure_images_in_static_img()
-        except Exception:
-            pass
-
 
 recipesConfig = RecipesConfig

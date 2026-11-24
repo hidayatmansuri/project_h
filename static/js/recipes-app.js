@@ -1,201 +1,258 @@
 /**
- * Recipes - Interactive UI Script
- * Controls Recipe Square Cards, Full Recipe Modals, and Admin Dynamic Form Rows
+ * Recipes - Interactive UI Script (Vanilla JS, zero jQuery/Materialize dependencies)
+ * Controls Collapsible Accordions, Recipe Square Cards, Full Recipe Modals,
+ * Admin Dynamic Form Rows, Live Search, Surprise Picker, and Filter Pills.
  */
 
-(function ($) {
+(function () {
     'use strict';
 
-    $(document).ready(function () {
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function smoothScrollTo(el, offset) {
+        if (!el) return;
+        var rect = el.getBoundingClientRect();
+        var top = window.pageYOffset + rect.top - (offset || 80);
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // ======================================================================
+        // 0. NATIVE COLLAPSIBLE ACCORDION (replaces Materialize .collapsible())
+        // ======================================================================
+
+        function toggleCollapsibleItem(li, forceOpen) {
+            if (!li) return;
+            var header = li.querySelector(':scope > .collapsible-header');
+            var body = li.querySelector(':scope > .collapsible-body');
+            if (!body) return;
+
+            var willOpen = typeof forceOpen === 'boolean' ? forceOpen : !li.classList.contains('active');
+
+            // Accordion behavior: close sibling items in the same .collapsible list
+            var parentList = li.parentElement;
+            if (willOpen && parentList && parentList.classList.contains('collapsible')) {
+                Array.prototype.forEach.call(parentList.children, function (sibling) {
+                    if (sibling !== li && sibling.classList.contains('active')) {
+                        sibling.classList.remove('active');
+                        var sibHeader = sibling.querySelector(':scope > .collapsible-header');
+                        if (sibHeader) sibHeader.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            li.classList.toggle('active', willOpen);
+            if (header) {
+                header.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            }
+        }
+
+        document.querySelectorAll('.collapsible > li > .collapsible-header').forEach(function (header) {
+            header.setAttribute('role', 'button');
+            header.setAttribute('tabindex', '0');
+            var li = header.parentElement;
+            header.setAttribute('aria-expanded', li && li.classList.contains('active') ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', function (e) {
+            var header = e.target.closest('.collapsible-header');
+            if (!header) return;
+            var li = header.parentElement;
+            if (li && li.parentElement && li.parentElement.classList.contains('collapsible')) {
+                e.preventDefault();
+                toggleCollapsibleItem(li);
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var header = e.target.closest('.collapsible-header');
+            if (!header) return;
+            var li = header.parentElement;
+            if (li && li.parentElement && li.parentElement.classList.contains('collapsible')) {
+                e.preventDefault();
+                toggleCollapsibleItem(li);
+            }
+        });
 
         // ======================================================================
         // 1. RECIPE MODAL SYSTEM
         // ======================================================================
 
-        // Open modal when clicking or pressing Enter/Space on a square recipe card
-        $(document).on('click', '[data-recipe-modal]', function (e) {
-            e.preventDefault();
-            var modalId = $(this).attr('data-recipe-modal');
-            openRecipeModal(modalId);
-        });
-
-        $(document).on('keydown', '[data-recipe-modal]', function (e) {
-            if (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32) {
-                e.preventDefault();
-                var modalId = $(this).attr('data-recipe-modal');
-                openRecipeModal(modalId);
-            }
-        });
-
         function openRecipeModal(modalId) {
-            var $modal = $('#' + modalId);
-            if ($modal.length) {
-                // Close any existing open modals first
-                $('.recipe-modal.is-open').removeClass('is-open').attr('aria-hidden', 'true');
+            var modal = document.getElementById(modalId);
+            if (!modal) return;
 
-                $modal.addClass('is-open').attr('aria-hidden', 'false');
-                $('body').addClass('modal-open-lock');
+            document.querySelectorAll('.recipe-modal.is-open').forEach(function (m) {
+                m.classList.remove('is-open');
+                m.setAttribute('aria-hidden', 'true');
+            });
 
-                // Focus close button for keyboard accessibility
-                var $closeBtn = $modal.find('.recipe-modal-close');
-                if ($closeBtn.length) {
-                    $closeBtn.focus();
-                }
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open-lock');
+
+            var closeBtn = modal.querySelector('.recipe-modal-close');
+            if (closeBtn) closeBtn.focus();
+        }
+
+        function closeRecipeModal(modal) {
+            var targets = modal ? [modal] : Array.prototype.slice.call(document.querySelectorAll('.recipe-modal.is-open'));
+            targets.forEach(function (m) {
+                m.classList.remove('is-open');
+                m.setAttribute('aria-hidden', 'true');
+            });
+            if (document.querySelectorAll('.recipe-modal.is-open').length === 0) {
+                document.body.classList.remove('modal-open-lock');
             }
         }
 
-        // Close modal when clicking backdrop or close buttons
-        $(document).on('click', '[data-close-modal]', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var $modal = $(this).closest('.recipe-modal');
-            closeRecipeModal($modal);
-        });
-
-        // Close modal when clicking directly on modal background area
-        $(document).on('click', '.recipe-modal', function (e) {
-            if (e.target === this) {
+        document.addEventListener('click', function (e) {
+            var trigger = e.target.closest('[data-recipe-modal]');
+            if (trigger) {
                 e.preventDefault();
-                closeRecipeModal($(this));
+                openRecipeModal(trigger.getAttribute('data-recipe-modal'));
+                return;
+            }
+
+            var closeTrigger = e.target.closest('[data-close-modal]');
+            if (closeTrigger) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeRecipeModal(closeTrigger.closest('.recipe-modal'));
+                return;
+            }
+
+            if (e.target.classList && e.target.classList.contains('recipe-modal')) {
+                e.preventDefault();
+                closeRecipeModal(e.target);
             }
         });
 
-        // Close modal when pressing Escape key
-        $(document).on('keydown', function (e) {
-            if (e.key === 'Escape' || e.keyCode === 27) {
-                var $openModal = $('.recipe-modal.is-open');
-                if ($openModal.length) {
-                    closeRecipeModal($openModal);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                var openModals = document.querySelectorAll('.recipe-modal.is-open');
+                if (openModals.length) closeRecipeModal(null);
+                return;
+            }
+            if (e.key === 'Enter' || e.key === ' ') {
+                var trigger = e.target.closest('[data-recipe-modal]');
+                if (trigger) {
+                    e.preventDefault();
+                    openRecipeModal(trigger.getAttribute('data-recipe-modal'));
                 }
             }
         });
-
-        function closeRecipeModal($modal) {
-            if (!$modal || !$modal.length) {
-                $modal = $('.recipe-modal.is-open');
-            }
-            $modal.removeClass('is-open').attr('aria-hidden', 'true');
-            if ($('.recipe-modal.is-open').length === 0) {
-                $('body').removeClass('modal-open-lock');
-            }
-        }
 
         // ======================================================================
         // 2. ADMIN DYNAMIC INGREDIENT & METHOD BUILDER
         // ======================================================================
 
-        function reindexDynamicRows($container, labelPrefix) {
-            if (typeof $container === 'string') {
-                $container = $('#' + $container);
+        function reindexDynamicRows(container, labelPrefix) {
+            if (typeof container === 'string') {
+                container = document.getElementById(container);
             }
-            $container.find('.admin-dynamic-row').each(function (index) {
-                $(this).find('label').text(labelPrefix + ' ' + (index + 1));
+            if (!container) return;
+            container.querySelectorAll('.admin-dynamic-row').forEach(function (row, index) {
+                var label = row.querySelector('label');
+                if (label) label.textContent = labelPrefix + ' ' + (index + 1);
             });
         }
 
-        // Add Ingredient
-        $(document).on('click', '#admin-add-ingredient-btn, .btn-add-ingredient', function (e) {
-            e.preventDefault();
-            var $container = $(this).closest('.admin-dynamic-section').find('.admin-dynamic-container');
-            if (!$container.length) {
-                $container = $('#admin-ingredients-container');
-            }
-            var count = $container.find('.admin-dynamic-row').length + 1;
-
-            var rowHtml = [
-                '<div class="admin-dynamic-row">',
+        function appendDynamicRow(container, inputName, iconName, placeholder, labelPrefix) {
+            if (!container) return;
+            var count = container.querySelectorAll('.admin-dynamic-row').length + 1;
+            var wrapper = document.createElement('div');
+            wrapper.className = 'admin-dynamic-row';
+            wrapper.innerHTML = [
                 '    <div class="input-field dynamic-input-field">',
-                '        <i class="material-icons prefix">ballot</i>',
-                '        <input name="ingredient[]" type="text" class="validate" placeholder="e.g. Ingredient item">',
-                '        <label class="active">Ingredient ' + count + '</label>',
+                '        <i class="material-icons prefix">' + iconName + '</i>',
+                '        <input name="' + inputName + '" type="text" class="validate" placeholder="' + placeholder + '">',
+                '        <label class="active">' + labelPrefix + ' ' + count + '</label>',
                 '    </div>',
-                '    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove ingredient">',
+                '    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove ' + labelPrefix.toLowerCase() + '">',
                 '        <i class="material-icons">delete_outline</i>',
-                '    </button>',
-                '</div>'
+                '    </button>'
             ].join('\n');
 
-            var $newRow = $(rowHtml).hide();
-            $container.append($newRow);
-            $newRow.slideDown(150, function () {
-                $newRow.find('input').focus();
-            });
-            reindexDynamicRows($container, 'Ingredient');
-        });
+            container.appendChild(wrapper);
+            reindexDynamicRows(container, labelPrefix);
+            var input = wrapper.querySelector('input');
+            if (input) input.focus();
+        }
 
-        // Add Method Step
-        $(document).on('click', '#admin-add-method-btn, .btn-add-method', function (e) {
-            e.preventDefault();
-            var $container = $(this).closest('.admin-dynamic-section').find('.admin-dynamic-container');
-            if (!$container.length) {
-                $container = $('#admin-methods-container');
+        document.addEventListener('click', function (e) {
+            var addIngBtn = e.target.closest('#admin-add-ingredient-btn, .btn-add-ingredient');
+            if (addIngBtn) {
+                e.preventDefault();
+                var section = addIngBtn.closest('.admin-dynamic-section');
+                var container = (section && section.querySelector('.admin-dynamic-container'))
+                    || document.getElementById('admin-ingredients-container');
+                appendDynamicRow(container, 'ingredient[]', 'ballot', 'e.g. Ingredient item', 'Ingredient');
+                return;
             }
-            var count = $container.find('.admin-dynamic-row').length + 1;
 
-            var rowHtml = [
-                '<div class="admin-dynamic-row">',
-                '    <div class="input-field dynamic-input-field">',
-                '        <i class="material-icons prefix">restaurant</i>',
-                '        <input name="method[]" type="text" class="validate" placeholder="e.g. Next instruction step">',
-                '        <label class="active">Step ' + count + '</label>',
-                '    </div>',
-                '    <button type="button" class="btn-remove-dynamic" title="Remove" aria-label="Remove step">',
-                '        <i class="material-icons">delete_outline</i>',
-                '    </button>',
-                '</div>'
-            ].join('\n');
+            var addMethodBtn = e.target.closest('#admin-add-method-btn, .btn-add-method');
+            if (addMethodBtn) {
+                e.preventDefault();
+                var mSection = addMethodBtn.closest('.admin-dynamic-section');
+                var mContainer = (mSection && mSection.querySelector('.admin-dynamic-container'))
+                    || document.getElementById('admin-methods-container');
+                appendDynamicRow(mContainer, 'method[]', 'restaurant', 'e.g. Next instruction step', 'Step');
+                return;
+            }
 
-            var $newRow = $(rowHtml).hide();
-            $container.append($newRow);
-            $newRow.slideDown(150, function () {
-                $newRow.find('input').focus();
-            });
-            reindexDynamicRows($container, 'Step');
-        });
+            var removeBtn = e.target.closest('.btn-remove-dynamic');
+            if (removeBtn) {
+                e.preventDefault();
+                var row = removeBtn.closest('.admin-dynamic-row');
+                if (!row) return;
+                var parent = row.parentElement;
+                var isMethod = !!row.querySelector('input[name="method[]"]')
+                    || ((parent && parent.id) || '').indexOf('method') !== -1;
+                var labelPrefix = isMethod ? 'Step' : 'Ingredient';
 
-        // Remove row
-        $(document).on('click', '.btn-remove-dynamic', function (e) {
-            e.preventDefault();
-            var $row = $(this).closest('.admin-dynamic-row');
-            var $container = $row.parent();
-            var isMethod = $row.find('input[name="method[]"]').length > 0 || ($container.attr('id') || '').indexOf('method') !== -1;
-            var labelPrefix = isMethod ? 'Step' : 'Ingredient';
-
-            if ($container.find('.admin-dynamic-row').length > 1) {
-                $row.slideUp(150, function () {
-                    $row.remove();
-                    reindexDynamicRows($container, labelPrefix);
-                });
-            } else {
-                // If only 1 row left, simply clear its value
-                $row.find('input').val('').focus();
+                if (parent && parent.querySelectorAll('.admin-dynamic-row').length > 1) {
+                    row.remove();
+                    reindexDynamicRows(parent, labelPrefix);
+                } else {
+                    var input = row.querySelector('input');
+                    if (input) {
+                        input.value = '';
+                        input.focus();
+                    }
+                }
             }
         });
 
         // Open embedded recipe editor collapsible when triggered or via URL hash
-        function openEmbeddedEditor($section) {
-            if (!$section || !$section.length) return;
-            var $collapsible = $section.find('.collapsible').first();
-            var $firstLi = $collapsible.children('li').first();
-            if ($firstLi.length && !$firstLi.hasClass('active')) {
-                $firstLi.children('.collapsible-header').trigger('click');
+        function openEmbeddedEditor(section) {
+            if (!section) return;
+            var firstLi = section.querySelector('.collapsible > li');
+            if (firstLi && !firstLi.classList.contains('active')) {
+                toggleCollapsibleItem(firstLi, true);
             }
         }
 
-        $(document).on('click', '.js-open-recipe-editor', function (e) {
-            var $editor = $('#embedded-recipe-editor');
-            if ($editor.length) {
+        document.addEventListener('click', function (e) {
+            var openBtn = e.target.closest('.js-open-recipe-editor');
+            if (!openBtn) return;
+            var editor = document.getElementById('embedded-recipe-editor');
+            if (editor) {
                 e.preventDefault();
-                openEmbeddedEditor($editor);
-                $('html, body').stop().animate({
-                    scrollTop: $editor.offset().top - 80
-                }, 400);
+                openEmbeddedEditor(editor);
+                smoothScrollTo(editor, 80);
             }
         });
 
         if (window.location.hash === '#embedded-recipe-editor') {
             setTimeout(function () {
-                openEmbeddedEditor($('#embedded-recipe-editor'));
+                openEmbeddedEditor(document.getElementById('embedded-recipe-editor'));
             }, 150);
         }
 
@@ -203,151 +260,151 @@
         // 3. LANDING PAGE LIVE SEARCH & FILTERING
         // ======================================================================
 
-        var $searchInput = $('#recipe-search-input');
-        var $clearBtn = $('#search-clear-btn');
-        var $feedback = $('#search-feedback');
+        var searchInput = document.getElementById('recipe-search-input');
+        var clearBtn = document.getElementById('search-clear-btn');
+        var feedback = document.getElementById('search-feedback');
 
         function performSearch(query) {
             query = (query || '').trim().toLowerCase();
+            var cards = document.querySelectorAll('.recipe-card-square');
+            var catCols = document.querySelectorAll('.category-card-col');
+            var cusCols = document.querySelectorAll('.cuisine-card-col');
 
             if (!query) {
-                // Reset all
-                $('.recipe-card-square').removeClass('is-search-hidden');
-                $('.category-card-col').removeClass('is-search-hidden');
-                $('.cuisine-card-col').removeClass('is-search-hidden');
-                $clearBtn.removeClass('is-active');
-                $feedback.removeClass('is-visible').text('');
+                cards.forEach(function (el) { el.classList.remove('is-search-hidden'); });
+                catCols.forEach(function (el) { el.classList.remove('is-search-hidden'); });
+                cusCols.forEach(function (el) { el.classList.remove('is-search-hidden'); });
+                if (clearBtn) clearBtn.classList.remove('is-active');
+                if (feedback) {
+                    feedback.classList.remove('is-visible');
+                    feedback.textContent = '';
+                }
                 return;
             }
 
-            $clearBtn.addClass('is-active');
+            if (clearBtn) clearBtn.classList.add('is-active');
 
             var matchCount = 0;
 
-            // Filter recipe square cards
-            $('.recipe-card-square').each(function () {
-                var name = $(this).attr('data-recipe-name') || '';
-                var cat = $(this).attr('data-recipe-category') || '';
-                var cus = $(this).attr('data-recipe-cuisine') || '';
-                var ing = $(this).attr('data-recipe-ingredients') || '';
+            cards.forEach(function (card) {
+                var name = card.getAttribute('data-recipe-name') || '';
+                var cat = card.getAttribute('data-recipe-category') || '';
+                var cus = card.getAttribute('data-recipe-cuisine') || '';
+                var ing = card.getAttribute('data-recipe-ingredients') || '';
                 var combined = (name + ' ' + cat + ' ' + cus + ' ' + ing).toLowerCase();
 
                 if (combined.indexOf(query) !== -1) {
-                    $(this).removeClass('is-search-hidden');
+                    card.classList.remove('is-search-hidden');
                     matchCount++;
                 } else {
-                    $(this).addClass('is-search-hidden');
+                    card.classList.add('is-search-hidden');
                 }
             });
 
-            // Filter category cards
-            $('.category-card-col').each(function () {
-                var text = $(this).text().toLowerCase();
-                if (text.indexOf(query) !== -1) {
-                    $(this).removeClass('is-search-hidden');
+            catCols.forEach(function (el) {
+                el.classList.toggle('is-search-hidden', el.textContent.toLowerCase().indexOf(query) === -1);
+            });
+
+            cusCols.forEach(function (el) {
+                el.classList.toggle('is-search-hidden', el.textContent.toLowerCase().indexOf(query) === -1);
+            });
+
+            if (feedback) {
+                feedback.classList.add('is-visible');
+                if (matchCount > 0) {
+                    feedback.innerHTML = '<i class="fas fa-check-circle"></i> Found ' + matchCount + ' recipe' + (matchCount === 1 ? '' : 's') + ' matching "' + escapeHtml(query) + '"';
                 } else {
-                    $(this).addClass('is-search-hidden');
+                    feedback.innerHTML = '<i class="fas fa-info-circle"></i> No recipes directly match "' + escapeHtml(query) + '". Showing category matches.';
                 }
-            });
-
-            // Filter cuisine cards
-            $('.cuisine-card-col').each(function () {
-                var text = $(this).text().toLowerCase();
-                if (text.indexOf(query) !== -1) {
-                    $(this).removeClass('is-search-hidden');
-                } else {
-                    $(this).addClass('is-search-hidden');
-                }
-            });
-
-            // Update feedback banner
-            if (matchCount > 0) {
-                $feedback.addClass('is-visible').html('<i class="fas fa-check-circle"></i> Found ' + matchCount + ' recipe' + (matchCount === 1 ? '' : 's') + ' matching "' + $('<div>').text(query).html() + '"');
-            } else {
-                $feedback.addClass('is-visible').html('<i class="fas fa-info-circle"></i> No recipes directly match "' + $('<div>').text(query).html() + '". Showing category matches.');
             }
         }
 
-        $searchInput.on('input', function () {
-            performSearch($(this).val());
-        });
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                performSearch(searchInput.value);
+            });
+        }
 
-        $clearBtn.on('click', function () {
-            $searchInput.val('').focus();
-            performSearch('');
-        });
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.focus();
+                }
+                performSearch('');
+            });
+        }
 
         // ======================================================================
         // 4. "SURPRISE ME!" RANDOM RECIPE GENERATOR
         // ======================================================================
 
-        $('#btn-surprise-recipe').on('click', function (e) {
-            e.preventDefault();
-            var $cards = $('.recipe-card-square:not(.is-search-hidden)');
-            if (!$cards.length) {
-                $cards = $('.recipe-card-square');
-            }
-            if (!$cards.length) return;
+        var surpriseBtn = document.getElementById('btn-surprise-recipe');
+        if (surpriseBtn) {
+            surpriseBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                var cards = document.querySelectorAll('.recipe-card-square:not(.is-search-hidden)');
+                if (!cards.length) {
+                    cards = document.querySelectorAll('.recipe-card-square');
+                }
+                if (!cards.length) return;
 
-            var randomIndex = Math.floor(Math.random() * $cards.length);
-            var $selectedCard = $cards.eq(randomIndex);
-            var modalId = $selectedCard.attr('data-recipe-modal');
+                var selectedCard = cards[Math.floor(Math.random() * cards.length)];
+                var modalId = selectedCard.getAttribute('data-recipe-modal');
 
-            // Visual feedback: scroll to card and flash
-            $('html, body').animate({
-                scrollTop: $selectedCard.offset().top - 140
-            }, 400, function () {
-                $selectedCard.addClass('surprise-highlight');
+                smoothScrollTo(selectedCard, 140);
                 setTimeout(function () {
-                    $selectedCard.removeClass('surprise-highlight');
-                    if (modalId) {
-                        openRecipeModal(modalId);
-                    }
-                }, 750);
+                    selectedCard.classList.add('surprise-highlight');
+                    setTimeout(function () {
+                        selectedCard.classList.remove('surprise-highlight');
+                        if (modalId) openRecipeModal(modalId);
+                    }, 750);
+                }, 400);
             });
-        });
+        }
 
         // ======================================================================
         // 5. FEATURED SHOWCASE FILTER PILLS
         // ======================================================================
 
-        $('.filter-pill-btn').on('click', function (e) {
-            e.preventDefault();
-            var filter = $(this).attr('data-filter');
-            $('.filter-pill-btn').removeClass('active');
-            $(this).addClass('active');
+        document.querySelectorAll('.filter-pill-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                var filter = btn.getAttribute('data-filter');
+                document.querySelectorAll('.filter-pill-btn').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
 
-            // Reset search input if user clicks filter
-            if ($searchInput.val()) {
-                $searchInput.val('');
-                $clearBtn.removeClass('is-active');
-                $feedback.removeClass('is-visible').text('');
-            }
-
-            $('.recipe-card-square').each(function () {
-                var $card = $(this);
-                var cookTime = parseInt($card.attr('data-cook-time') || '0', 10);
-                var category = ($card.attr('data-recipe-category') || '').toLowerCase();
-                var cuisine = ($card.attr('data-recipe-cuisine') || '').toLowerCase();
-
-                var show = true;
-                if (filter === 'all') {
-                    show = true;
-                } else if (filter === 'u30') {
-                    show = (cookTime > 0 && cookTime <= 30);
-                } else if (filter === 'veg') {
-                    show = (category.indexOf('veg') !== -1 || category.indexOf('healthy') !== -1);
-                } else if (filter === 'meat') {
-                    show = (category.indexOf('chick') !== -1 || category.indexOf('beef') !== -1 || category.indexOf('lamb') !== -1 || category.indexOf('pork') !== -1 || category.indexOf('sea food') !== -1 || category.indexOf('seafood') !== -1);
-                } else if (filter === 'global') {
-                    show = (cuisine.length > 0);
+                if (searchInput && searchInput.value) {
+                    searchInput.value = '';
+                    if (clearBtn) clearBtn.classList.remove('is-active');
+                    if (feedback) {
+                        feedback.classList.remove('is-visible');
+                        feedback.textContent = '';
+                    }
                 }
 
-                if (show) {
-                    $card.removeClass('is-search-hidden');
-                } else {
-                    $card.addClass('is-search-hidden');
-                }
+                document.querySelectorAll('.recipe-card-square').forEach(function (card) {
+                    var cookTime = parseInt(card.getAttribute('data-cook-time') || '0', 10);
+                    var category = (card.getAttribute('data-recipe-category') || '').toLowerCase();
+                    var cuisine = (card.getAttribute('data-recipe-cuisine') || '').toLowerCase();
+
+                    var show = true;
+                    if (filter === 'u30') {
+                        show = (cookTime > 0 && cookTime <= 30);
+                    } else if (filter === 'veg') {
+                        show = (category.indexOf('veg') !== -1 || category.indexOf('healthy') !== -1);
+                    } else if (filter === 'meat') {
+                        show = (category.indexOf('chick') !== -1 || category.indexOf('beef') !== -1
+                            || category.indexOf('lamb') !== -1 || category.indexOf('pork') !== -1
+                            || category.indexOf('sea food') !== -1 || category.indexOf('seafood') !== -1);
+                    } else if (filter === 'global') {
+                        show = (cuisine.length > 0);
+                    }
+
+                    card.classList.toggle('is-search-hidden', !show);
+                });
             });
         });
 
@@ -355,16 +412,17 @@
         // 6. SMOOTH SCROLL FOR BACK-TO-TOP & IN-PAGE ANCHORS
         // ======================================================================
 
-        $('a[href^="#"]').on('click', function (e) {
-            var target = $(this.getAttribute('href'));
-            if (target.length) {
-                e.preventDefault();
-                $('html, body').stop().animate({
-                    scrollTop: target.offset().top - 80
-                }, 400);
-            }
+        document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                var href = link.getAttribute('href');
+                if (!href || href.length < 2) return;
+                var target = document.querySelector(href);
+                if (target) {
+                    e.preventDefault();
+                    smoothScrollTo(target, 80);
+                }
+            });
         });
 
     });
-
-})(jQuery);
+})();

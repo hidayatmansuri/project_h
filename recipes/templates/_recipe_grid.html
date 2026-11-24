@@ -32,7 +32,7 @@
         {% if recipe.image_url %}
         <div class="recipe-card-bg" style="background-image: url('{{ recipe.image_url }}');"></div>
         {% else %}
-        <div class="recipe-card-bg" style="background-image: url('{% static 'img/batata_poha_20261004193608.jpeg' %}');"></div>
+        <div class="recipe-card-bg" style="background-image: url('{% static 'images/batata_poha_20261004193608.jpeg' %}');"></div>
         {% endif %}
 
         <!-- Recipe Information Overlay -->
@@ -94,7 +94,7 @@
                 {% if recipe.image_url %}
                 <img class="recipe-modal-hero-img" loading="lazy" src="{{ recipe.image_url }}" alt="{{ recipe.name }}">
                 {% else %}
-                <img class="recipe-modal-hero-img" loading="lazy" src="{% static 'img/batata_poha_20261004193608.jpeg' %}" alt="{{ recipe.name }}">
+                <img class="recipe-modal-hero-img" loading="lazy" src="{% static 'images/batata_poha_20261004193608.jpeg' %}" alt="{{ recipe.name }}">
                 {% endif %}
             </div>
 

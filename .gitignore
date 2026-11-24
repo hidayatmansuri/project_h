@@ -18,3 +18,10 @@ docedit/scratch/
 scratch/
 listimage/workspace/
 
+# Backups & IDE configs
+*.sql
+*_backup.json
+data.json
+.idea/
+.vscode/
+

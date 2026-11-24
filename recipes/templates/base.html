@@ -10,7 +10,6 @@
 
 <!-- Lightweight Responsive Framework & Styles -->
 <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}" type="text/css">
-<link rel="stylesheet" href="{% static 'css/materialize.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
 {% block recipes_extra_css %}{% endblock %}
 {% endblock %}
@@ -25,23 +24,6 @@
 
 {% block script %}
 {{ block.super }}
-<script src="{% static 'js/jquery.js' %}"></script>
-<script src="{% static 'js/materialize.js' %}"></script>
 <script src="{% static 'js/recipes-app.js' %}"></script>
-<script type="text/javascript">
-    $(document).ready(function () {
-        if (typeof $.fn.collapsible === 'function') {
-            $('.collapsible').collapsible();
-        }
-        if (typeof $.fn.formSelect === 'function') {
-            $('select').formSelect();
-        }
-        if (typeof $.fn.datepicker === 'function') {
-            $('.datepicker').datepicker({
-                format: 'dd mmm yyyy'
-            });
-        }
-    });
-</script>
 {% block recipes_extra_js %}{% endblock %}
 {% endblock %}

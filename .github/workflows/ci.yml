@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, app-projectauth]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install system dependencies (Tesseract OCR)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django deployment system checks
+        env:
+          DJANGO_DEBUG: "False"
+          SECRET_KEY: "ci-ephemeral-secret-key-for-deploy-check-at-least-fifty-chars-0123456789"
+          ALLOWED_HOSTS: "example.com"
+          PROJECTAUTH_ENCRYPTION_KEYS: "kid1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          SECURE_HSTS_SECONDS: "31536000"
+          SECURE_HSTS_PRELOAD: "True"
+        run: python manage.py check --deploy
+
+      - name: Run full Django test suite
+        env:
+          DJANGO_DEBUG: "True"
+          SECRET_KEY: "ci-test-secret-key"
+          PROJECTAUTH_ENCRYPTION_KEYS: "kid1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        run: python manage.py test --verbosity=1

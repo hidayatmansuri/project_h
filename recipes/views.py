@@ -1,10 +1,10 @@
-from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout
 from django.contrib.auth.views import LoginView
 from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .forms import (
@@ -14,9 +14,8 @@ from .forms import (
     CuisineForm,
     ImageUploadForm,
     RecipeForm,
-    SignUpForm,
 )
-from .models import Category, Cuisine, Recipe, RecipeImage, ensure_images_in_static_img
+from .models import Category, Cuisine, Recipe, RecipeImage
 
 QUICK_MINUTES = 30
 DEFAULT_PASSCODE = "000000"
@@ -28,7 +27,6 @@ DEFAULT_PASSCODE = "000000"
 
 def recipe_queryset():
     """Recipes with everything the cards need, fetched in one query."""
-    ensure_images_in_static_img()
     return Recipe.objects.select_related("category", "cuisine", "image")
 
 
@@ -95,11 +93,15 @@ def collection_context(title, recipes, section_id, empty_message="Will be availa
 
 def get_redirect_target(request, default="recipes:index"):
     """
-    Returns the custom 'next' URL parameter if provided, or falls back to
-    the given default URL name.
+    Returns the custom 'next' URL parameter if provided and safe (same host),
+    or falls back to the given default URL name.
     """
     next_url = request.POST.get("next") or request.GET.get("next")
-    if next_url:
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
         return next_url
     return reverse(default)
 
@@ -199,12 +201,10 @@ def slow_recipes(request):
 
 
 # ============================================================================
-# Legacy Account Views (kept for URL compatibility; not required for editing)
+# Legacy Account Views (kept for URL compatibility; delegated to projectauth)
 # ============================================================================
 
 class LoginView(LoginView):
-    template_name = "login.html"
-
     def dispatch(self, request, *args, **kwargs):
         return redirect(f"{reverse('projectauth:login')}?next={reverse('recipes:index')}")
 
@@ -213,29 +213,11 @@ class LoginView(LoginView):
 def logout_view(request):
     logout(request)
     messages.info(request, "You have been successfully logged out.")
-    target = request.POST.get("next") or request.GET.get("next") or reverse("recipes:index")
-    return redirect(target)
+    return redirect(get_redirect_target(request, default="recipes:index"))
 
 
 def signup(request):
-    if not getattr(settings, "RECIPES_ALLOW_SIGNUP", getattr(settings, "recipes_ALLOW_SIGNUP", False)):
-        return redirect("projectauth:signup")
-
-    if request.method == "POST":
-        form = SignUpForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_staff = getattr(
-                settings, "RECIPES_SIGNUP_GRANTS_STAFF", getattr(settings, "recipes_SIGNUP_GRANTS_STAFF", False)
-            )
-            user.save()
-            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-            messages.info(request, "Account successfully created!")
-            return redirect(reverse("recipes:index") + "#admin-section")
-        flash_form_errors(request, form)
-    else:
-        form = SignUpForm()
-    return render(request, "signup.html", {"page_title": "Create New User", "form": form})
+    return redirect("projectauth:signup")
 
 
 # ============================================================================

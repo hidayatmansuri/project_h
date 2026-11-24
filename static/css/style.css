@@ -525,7 +525,7 @@ html.dark .recipes-app-container #mainNav .navbar-nav>li.nav-item>a:focus {
    ========================================================================== */
 header.masthead {
   margin-bottom: 45px;
-  background: url('../img/Basically-Gojuchang-Chicken-Recipe-Wide.jpg') no-repeat center center;
+  background: url('../images/Basically-Gojuchang-Chicken-Recipe-Wide.jpg') no-repeat center center;
   background-color: #212A31;
   background-size: cover;
   position: relative;
@@ -2871,4 +2871,110 @@ ul.dropdown-content.select-dropdown li.disabled>span {
   .about-feature-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+
+/* ============================================================================
+ * Native Collapsible, Select, Date Input & Input-Field Styles
+ * (Replaces legacy 185 KB materialize.css with lightweight native HTML5 styles)
+ * ============================================================================ */
+
+.recipes-app-container ul.collapsible {
+    list-style: none;
+    margin: 0.75rem 0 1.25rem;
+    padding: 0;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.recipes-app-container .collapsible > li {
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.recipes-app-container .collapsible > li:last-child {
+    border-bottom: none;
+}
+
+.recipes-app-container .collapsible-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.9rem 1.15rem;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.recipes-app-container .collapsible-header:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+}
+
+.recipes-app-container .collapsible-body {
+    display: none;
+    padding: 1.15rem 1.25rem;
+    border-top: 1px solid rgba(128, 128, 128, 0.18);
+}
+
+.recipes-app-container .collapsible > li.active > .collapsible-body {
+    display: block;
+}
+
+.recipes-app-container .input-field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+}
+
+.recipes-app-container .input-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.85;
+    order: -1;
+}
+
+.recipes-app-container .input-field i.prefix {
+    position: absolute;
+    left: 0.65rem;
+    bottom: 0.55rem;
+    font-size: 1.2rem;
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.recipes-app-container .input-field input[type="text"],
+.recipes-app-container .input-field input[type="number"],
+.recipes-app-container .input-field input[type="password"],
+.recipes-app-container .input-field input[type="date"],
+.recipes-app-container .input-field select,
+.recipes-app-container .input-field textarea {
+    display: block;
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 6px;
+    background-color: transparent;
+    color: inherit;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+.recipes-app-container .input-field i.prefix ~ input,
+.recipes-app-container .input-field i.prefix ~ select,
+.recipes-app-container .input-field i.prefix ~ textarea {
+    padding-left: 2.35rem;
+}
+
+.recipes-app-container .input-field select option {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+
+html.dark .recipes-app-container .input-field select option {
+    background-color: #1f242d;
+    color: #f3f4f6;
 }

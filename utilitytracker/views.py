@@ -18,7 +18,7 @@ def utility(request):
             if date_str:
                 try:
                     instance = UtilityReading.objects.filter(date=date_str).first()
-                except Exception:
+                except (ValueError, TypeError):
                     pass
             reading_form = UtilityReadingForm(request.POST, instance=instance)
             if reading_form.is_valid():
@@ -37,7 +37,7 @@ def utility(request):
             if topup_id:
                 try:
                     instance = TopUp.objects.filter(id=topup_id).first()
-                except Exception:
+                except (ValueError, TypeError):
                     pass
             topup_form = TopUpForm(request.POST, instance=instance)
             if topup_form.is_valid():

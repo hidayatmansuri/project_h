@@ -1,77 +1,255 @@
 {% extends "home.html" %}
+{% load static %}
 
-{% block title %}
-CV
+{% block title %}About Me &amp; CV | project-h{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/cv.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="home-body about-container">
-    {% for p in personal_info %}
-    {% comment %} <div class="cv-name">
-        <div>{{ p.name }}</div>
-    </div> {% endcomment %}
-    <div class="ph-card hero-card">
-        {% comment %} <div class="cv-personal"> {% endcomment %}
-            <div class="cv-name hero-headline">{{ p.name }}</div>
-            {% comment %} <div>{{ p.phone }}</div> {% endcomment %}
-            {% comment %} <div>{{ p.address }}</div> {% endcomment %}
-            {% comment %}
-        </div> {% endcomment %}
-        <div class="cv-profile">
-            {{ p.profile|linebreaksbr }}
-        </div>
-        <div class="ph-link"><a href="#experience" class="ph-hover">experience</a> | <a href="#skill"
-                class="ph-hover">skill</a></div>
-    </div>
-    {% endfor %}
+<div class="cv-app">
 
-    <div id="experience" class="cv-name">
-        {% comment %} <div class="ph-circle"></div>
-        <div class="ph-line-10"></div> {% endcomment %}
-        Experience
-        {% comment %} <div class="ph-line"></div>
-        <div class="ph-circle"></div> {% endcomment %}
-    </div>
-    {% for e in experience %}
-    <div class="ph-card">
-        <div class="cv-personal">
-            <div class="cv-title">{{ e.title }}</div>
-            <div><i class="fa-solid fa-building"></i> {{ e.employer }}</div>
-            <div><i class="fa-solid fa-industry"></i> {{ e.industry }}</div>
-            <div><i class="fa-solid fa-timeline"></i> {{ e.start_date|date:"M y" }} -
-                {% if e.end_date %}
-                {{ e.end_date|date:"M y" }}
-                {% else %}
-                Present
-                {% endif %}
+    <!-- 1. HERO PROFILE & QUICK NAVIGATION -->
+    <section id="overview" class="cv-section">
+        <div class="ph-card cv-hero">
+            <div class="cv-hero-top">
+                <div class="cv-hero-identity">
+                    <div class="cv-badge-row">
+                        <span class="cv-pill-badge"><i class="fa-solid fa-code"></i> Full-Stack Python &amp; Django</span>
+                        <span class="cv-pill-badge"><i class="fa-solid fa-layer-group"></i> Creator of project-h</span>
+                    </div>
+                    {% if primary_profile %}
+                    <h1 class="cv-hero-name">{{ primary_profile.name }}</h1>
+                    <p class="cv-hero-tagline">{{ primary_profile.profile|linebreaksbr }}</p>
+                    {% else %}
+                    <h1 class="cv-hero-name">Project H — Engineering Portfolio &amp; CV</h1>
+                    <p class="cv-hero-tagline">
+                        Full-stack developer and architect of <strong>project-h</strong>: a modular Django 5.2 &amp; PostgreSQL 18 platform unifying enterprise-grade authentication (2FA, RBAC, audit logging), AI background removal &amp; SVG vectorization, layout-preserving PDF editing with OCR, household utility analytics, and daily productivity tools.
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="cv-hero-actions">
+                    <a href="#project-showcase" class="cv-nav-pill"><i class="fa-solid fa-cubes"></i> Project H</a>
+                    <a href="#skills-analytics" class="cv-nav-pill"><i class="fa-solid fa-chart-pie"></i> Skills &amp; Charts</a>
+                    <a href="#experience" class="cv-nav-pill"><i class="fa-solid fa-briefcase"></i> Experience</a>
+                    <a href="#qualification" class="cv-nav-pill"><i class="fa-solid fa-graduation-cap"></i> Qualifications</a>
+                    <button type="button" class="cv-print-btn" onclick="window.print()">
+                        <i class="fa-solid fa-print"></i> Print / Save PDF
+                    </button>
+                </div>
             </div>
         </div>
-        <div class="cv-profile">
-            {{ e.description|linebreaksbr }}
-        </div>
-    </div>
-    {% endfor %}
 
-    <div id="skill" class="cv-name">
-        Qualification
-    </div>
-    {% for qlf in qualification %}
-    <div class="ph-card">
-        <div class="cv-qlf-title">{{ qlf.degree }}</div>
-        <div class="cv-personal">
-            <div><i class="fa-solid fa-building"></i> {{ qlf.institute }}</div>
-            <div><i class="fa-solid fa-timeline"></i> {{ qlf.start_date|date:"M y" }} -
-                {% if qlf.end_date %}
-                {{ qlf.end_date|date:"M y" }}
-                {% else %}
-                Present
-                {% endif %}
+        <!-- KPI Metrics Strip -->
+        <div class="cv-kpi-grid">
+            <div class="ph-card cv-kpi-card">
+                <i class="fa-solid fa-cubes cv-kpi-icon"></i>
+                <div class="cv-kpi-value">{{ metrics.apps_built }}</div>
+                <div class="cv-kpi-label">Apps in project-h</div>
+            </div>
+            <div class="ph-card cv-kpi-card">
+                <i class="fa-solid fa-screwdriver-wrench cv-kpi-icon"></i>
+                <div class="cv-kpi-value">{{ metrics.skills_count }}</div>
+                <div class="cv-kpi-label">Core Technical Skills</div>
+            </div>
+            <div class="ph-card cv-kpi-card">
+                <i class="fa-solid fa-timeline cv-kpi-icon"></i>
+                <div class="cv-kpi-value">{{ metrics.experience_years }}</div>
+                <div class="cv-kpi-label">Years Experience</div>
+            </div>
+            <div class="ph-card cv-kpi-card">
+                <i class="fa-solid fa-circle-check cv-kpi-icon"></i>
+                <div class="cv-kpi-value">273+</div>
+                <div class="cv-kpi-label">Automated Tests</div>
             </div>
         </div>
-        <div class="cv-profile">
-            {{ qlf.subject|linebreaksbr }}
+    </section>
+
+    <!-- 2. PROJECT H ARCHITECTURE & MODULE SHOWCASE -->
+    <section id="project-showcase" class="cv-section">
+        <div class="cv-section-header">
+            <h2 class="cv-section-title"><i class="fa-solid fa-rocket"></i> Project H — Engineering Showcase</h2>
+            <p class="cv-section-subtitle">
+                End-to-end architecture built on Django 5.2, PostgreSQL 18, WhiteNoise, Vanilla JS, Self-Hosted Icons, and GitHub Actions CI.
+            </p>
         </div>
-    </div>
-    {% endfor %}
+
+        <div class="cv-projects-grid">
+            {% for app in project_showcase %}
+            <a href="{{ app.url }}" class="ph-card cv-project-card">
+                <div>
+                    <div class="cv-project-head">
+                        <div class="cv-project-icon-title">
+                            <span class="cv-project-icon"><i class="{{ app.icon }}"></i></span>
+                            <div>
+                                <h3 class="cv-project-name">{{ app.name }}</h3>
+                                {% if app.highlight %}
+                                <div class="cv-project-highlight">{{ app.highlight }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right ph-hover"></i>
+                    </div>
+                    <p class="cv-project-desc" style="margin-top: 0.7rem;">{{ app.description }}</p>
+                </div>
+                {% if app.stack %}
+                <div class="cv-tag-list">
+                    {% for tag in app.stack %}
+                    <span class="cv-tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 3. SKILLS & INTERACTIVE ANALYTICS -->
+    <section id="skills-analytics" class="cv-section">
+        <div class="cv-section-header">
+            <h2 class="cv-section-title"><i class="fa-solid fa-chart-column"></i> Skills &amp; Visual Analytics</h2>
+            <p class="cv-section-subtitle">
+                Interactive competency radar and proficiency breakdown across project-h engineering domains.
+                {% if using_default_skills %}<span class="cv-empty-note">(Showing project-h stack; add custom Skill entries in Django Admin to personalise.)</span>{% endif %}
+            </p>
+        </div>
+
+        <div class="cv-charts-grid">
+            <div class="ph-card cv-chart-card">
+                <h3 class="cv-chart-title"><i class="fa-solid fa-compass"></i> Domain Competency Radar</h3>
+                <div class="cv-chart-wrap">
+                    <canvas id="cvRadarChart" aria-label="Domain Competency Radar Chart"></canvas>
+                </div>
+            </div>
+            <div class="ph-card cv-chart-card">
+                <h3 class="cv-chart-title"><i class="fa-solid fa-bars-progress"></i> Skill Proficiency Breakdown</h3>
+                <div class="cv-chart-wrap cv-chart-wrap-tall">
+                    <canvas id="cvSkillsChart" aria-label="Skills Proficiency Bar Chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div id="skill" class="cv-filter-bar" role="tablist" aria-label="Filter skills by category">
+            <button type="button" class="cv-filter-btn active" data-category="all">All ({{ skills|length }})</button>
+            {% for cat in skill_categories %}
+            <button type="button" class="cv-filter-btn" data-category="{{ cat }}">{{ cat }}</button>
+            {% endfor %}
+        </div>
+
+        <!-- Skill Cards with Progress Bars -->
+        <div class="cv-skills-grid">
+            {% for s in skills %}
+            <div class="ph-card cv-skill-item" data-category="{{ s.category }}">
+                <div class="cv-skill-row">
+                    <span class="cv-skill-name">{{ s.name }}</span>
+                    <span class="cv-skill-meta">{{ s.category }} &bull; {{ s.proficiency }}</span>
+                </div>
+                <div class="cv-progress-track" role="progressbar" aria-valuenow="{{ s.score }}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="cv-progress-fill" style="width: {{ s.score }}%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 4. EXPERIENCE TIMELINE & DURATION CHART -->
+    <section id="experience" class="cv-section">
+        <div class="cv-section-header">
+            <h2 class="cv-section-title"><i class="fa-solid fa-briefcase"></i> Experience</h2>
+            <p class="cv-section-subtitle">Professional roles, technical ownership, and career progression.</p>
+        </div>
+
+        {% if experience %}
+        <div class="ph-card cv-chart-card">
+            <h3 class="cv-chart-title"><i class="fa-solid fa-chart-bar"></i> Role Duration Overview (Years)</h3>
+            <div class="cv-chart-wrap">
+                <canvas id="cvExperienceChart" aria-label="Experience Duration Chart"></canvas>
+            </div>
+        </div>
+
+        <div class="cv-timeline">
+            {% for e in experience %}
+            <article class="ph-card cv-timeline-item">
+                <span class="cv-timeline-dot" aria-hidden="true"></span>
+                <div class="cv-exp-header">
+                    <h3 class="cv-exp-title">{{ e.title }}</h3>
+                    <span class="cv-pill-badge">{{ e.duration_label }}</span>
+                </div>
+                <div class="cv-exp-meta">
+                    <span><i class="fa-solid fa-building"></i> {{ e.employer }}</span>
+                    <span><i class="fa-solid fa-industry"></i> {{ e.industry }}</span>
+                    <span>
+                        <i class="fa-solid fa-timeline"></i>
+                        {{ e.start_date|date:"M Y" }} &ndash;
+                        {% if e.end_date %}{{ e.end_date|date:"M Y" }}{% else %}Present{% endif %}
+                    </span>
+                </div>
+                <p class="cv-exp-desc">{{ e.description|linebreaksbr }}</p>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="cv-timeline">
+            <article class="ph-card cv-timeline-item">
+                <span class="cv-timeline-dot" aria-hidden="true"></span>
+                <div class="cv-exp-header">
+                    <h3 class="cv-exp-title">Lead Developer &amp; Architect — project-h</h3>
+                    <span class="cv-pill-badge">Active</span>
+                </div>
+                <div class="cv-exp-meta">
+                    <span><i class="fa-solid fa-building"></i> Personal Engineering Platform</span>
+                    <span><i class="fa-solid fa-industry"></i> Full-Stack Web &amp; AI Tooling</span>
+                </div>
+                <p class="cv-exp-desc">
+                    Designed, built, and hardened a multi-app Django 5.2 &amp; PostgreSQL 18 suite featuring centralised 2FA/RBAC authentication (<code>projectauth</code>), AI background removal and dual-engine SVG vectorization (<code>listimage</code>), layout-preserving PDF editing with Tesseract OCR (<code>docedit</code>), time-series utility tracking (<code>utilitytracker</code>), and a zero-framework cookbook (<code>recipes</code>), backed by 273+ automated tests and GitHub Actions CI.
+                </p>
+            </article>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- 5. QUALIFICATIONS -->
+    <section id="qualification" class="cv-section">
+        <div class="cv-section-header">
+            <h2 class="cv-section-title"><i class="fa-solid fa-graduation-cap"></i> Qualifications</h2>
+            <p class="cv-section-subtitle">Academic credentials and technical certifications.</p>
+        </div>
+
+        {% if qualification %}
+        <div class="cv-qlf-grid">
+            {% for qlf in qualification %}
+            <article class="ph-card cv-qlf-card">
+                <h3 class="cv-exp-title">{{ qlf.degree }}</h3>
+                <div class="cv-exp-meta">
+                    <span><i class="fa-solid fa-building"></i> {{ qlf.institute }}</span>
+                    <span>
+                        <i class="fa-solid fa-timeline"></i>
+                        {{ qlf.start_date|date:"M Y" }} &ndash;
+                        {% if qlf.end_date %}{{ qlf.end_date|date:"M Y" }}{% else %}Present{% endif %}
+                    </span>
+                </div>
+                <p class="cv-exp-desc">{{ qlf.subject|linebreaksbr }}</p>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ph-card cv-qlf-card">
+            <p class="cv-empty-note" style="margin: 0;">
+                No qualifications added yet. Add your degrees or certifications under <strong>Cv &rarr; Qualifications</strong> in Django Admin and they will appear here automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
 </div>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ cv_chart_payload|json_script:"cv-chart-data" }}
+<script src="{% static 'js/cv-charts.js' %}"></script>
 {% endblock %}

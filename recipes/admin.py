@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .forms import RecipeAdminForm
-from .models import Category, ChatMessage, Cuisine, Recipe, RecipeImage
+from .models import Category, Cuisine, Recipe, RecipeImage
 
 
 @admin.register(Category)
@@ -29,10 +29,3 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ("category", "cuisine")
     search_fields = ("name",)
     readonly_fields = ("created_at", "updated_at")
-
-
-@admin.register(ChatMessage)
-class ChatMessageAdmin(admin.ModelAdmin):
-    list_display = ("created", "username", "message")
-    search_fields = ("username", "message")
-    date_hierarchy = "created"

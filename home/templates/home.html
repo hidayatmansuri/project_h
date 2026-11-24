@@ -1,10 +1,6 @@
 {% load static projectauth_tags %}
 <!DOCTYPE html>
-<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]>      <html class="no-js"> <![endif]-->
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
@@ -13,15 +9,12 @@
     <title>{% block title %}project-h{% endblock %}</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://kit.fontawesome.com/8461ef5dbf.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/home-style.css'%}">
     {% block extra_css %}{% endblock %}
 </head>
 
 <body id="top">
-    <!--[if lt IE 7]>
-            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
-        <![endif]-->
     <header class="ph-header">
         <a href="{% url 'home' %}" aria-label="project-h home">
             <div class="ph-logo ph-hover">
@@ -34,11 +27,6 @@
         </button>
         <nav class="home-nav text-shadow" id="mainNav">
             <button class="close-menu" id="closeMenu" aria-label="Close Menu">&times;</button>
-            {% comment %} <div class="home-nav-label">
-                <a class="nav-link ph-hover" href="{% url 'cv' %}"><i class="fa-regular fa-file-code"></i>
-                    <span>Project</span></a>
-            </div>
-            <div class="nav-separator">|</div> {% endcomment %}
             <div class="home-nav-label">
                 <a class="nav-link ph-hover" href="{% url 'cv' %}"><i class="fa-regular fa-file-lines"></i>
                     <span>About Me</span></a>
@@ -133,13 +121,6 @@
                     <span>Re<span class="floating-lable">cipes</span></span>
                 </a>
             </div>
-            <!-- <div class="ph-welcome-subs welcome-desc">
-                <a class="ph-hover" href="{% url 'cv' %}">CV</a><br>
-                <a class="ph-hover" href="{% url 'passgen' %}">Password Generator</a><br>
-                <a class="ph-hover" href="{% url 'utility' %}">Utility Tracker</a><br>
-                <a class="ph-hover" href="{% url 'passgen' %}">Currency Converter</a><br>
-                <a class="ph-hover" href="{% url 'passgen' %}">Measurement Converter</a><br>
-            </div> -->
         </div>
 
         {% endblock %}
