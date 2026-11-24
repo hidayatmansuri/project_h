@@ -2618,9 +2618,11 @@ class LanguageScopeOnHoldTests(TestCase):
         page = doc.new_page(width=595, height=842)
         # Latin block
         page.insert_text((50, 100), "English Chapter Title: The Renaissance", fontsize=14)
-        # Non-Latin block (Devanagari using Nirmala font if on Windows, else Arial or generic)
+        # Non-Latin block (Devanagari using bundled Gotu-Regular.ttf so it works on both Linux CI and Windows)
+        gotu_font = conf.BASE_DIR / "static" / "fonts" / "Gotu-Regular.ttf"
         nirmala = Path("C:/Windows/Fonts/Nirmala.ttc")
-        font_kwargs = {"fontname": "Nirmala", "fontfile": str(nirmala)} if nirmala.is_file() else {}
+        dev_font = gotu_font if gotu_font.is_file() else (nirmala if nirmala.is_file() else None)
+        font_kwargs = {"fontname": "Gotu", "fontfile": str(dev_font)} if dev_font else {}
         page.insert_text((50, 200), "हिन्दी अध्याय: प्राचीन भारत", fontsize=14, **font_kwargs)
         doc.save(str(pdf_path))
         doc.close()
@@ -2689,8 +2691,10 @@ class LanguageScopeOnHoldTests(TestCase):
         doc = pymupdf.open()
         page = doc.new_page(width=595, height=842)
         page.insert_text((50, 100), "Original English Text", fontsize=12)
+        gotu_font = conf.BASE_DIR / "static" / "fonts" / "Gotu-Regular.ttf"
         nirmala = Path("C:/Windows/Fonts/Nirmala.ttc")
-        font_kwargs = {"fontname": "Nirmala", "fontfile": str(nirmala)} if nirmala.is_file() else {}
+        dev_font = gotu_font if gotu_font.is_file() else (nirmala if nirmala.is_file() else None)
+        font_kwargs = {"fontname": "Gotu", "fontfile": str(dev_font)} if dev_font else {}
         page.insert_text((50, 200), "मूल हिन्दी पाठ", fontsize=12, **font_kwargs)
         doc.save(str(pdf_path))
         doc.close()

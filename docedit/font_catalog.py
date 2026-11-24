@@ -605,15 +605,21 @@ def find_font_variant_file(
             return candidates[0][1]
 
     # 2. File-system stem search
-    search_dirs = []
+    base_matches_target = False
     if base_font_path and Path(base_font_path).is_file():
+        base_stem_check = Path(base_font_path).stem.lower().replace("-", "").replace("_", "")
+        clean_target = re.sub(r"[^a-zA-Z0-9]", "", font_name or "").lower()
+        base_matches_target = (not clean_target) or (clean_target in base_stem_check) or (base_stem_check in clean_target)
+
+    search_dirs = []
+    if base_matches_target:
         search_dirs.append(Path(base_font_path).parent)
     search_dirs.extend(conf.SYSTEM_FONT_DIRS)
     search_dirs.extend(conf.PROJECT_FONT_DIRS)
     search_dirs.append(conf.FONT_LIBRARY_DIR)
 
     base_stem = ""
-    if base_font_path and Path(base_font_path).is_file():
+    if base_matches_target:
         base_stem = Path(base_font_path).stem
     elif font_name:
         base_stem = re.sub(r"[^\w]", "", font_name)
